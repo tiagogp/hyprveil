@@ -1,0 +1,148 @@
+/* Palette mirror of hypr/colors.conf — keep in sync manually (waybar can't read it).
+   bg #0F1115 · surface #16181D · elevated #1C1F26 · text #F5F5F7 · muted #9A9CA5
+   dim #6B6E78 · border #2A2D35 · accent #E14658 · warn #E1A346 · error #E5484D */
+
+* {
+    font-family: "Geist", "Symbols Nerd Font", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+}
+
+window#waybar {
+    background: rgba(20, 22, 27, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    color: #F5F5F7;
+}
+
+/* left: workspace squares */
+#workspaces {
+    margin-left: 8px;
+}
+
+#workspaces button {
+    min-width: 20px;
+    min-height: 20px;
+    margin: 0 3px;
+    padding: 0 4px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #6B6E78;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 150ms ease;
+}
+
+#workspaces button.active {
+    background: rgba(225, 70, 88, 0.18);
+    border-color: #E14658;
+    color: #E14658;
+}
+
+#workspaces button.urgent {
+    border-color: #E1A346;
+    color: #E1A346;
+}
+
+#workspaces button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #9A9CA5;
+}
+
+/* center: window title */
+#window {
+    color: #9A9CA5;
+    font-weight: 500;
+}
+
+/* right: status cluster */
+#network,
+#pulseaudio,
+#battery,
+#custom-notifications {
+    color: #9A9CA5;
+    padding: 0 8px;
+}
+
+#battery.warning {
+    color: #E1A346;
+}
+
+#battery.critical {
+    color: #E5484D;
+}
+
+#clock {
+    color: #F5F5F7;
+    font-weight: 600;
+    padding: 0 8px;
+    margin-right: 6px;
+}
+
+/* ---- bottom dock (end-4-style, styled like the mockup's bottom pill) ---- */
+
+/* the dock bar itself is invisible full-width; the pill is the center box */
+window#waybar.dock {
+    background: transparent;
+    border: none;
+}
+
+window#waybar.dock .modules-center {
+    background: rgba(10, 11, 14, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    padding: 0 8px;
+}
+
+#custom-launcher,
+#custom-terminal,
+#custom-browser,
+#custom-editor,
+#custom-files {
+    color: #9A9CA5;
+    font-size: 17px;
+    padding: 0 10px;
+    border-radius: 999px;
+    transition: all 150ms ease;
+}
+
+#custom-launcher:hover,
+#custom-terminal:hover,
+#custom-browser:hover,
+#custom-editor:hover,
+#custom-files:hover {
+    color: #F5F5F7;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+#custom-launcher {
+    color: #E14658;
+}
+
+/* running apps */
+#taskbar {
+    margin-left: 6px;
+    padding-left: 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#taskbar button {
+    padding: 0 8px;
+    margin: 6px 2px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: all 150ms ease;
+}
+
+#taskbar button:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+#taskbar button.active {
+    background: rgba(225, 70, 88, 0.18);
+    border-color: #E14658;
+}

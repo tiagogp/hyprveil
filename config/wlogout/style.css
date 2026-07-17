@@ -1,0 +1,45 @@
+/* Power menu from the design mockup: dimmed backdrop, row of round glass
+   buttons, Shutdown in accent. Icons ship with the wlogout package.
+   Palette mirror of hypr/colors.conf — keep in sync manually. */
+
+* {
+    background-image: none;
+    font-family: "Geist", sans-serif;
+    font-size: 12.5px;
+}
+
+window {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+button {
+    background-color: rgba(22, 24, 29, 0.62);
+    color: #9A9CA5;
+    border: 1.5px solid #2A2D35;
+    border-radius: 22px;
+    margin: 220px 10px;
+    padding: 24px 12px 12px 12px;
+    background-repeat: no-repeat;
+    background-position: center 38%;
+    background-size: 22%;
+}
+
+button:focus,
+button:active,
+button:hover {
+    background-color: rgba(225, 70, 88, 0.12);
+    border-color: #E14658;
+    color: #E14658;
+}
+
+#shutdown {
+    background-color: rgba(225, 70, 88, 0.12);
+    border-color: #E14658;
+    color: #E14658;
+}
+
+#lock     { background-image: image(url("/usr/share/wlogout/icons/lock.png")); }
+#logout   { background-image: image(url("/usr/share/wlogout/icons/logout.png")); }
+#suspend  { background-image: image(url("/usr/share/wlogout/icons/suspend.png")); }
+#reboot   { background-image: image(url("/usr/share/wlogout/icons/reboot.png")); }
+#shutdown { background-image: image(url("/usr/share/wlogout/icons/shutdown.png")); }

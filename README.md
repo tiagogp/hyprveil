@@ -17,7 +17,7 @@ project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
   `keybindings.conf`, `autostart.conf`
 - Fedora package install script for Hyprland itself + hybrid-GPU env vars
 
-**Stage 2 (this delivery): the desktop shell — implements the design mockup** ✅
+**Stage 2: the desktop shell — implements the design mockup** ✅
 - **Waybar** (`waybar/`) — two bars from one process: the floating glass top bar
   (workspaces 1–5 left, window title center, wifi/volume/battery/notifications/clock
   right) and an end-4-style bottom dock — a centered pill with launcher, pinned
@@ -34,8 +34,27 @@ project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
 - Keybind scheme ported from end-4/dots-hyprland (see cheatsheet below)
 - `scripts/02-install-fedora-shell.sh` — packages, Geist + Nerd-symbol fonts, wallpaper
 
-**Coming in later stages** (say "next stage" when ready): screenshot + clipboard
-tooling, GTK/Qt theming, cursor/icon themes, zsh + Starship.
+**Stage 3 (this delivery): app theming + shell environment** ✅
+(screenshot + clipboard tooling originally slated here already landed in Stage 2)
+- **GTK** (`gtk-3.0/`, `gtk-4.0/`) — adw-gtk3-dark for GTK3, libadwaita named-color
+  overrides in `gtk.css` for both, so every GTK app gets the dark neutrals + red accent
+- **Qt** (`qt5ct/`, `qt6ct/`) — Fusion style with a full hyprveil palette
+  (`colors/hyprveil.conf`), Geist/Fira Code fonts, Papirus-Dark icons; Hyprland sets
+  `QT_QPA_PLATFORMTHEME=qt6ct`
+- **Cursor** — Bibata Modern Classic (XCURSOR + HYPRCURSOR env vars in
+  `hypr/variables.conf`, installed to `~/.local/share/icons` by script 04)
+- **Icons** — Papirus-Dark with folders switched to red via `papirus-folders`
+- **`hypr/scripts/apply-theme.sh`** — runs at login (autostart) to push
+  theme/cursor/fonts into gsettings, which is the only channel libadwaita apps read
+- **zsh** (`zsh/.zshrc`) — shared history, menu completion, autosuggestions +
+  syntax highlighting (Fedora packages), history search on arrow keys
+- **Starship** (`starship.toml`) — minimal two-line prompt, accent-red directory
+  and `❯`, git branch/status in muted gray
+- `scripts/04-install-fedora-theming.sh` — packages, Bibata, papirus-folders,
+  Qt config install (expands `__HOME__` placeholders), `~/.zshrc` + `chsh`
+
+That completes the original roadmap. Possible extras if you want them later:
+SDDM login-screen theming, per-app GTK tweaks, kitty tab/session tooling.
 
 ## Fedora + Hyprland: what you need to know first
 
@@ -80,18 +99,27 @@ config/
 │   ├── autostart.conf       # exec-once entries
 │   ├── hyprlock.conf        # lock screen (Stage 2)
 │   ├── hypridle.conf        # idle -> lock -> dpms -> suspend (Stage 2)
-│   └── hyprpaper.conf       # wallpaper (Stage 2)
+│   ├── hyprpaper.conf       # wallpaper (Stage 2)
+│   └── scripts/             # zoom.sh, apply-theme.sh (gsettings push, Stage 3)
 ├── waybar/                  # config.jsonc + style.css (Stage 2)
 ├── kitty/                   # kitty.conf (Stage 2)
 ├── rofi/                    # config.rasi + hyprveil.rasi theme (Stage 2)
 ├── mako/                    # config (Stage 2)
-└── wlogout/                 # layout + style.css (Stage 2)
+├── wlogout/                 # layout + style.css (Stage 2)
+├── gtk-3.0/                 # settings.ini + accent gtk.css (Stage 3)
+├── gtk-4.0/                 # settings.ini + libadwaita accent gtk.css (Stage 3)
+├── qt5ct/                   # qt5ct.conf + colors/hyprveil.conf (Stage 3)
+├── qt6ct/                   # qt6ct.conf + colors/hyprveil.conf (Stage 3)
+├── zsh/                     # .zshrc — script 04 copies it to ~/.zshrc (Stage 3)
+└── starship.toml            # prompt theme (Stage 3)
 design/
 └── Hyprland Desktop Design.dc.html   # the mockup all of this implements
 scripts/
 ├── 00-backup.sh
 ├── 01-install-fedora-core.sh
-└── 02-install-fedora-shell.sh
+├── 02-install-fedora-shell.sh
+├── 03-test-config.sh
+└── 04-install-fedora-theming.sh
 ```
 
 ## Install
@@ -101,8 +129,31 @@ chmod +x scripts/*.sh
 ./scripts/00-backup.sh
 ./scripts/01-install-fedora-core.sh      # Stage 1: Hyprland core
 ./scripts/02-install-fedora-shell.sh     # Stage 2: shell packages + fonts + wallpaper
-cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout ~/.config/
+./scripts/04-install-fedora-theming.sh   # Stage 3: GTK/Qt/cursor/icons + zsh/Starship
+./scripts/03-test-config.sh              # test BEFORE installing (see below)
+cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout \
+      config/gtk-3.0 config/gtk-4.0 config/starship.toml ~/.config/
 ```
+
+Script 04 handles the pieces `cp -r` can't: the qt5ct/qt6ct configs (their
+`color_scheme_path` needs your absolute home dir — the repo files carry a
+`__HOME__` placeholder it expands) and `~/.zshrc` + `chsh` (zsh reads from
+`$HOME`, not `~/.config`).
+
+## Test before use — `scripts/03-test-config.sh`
+
+Run it from the repo root any time; it never touches `~/.config`:
+
+1. **Static checks** (run anywhere): all config files present, waybar/wlogout JSON
+   valid, every command the binds call is installed, fonts installed, and — if your
+   Hyprland build supports it — a full `Hyprland --verify-config` parse check.
+2. **Nested live test** (when run from inside any Wayland session, including your
+   current end-4 desktop): boots hyprveil **in a window** from a staged copy of the
+   repo's configs (`XDG_CONFIG_HOME` points at the stage, so waybar/rofi/mako/kitty
+   inside it read repo configs, not your real ones). Exit with `SUPER+SHIFT+Q`.
+
+If the nested session looks right, run the `cp -r config/...` line above to install
+for real.
 
 **Before launching Hyprland:** open `~/.config/hypr/monitors.conf` and replace the
 placeholder monitor names/resolutions with your real ones (get them via
@@ -119,23 +170,34 @@ makoctl reload                 # re-read mako config
 ## Validation checklist
 
 Stage 1:
-- [ ] `hyprctl reload` returns no errors
-- [ ] `hyprctl monitors` shows all displays at correct resolution/position/scale
-- [ ] Window open/close animation is snappy (~180ms), not sluggish
-- [ ] Gaps/border radius match `variables.conf` values
+- [x] `hyprctl reload` returns no errors
+- [x] `hyprctl monitors` shows all displays at correct resolution/position/scale
+- [x] Window open/close animation is snappy (~180ms), not sluggish
+- [x] Gaps/border radius match `variables.conf` values
 
 Stage 2 (compare against the mockup's five screens):
-- [ ] **Desktop**: Waybar floats with rounded corners and blur; active workspace pill
+- [x] **Desktop**: Waybar floats with rounded corners and blur; active workspace pill
       is red-tinted; active window border is `#E14658`, inactive `#2A2D35`
-- [ ] **Dock**: centered pill at the bottom; pinned icons launch apps; running apps
+- [x] **Dock**: centered pill at the bottom; pinned icons launch apps; running apps
       appear right of the divider with a red-tinted ring on the focused one
-- [ ] `SUPER+Return` opens a translucent blurred Kitty with Fira Code
-- [ ] **Launcher**: `SUPER+Space` opens the centered 480px rofi panel; selected row
+- [x] `SUPER+Return` opens a translucent blurred Kitty with Fira Code
+- [x] **Launcher**: `SUPER+Space` opens the centered 480px rofi panel; selected row
       has the red-tinted background
-- [ ] **Notification**: `notify-send "Build complete" "aurora compiled successfully"`
+- [x] **Notification**: `notify-send "Build complete" "aurora compiled successfully"`
       shows a glass card top-right; `notify-send -u critical` gets the red border
-- [ ] **Lock**: `SUPER+L` shows big thin clock, avatar ring, pill password field
-- [ ] **Power**: `SUPER+Escape` shows the five-button row with Shutdown in red
+- [x] **Lock**: `SUPER+L` shows big thin clock, avatar ring, pill password field
+- [x] **Power**: `SUPER+Escape` shows the five-button row with Shutdown in red
+
+Stage 3 (after script 04 + config copy + logout/login):
+- [x] Cursor is Bibata (black, rounded) everywhere, including over app windows
+- [x] GTK app (e.g. nautilus): dark surfaces, **red** selection/accent instead of
+      blue, red folder icons, Geist as UI font
+- [x] Qt app (e.g. pavucontrol if Qt, or run `qt6ct` itself): dark Fusion palette
+      with red highlight — open qt6ct and check the preview
+- [x] New Kitty window drops you in zsh with the Starship prompt: red directory,
+      red `❯`, git branch shown inside a repo
+- [x] Typing shows gray ghost autosuggestions; invalid commands render red
+      (syntax highlighting)
 
 ## Keybind cheatsheet (end-4 style)
 
@@ -175,8 +237,18 @@ instead of the Quickshell overview.
 - **Colors** → edit `hypr/colors.conf` for Hyprland; Waybar/Kitty/Rofi/mako/hyprlock/
   wlogout each carry a palette mirror block at the top of their file (these tools
   can't read Hyprland variables — grep for the old hex when changing a color).
+  Stage 3 mirrors: `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css`,
+  `qt5ct/colors/hyprveil.conf`, `qt6ct/colors/hyprveil.conf`, `starship.toml`.
 - **Gaps / border width / corner radius / animation speed** → `hypr/variables.conf`.
 - **Blur strength** → `decoration.blur.size` / `.passes` in `appearance.conf`.
 - **Monitor layout** → `hypr/monitors.conf`.
 - **Idle/lock timeouts** → `hypr/hypridle.conf`.
 - **Wallpaper** → replace `~/.config/hypr/wallpaper.jpg`, then `hyprctl hyprpaper reload ,"~/.config/hypr/wallpaper.jpg"` or restart hyprpaper.
+- **Cursor theme/size** → env vars in `hypr/variables.conf` **and**
+  `hypr/scripts/apply-theme.sh` (keep both in sync), then `hyprctl reload` and
+  re-run the script.
+- **GTK/Qt/icon/font choices** → `hypr/scripts/apply-theme.sh` (gsettings, wins for
+  libadwaita apps) plus the matching `gtk-*/settings.ini` / `qt6ct.conf`.
+- **Folder accent color** → `sudo papirus-folders -C <color> --theme Papirus-Dark`.
+- **Prompt** → `starship.toml` (`starship explain` helps); zsh behavior → `~/.zshrc`
+  (repo copy: `config/zsh/.zshrc` — re-run the script 04 zsh step after editing).

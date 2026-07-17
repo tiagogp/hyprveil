@@ -1,0 +1,87 @@
+/* Palette mirror of hypr/colors.conf — keep in sync manually. */
+
+* {
+    bg:          rgba(22, 24, 29, 62%);
+    bg-row:      rgba(28, 31, 38, 100%);
+    text:        #F5F5F7;
+    muted:       #9A9CA5;
+    dim:         #6B6E78;
+    hairline:    rgba(255, 255, 255, 10%);
+    accent:      #E14658;
+    accent-dim:  rgba(225, 70, 88, 14%);
+
+    background-color: transparent;
+    text-color: @text;
+}
+
+window {
+    width: 480px;
+    background-color: @bg;
+    border: 1px;
+    border-color: @hairline;
+    border-radius: 16px;
+    location: center;
+}
+
+mainbox {
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    children: [ textbox-prompt-icon, entry ];
+    padding: 16px 18px;
+    spacing: 10px;
+    border: 0 0 1px 0;
+    border-color: @hairline;
+}
+
+textbox-prompt-icon {
+    expand: false;
+    str: "󰍉";
+    text-color: @muted;
+    font: "Symbols Nerd Font 13";
+    vertical-align: 0.5;
+}
+
+entry {
+    placeholder: "Search";
+    placeholder-color: @dim;
+    text-color: @text;
+    vertical-align: 0.5;
+}
+
+listview {
+    lines: 6;
+    padding: 8px;
+    spacing: 0;
+    scrollbar: false;
+    fixed-height: false;
+}
+
+element {
+    padding: 10px 12px;
+    spacing: 12px;
+    border-radius: 10px;
+}
+
+element selected.normal,
+element selected.active {
+    background-color: @accent-dim;
+}
+
+element-icon {
+    size: 32px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    vertical-align: 0.5;
+    markup: true;
+}
+
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active {
+    background-color: transparent;
+}

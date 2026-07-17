@@ -1,0 +1,25 @@
+/* Palette mirror of hypr/colors.conf — keep in sync manually.
+ * adw-gtk3 reads these libadwaita-style named colors, so GTK3 apps pick up
+ * the same red accent and dark neutrals as everything else. */
+@define-color accent_color #E86A79;
+@define-color accent_bg_color #E14658;
+@define-color accent_fg_color #F5F5F7;
+
+@define-color window_bg_color #0F1115;
+@define-color window_fg_color #F5F5F7;
+@define-color view_bg_color #16181D;
+@define-color view_fg_color #F5F5F7;
+@define-color headerbar_bg_color #16181D;
+@define-color headerbar_fg_color #F5F5F7;
+@define-color sidebar_bg_color #16181D;
+@define-color sidebar_fg_color #F5F5F7;
+@define-color card_bg_color #1C1F26;
+@define-color card_fg_color #F5F5F7;
+@define-color popover_bg_color #1C1F26;
+@define-color popover_fg_color #F5F5F7;
+@define-color dialog_bg_color #1C1F26;
+@define-color dialog_fg_color #F5F5F7;
+
+@define-color warning_bg_color #E1A346;
+@define-color error_bg_color #E5484D;
+@define-color success_bg_color #4CAE80;

@@ -1,0 +1,116 @@
+// Two bars from one waybar process:
+//  1. "top"  — the design mockup's glass top bar (workspaces / title / status)
+//  2. "dock" — bottom centered pill, ported from end-4's dock: pinned apps +
+//     running apps (wlr/taskbar), styled like the mockup's bottom pill.
+[
+{
+    "name": "top",
+    "layer": "top",
+    "position": "top",
+    "height": 44,
+    "margin-top": 10,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 0,
+
+    "modules-left": ["hyprland/workspaces"],
+    "modules-center": ["hyprland/window"],
+    "modules-right": ["network", "pulseaudio", "battery", "custom/notifications", "clock"],
+
+    "hyprland/workspaces": {
+        "format": "{id}",
+        "on-click": "activate",
+        "persistent-workspaces": { "*": 5 }
+    },
+
+    "hyprland/window": {
+        "max-length": 64,
+        "separate-outputs": true
+    },
+
+    "network": {
+        "format-wifi": "󰖩",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰖪",
+        "tooltip-format": "{ifname}: {ipaddr}",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+        "on-click": "nm-connection-editor"
+    },
+
+    "pulseaudio": {
+        "format": "{icon}",
+        "format-muted": "󰝟",
+        "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
+        "tooltip-format": "{desc}: {volume}%",
+        "on-click": "pavucontrol"
+    },
+
+    "battery": {
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
+        "states": { "warning": 20, "critical": 10 },
+        "interval": 30
+    },
+
+    "custom/notifications": {
+        "format": "󰂚",
+        "tooltip": false,
+        "on-click": "makoctl dismiss --all"
+    },
+
+    "clock": {
+        "format": "{:%I:%M %p}",
+        "tooltip-format": "{:%A, %B %e — %Y}"
+    }
+},
+{
+    "name": "dock",
+    "layer": "top",
+    "position": "bottom",
+    "height": 48,
+    "margin-bottom": 6,
+    "spacing": 0,
+
+    "modules-center": ["custom/launcher", "custom/terminal", "custom/browser", "custom/editor", "custom/files", "wlr/taskbar"],
+
+    "custom/launcher": {
+        "format": "󰍜",
+        "tooltip-format": "Launcher",
+        "on-click": "pkill rofi || rofi -show drun"
+    },
+
+    "custom/terminal": {
+        "format": "",
+        "tooltip-format": "Kitty",
+        "on-click": "kitty"
+    },
+
+    "custom/browser": {
+        "format": "󰈹",
+        "tooltip-format": "Firefox",
+        "on-click": "firefox"
+    },
+
+    "custom/editor": {
+        "format": "󰨞",
+        "tooltip-format": "VS Code",
+        "on-click": "code"
+    },
+
+    "custom/files": {
+        "format": "󰉋",
+        "tooltip-format": "Files",
+        "on-click": "nautilus"
+    },
+
+    "wlr/taskbar": {
+        "format": "{icon}",
+        "icon-size": 20,
+        "tooltip-format": "{title}",
+        "on-click": "activate",
+        "on-click-middle": "close",
+        "ignore-list": []
+    }
+}
+]

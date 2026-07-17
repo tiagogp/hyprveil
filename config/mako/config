@@ -1,0 +1,33 @@
+# Notifications — glass cards, top-right, per the design mockup.
+# Palette mirror of hypr/colors.conf — keep in sync manually.
+
+font=Geist 10.5
+width=340
+height=140
+margin=24
+padding=16
+anchor=top-right
+
+background-color=#16181DE0
+text-color=#F5F5F7
+border-color=#FFFFFF1A
+border-size=1
+border-radius=14
+
+icons=1
+max-icon-size=36
+markup=1
+default-timeout=6000
+max-visible=4
+layer=overlay
+
+# title bold, body muted — mako styles via markup on format
+format=<b>%s</b>\n<span color="#9A9CA5">%b</span>
+
+[urgency=critical]
+border-color=#E14658
+default-timeout=0
+
+[urgency=low]
+background-color=#16181DB3
+text-color=#9A9CA5
