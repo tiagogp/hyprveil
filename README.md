@@ -130,19 +130,18 @@ chmod +x scripts/*.sh
 ./scripts/01-install-fedora-core.sh      # Stage 1: Hyprland core
 ./scripts/02-install-fedora-shell.sh     # Stage 2: shell packages + fonts + wallpaper
 ./scripts/04-install-fedora-theming.sh   # Stage 3: GTK/Qt/cursor/icons + zsh/Starship
-./scripts/03-test-config.sh              # test BEFORE installing (see below)
-cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout \
-      config/gtk-3.0 config/gtk-4.0 config/starship.toml ~/.config/
+./scripts/03-test-config.sh              # test BEFORE installing (see below) — offers
+                                          # to install for real once the nested test looks right
 ```
 
-Script 04 handles the pieces `cp -r` can't: the qt5ct/qt6ct configs (their
+Script 04 handles the pieces the config copy can't: the qt5ct/qt6ct configs (their
 `color_scheme_path` needs your absolute home dir — the repo files carry a
 `__HOME__` placeholder it expands) and `~/.zshrc` + `chsh` (zsh reads from
 `$HOME`, not `~/.config`).
 
 ## Test before use — `scripts/03-test-config.sh`
 
-Run it from the repo root any time; it never touches `~/.config`:
+Run it from the repo root any time. Phases 1 and 2 never touch `~/.config`:
 
 1. **Static checks** (run anywhere): all config files present, waybar/wlogout JSON
    valid, every command the binds call is installed, fonts installed, and — if your
@@ -151,9 +150,10 @@ Run it from the repo root any time; it never touches `~/.config`:
    current end-4 desktop): boots hyprveil **in a window** from a staged copy of the
    repo's configs (`XDG_CONFIG_HOME` points at the stage, so waybar/rofi/mako/kitty
    inside it read repo configs, not your real ones). Exit with `SUPER+SHIFT+Q`.
-
-If the nested session looks right, run the `cp -r config/...` line above to install
-for real.
+3. **Install prompt**: after the nested session exits, the script asks whether it
+   looked right and, if you say yes, runs the `cp -r config/...` copy into
+   `~/.config` for you. Say no (or skip phase 2 entirely) to leave `~/.config`
+   untouched and copy manually later.
 
 **Before launching Hyprland:** open `~/.config/hypr/monitors.conf` and replace the
 placeholder monitor names/resolutions with your real ones (get them via

@@ -130,3 +130,43 @@ export XDG_CONFIG_HOME="$STAGE"
 echo "staged config: $STAGE (kept after exit for inspection; rm -rf it when done)"
 Hyprland -c "$STAGE/hypr/hyprland.conf"
 echo "Nested session ended. Logs above; staged config left at $STAGE"
+
+echo
+TARGETS="hypr waybar kitty rofi mako wlogout gtk-3.0 gtk-4.0"
+INSTALLED=()
+for t in $TARGETS; do
+    [ -e "$HOME/.config/$t" ] && INSTALLED+=("$t")
+done
+[ -e "$HOME/.config/starship.toml" ] && INSTALLED+=("starship.toml")
+
+install_fresh() {
+    cp -r "$CONF/hypr" "$CONF/waybar" "$CONF/kitty" "$CONF/rofi" "$CONF/mako" "$CONF/wlogout" \
+          "$CONF/gtk-3.0" "$CONF/gtk-4.0" "$CONF/starship.toml" "$HOME/.config/"
+    echo "Installed to ~/.config. Reload with: hyprctl reload && pkill waybar; waybar & disown"
+}
+
+if [ "${#INSTALLED[@]}" -gt 0 ]; then
+    echo "Already installed: found existing ${INSTALLED[*]} in ~/.config"
+    echo "A plain copy would merge into these and can leave stale files behind"
+    echo "(e.g. old waybar modules this repo no longer ships)."
+    read -p "Do a clean install now — backup, remove the above, then copy fresh? [y/N] " ans2
+    if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
+        echo "Backing up existing configs first..."
+        "$REPO/scripts/00-backup.sh"
+        for t in "${INSTALLED[@]}"; do
+            rm -rf "$HOME/.config/$t"
+        done
+        install_fresh
+    else
+        echo "Skipped. Re-run this script when ready for a clean install."
+    fi
+else
+    read -p "Looked right? Install these configs into ~/.config for real now? [y/N] " ans2
+    if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
+        install_fresh
+    else
+        echo "Skipped. Install later by re-running this script, or manually:"
+        echo "  cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout \\"
+        echo "        config/gtk-3.0 config/gtk-4.0 config/starship.toml ~/.config/"
+    fi
+fi
