@@ -64,10 +64,14 @@ for c in $OPTIONAL; do
 done
 
 # --- fonts ---
+# Note: fc-list piped straight into `grep -q` can trip `pipefail` — grep exits
+# as soon as it finds a match, and the SIGPIPE that hits fc-list becomes the
+# pipeline's exit status even though the match succeeded. Capture output first.
 if command -v fc-list >/dev/null; then
-    fc-list | grep -qi "geist"        && ok "font: Geist"        || warn "font Geist not installed (script 02 fonts step)"
-    fc-list | grep -qi "fira code"    && ok "font: Fira Code"    || warn "font Fira Code not installed"
-    fc-list | grep -qi "symbols nerd" && ok "font: Nerd symbols" || warn "Nerd symbols font missing — bar/launcher icons will be boxes"
+    FONT_LIST="$(fc-list)"
+    grep -qi "geist"        <<<"$FONT_LIST" && ok "font: Geist"        || warn "font Geist not installed (script 02 fonts step)"
+    grep -qi "fira code"    <<<"$FONT_LIST" && ok "font: Fira Code"    || warn "font Fira Code not installed"
+    grep -qi "symbols nerd" <<<"$FONT_LIST" && ok "font: Nerd symbols" || warn "Nerd symbols font missing — bar/launcher icons will be boxes"
 fi
 
 # --- wallpaper ---

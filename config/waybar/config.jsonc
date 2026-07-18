@@ -72,36 +72,16 @@
     "margin-bottom": 6,
     "spacing": 0,
 
-    "modules-center": ["custom/launcher", "custom/terminal", "custom/browser", "custom/editor", "custom/files", "wlr/taskbar"],
+    // Pin an app by adding a "custom/<name>" entry here (format = Nerd Font glyph,
+    // on-click = launch command) and appending "custom/<name>" to modules-center
+    // below, before "wlr/taskbar". Give it a #custom-<name> rule in style.css —
+    // copy the #custom-launcher block as a template.
+    "modules-center": ["custom/launcher", "wlr/taskbar"],
 
     "custom/launcher": {
         "format": "󰍜",
         "tooltip-format": "Launcher",
         "on-click": "pkill rofi || rofi -show drun"
-    },
-
-    "custom/terminal": {
-        "format": "",
-        "tooltip-format": "Kitty",
-        "on-click": "kitty"
-    },
-
-    "custom/browser": {
-        "format": "󰈹",
-        "tooltip-format": "Firefox",
-        "on-click": "firefox"
-    },
-
-    "custom/editor": {
-        "format": "󰨞",
-        "tooltip-format": "VS Code",
-        "on-click": "code"
-    },
-
-    "custom/files": {
-        "format": "󰉋",
-        "tooltip-format": "Files",
-        "on-click": "nautilus"
     },
 
     "wlr/taskbar": {

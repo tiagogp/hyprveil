@@ -3,59 +3,59 @@
    dim #6B6E78 · border #2A2D35 · accent #E14658 · warn #E1A346 · error #E5484D */
 
 * {
-    font-family: "Geist", "Symbols Nerd Font", sans-serif;
-    font-size: 13px;
-    min-height: 0;
-    padding: 0;
-    margin: 0;
+  font-family: "Geist", "Symbols Nerd Font", sans-serif;
+  font-size: 13px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 window#waybar {
-    background: rgba(20, 22, 27, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
-    color: #F5F5F7;
+  background: rgba(20, 22, 27, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  color: #f5f5f7;
 }
 
 /* left: workspace squares */
 #workspaces {
-    margin-left: 8px;
+  margin-left: 8px;
 }
 
 #workspaces button {
-    min-width: 20px;
-    min-height: 20px;
-    margin: 0 3px;
-    padding: 0 4px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: #6B6E78;
-    font-size: 11px;
-    font-weight: 600;
-    transition: all 150ms ease;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 0 3px;
+  padding: 0 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b6e78;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 150ms ease;
 }
 
 #workspaces button.active {
-    background: rgba(225, 70, 88, 0.18);
-    border-color: #E14658;
-    color: #E14658;
+  background: rgba(225, 70, 88, 0.18);
+  border-color: #e14658;
+  color: #e14658;
 }
 
 #workspaces button.urgent {
-    border-color: #E1A346;
-    color: #E1A346;
+  border-color: #e1a346;
+  color: #e1a346;
 }
 
 #workspaces button:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #9A9CA5;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9a9ca5;
 }
 
 /* center: window title */
 #window {
-    color: #9A9CA5;
-    font-weight: 500;
+  color: #9a9ca5;
+  font-weight: 500;
 }
 
 /* right: status cluster */
@@ -63,86 +63,90 @@ window#waybar {
 #pulseaudio,
 #battery,
 #custom-notifications {
-    color: #9A9CA5;
-    padding: 0 8px;
+  color: #9a9ca5;
+  padding: 0 8px;
 }
 
 #battery.warning {
-    color: #E1A346;
+  color: #e1a346;
 }
 
 #battery.critical {
-    color: #E5484D;
+  color: #e5484d;
 }
 
 #clock {
-    color: #F5F5F7;
-    font-weight: 600;
-    padding: 0 8px;
-    margin-right: 6px;
+  color: #f5f5f7;
+  font-weight: 600;
+  padding: 0 8px;
+  margin-right: 6px;
 }
 
 /* ---- bottom dock (end-4-style, styled like the mockup's bottom pill) ---- */
 
 /* the dock bar itself is invisible full-width; the pill is the center box */
 window#waybar.dock {
-    background: transparent;
-    border: none;
+  background: transparent;
+  border: none;
 }
 
 window#waybar.dock .modules-center {
-    background: rgba(10, 11, 14, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 999px;
-    padding: 0 8px;
-}
-
-#custom-launcher,
-#custom-terminal,
-#custom-browser,
-#custom-editor,
-#custom-files {
-    color: #9A9CA5;
-    font-size: 17px;
-    padding: 0 10px;
-    border-radius: 999px;
-    transition: all 150ms ease;
-}
-
-#custom-launcher:hover,
-#custom-terminal:hover,
-#custom-browser:hover,
-#custom-editor:hover,
-#custom-files:hover {
-    color: #F5F5F7;
-    background: rgba(255, 255, 255, 0.06);
+  background: rgba(10, 11, 14, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0 8px;
 }
 
 #custom-launcher {
-    color: #E14658;
+  color: #e14658;
+  font-size: 18px;
+  min-width: 34px;
+  min-height: 34px;
+  margin: 5px 3px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #1c1f26;
+  transition: all 150ms ease;
+}
+
+#custom-launcher:hover {
+  color: #f5f5f7;
+  background: #23262e;
 }
 
 /* running apps */
 #taskbar {
-    margin-left: 6px;
-    padding-left: 8px;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 #taskbar button {
-    padding: 0 8px;
-    margin: 6px 2px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    background: transparent;
-    transition: all 150ms ease;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0 7px;
+  margin: 5px 3px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #1c1f26;
+  transition: all 150ms ease;
+}
+
+/* wlr/taskbar wraps the icon in a box alongside two empty (hidden) title
+   labels. Giving the button a min-width bigger than the icon's own natural
+   size stretches that inner box past the icon without centering it — GTK
+   packs the icon to the left and leaves the slack on the right, showing up
+   as lopsided padding. Keeping min-width == icon-size avoids any slack. */
+#taskbar button image {
+  min-width: 20px;
+  min-height: 20px;
 }
 
 #taskbar button:hover {
-    background: rgba(255, 255, 255, 0.06);
+  background: #23262e;
 }
 
 #taskbar button.active {
-    background: rgba(225, 70, 88, 0.18);
-    border-color: #E14658;
+  background: rgba(225, 70, 88, 0.15);
+  border-color: #e14658;
 }

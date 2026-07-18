@@ -46,12 +46,17 @@ if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
 fi
 
 echo "== Wallpaper (Elliott Engelmann, Unsplash) -> ~/.config/hypr/wallpaper.jpg =="
+echo "  Required: hyprpaper.conf points at this file and hyprpaper will show no background at all until it exists."
 read -p "Download now? [y/N] " ans3
 if [[ "$ans3" == "y" || "$ans3" == "Y" ]]; then
     mkdir -p "$HOME/.config/hypr"
-    curl -fL "https://unsplash.com/photos/DjlKxYFJlTc/download?force=true&w=3840" \
-        -o "$HOME/.config/hypr/wallpaper.jpg" \
-        || echo "Download failed — save any dark desert-dune wallpaper to ~/.config/hypr/wallpaper.jpg"
+    if ! curl -fL "https://unsplash.com/photos/DjlKxYFJlTc/download?force=true&w=3840" \
+        -o "$HOME/.config/hypr/wallpaper.jpg"; then
+        echo "Download failed — save any dark desert-dune wallpaper to ~/.config/hypr/wallpaper.jpg"
+    fi
+else
+    echo "Skipped — remember to save any wallpaper to ~/.config/hypr/wallpaper.jpg before starting Hyprland,"
+    echo "or hyprpaper will start with no background."
 fi
 
 echo

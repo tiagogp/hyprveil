@@ -53,8 +53,28 @@ project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
 - `scripts/04-install-fedora-theming.sh` — packages, Bibata, papirus-folders,
   Qt config install (expands `__HOME__` placeholders), `~/.zshrc` + `chsh`
 
-That completes the original roadmap. Possible extras if you want them later:
-SDDM login-screen theming, per-app GTK tweaks, kitty tab/session tooling.
+That completes the original roadmap.
+
+**Stage 4 (extra): SDDM login-screen theming** ✅
+- **SDDM** (`sddm/hyprveil/`) — QML greeter theme matching hyprlock's idiom:
+  oversized thin clock, accent avatar ring + username (`userModel`-bound),
+  pill password field, and a Suspend/Restart/Shutdown row styled after the
+  design mockup's Power screen (reuses wlogout's installed icons so the two
+  match pixel-for-pixel). Bundles its own Geist fonts since the greeter runs
+  as the `sddm` system user, which can't see `~/.local/share/fonts`.
+- Uses SDDM's own Wayland (Weston-backed) greeter by default — Fedora's real
+  compiled-in default, not the "experimental" X11 fallback older docs
+  describe — with an X11-greeter opt-out for the NVIDIA hybrid-GPU case (see
+  "Hybrid GPU" below).
+- `scripts/06-install-fedora-sddm.sh` — the one piece of hyprveil that changes
+  a *system* file (`/etc/sddm.conf.d/`) and replaces the machine's display
+  manager for every login, so every step inside it is separately confirmed.
+  `scripts/05-install-all.sh` offers to run it as a final, separately-gated
+  step; it's also runnable standalone. Test the theme with zero system
+  changes first: `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil`.
+
+Remaining possible extras if you want them later: per-app GTK tweaks, kitty
+tab/session tooling.
 
 ## Fedora + Hyprland: what you need to know first
 
@@ -82,6 +102,12 @@ tell me which when you get a chance, and I'll tighten `monitors.conf` accordingl
 
 Run `lspci | grep -E "VGA|3D"` and paste the output back to me so I can lock this down
 instead of leaving it as a guess.
+
+This same NVIDIA-hybrid question resurfaces in `scripts/06-install-fedora-sddm.sh`:
+SDDM's Wayland/Weston greeter has an open upstream GPU-handoff issue on NVIDIA
+hybrid setups ([sddm#2142](https://github.com/sddm/sddm/issues/2142)), so that
+script asks the same question and installs `sddm-x11` instead of
+`sddm-wayland-generic` when you say yes. AMD+Intel/single-GPU is unaffected.
 
 ## Directory structure
 
@@ -111,7 +137,13 @@ config/
 ├── qt5ct/                   # qt5ct.conf + colors/hyprveil.conf (Stage 3)
 ├── qt6ct/                   # qt6ct.conf + colors/hyprveil.conf (Stage 3)
 ├── zsh/                     # .zshrc — script 04 copies it to ~/.zshrc (Stage 3)
-└── starship.toml            # prompt theme (Stage 3)
+├── starship.toml            # prompt theme (Stage 3)
+└── sddm/hyprveil/           # SDDM QML greeter theme (Stage 4, extra) — a
+    ├── metadata.desktop     #   *system* install (/usr/share/sddm/themes/),
+    ├── theme.conf           #   not copied via ~/.config like everything else
+    ├── Main.qml
+    └── Components/          # Palette.qml, Clock.qml, UserAvatar.qml,
+                              # PasswordField.qml, SessionPicker.qml, PowerRow.qml
 design/
 └── Hyprland Desktop Design.dc.html   # the mockup all of this implements
 scripts/
@@ -119,7 +151,9 @@ scripts/
 ├── 01-install-fedora-core.sh
 ├── 02-install-fedora-shell.sh
 ├── 03-test-config.sh
-└── 04-install-fedora-theming.sh
+├── 04-install-fedora-theming.sh
+└── 06-install-fedora-sddm.sh   # Stage 4 (extra) — its own gated steps; 05 offers
+                                 # to run it as a final, separately-confirmed step
 ```
 
 ## Install
@@ -138,6 +172,23 @@ Script 04 handles the pieces the config copy can't: the qt5ct/qt6ct configs (the
 `color_scheme_path` needs your absolute home dir — the repo files carry a
 `__HOME__` placeholder it expands) and `~/.zshrc` + `chsh` (zsh reads from
 `$HOME`, not `~/.config`).
+
+### Optional: SDDM login screen
+
+`scripts/05-install-all.sh` above ends by offering to run this too, as its
+own separately-confirmed final step. To run it standalone instead (e.g. later,
+after everything else is verified working) — it's the one piece of hyprveil
+that touches system files (`/usr/share/sddm/`, `/etc/sddm.conf.d/`) and can
+replace your display manager:
+
+```bash
+./scripts/06-install-fedora-sddm.sh
+```
+
+It previews the theme in a window first (`sddm-greeter-qt6 --test-mode`, no
+root, no system changes) before asking to install `sddm`, copy the theme,
+point sddm at it, and — as a separately confirmed last step — actually enable
+`sddm.service` in place of your current display manager.
 
 ## Test before use — `scripts/03-test-config.sh`
 
@@ -199,6 +250,15 @@ Stage 3 (after script 04 + config copy + logout/login):
 - [x] Typing shows gray ghost autosuggestions; invalid commands render red
       (syntax highlighting)
 
+Stage 4 (extra, after `scripts/06-install-fedora-sddm.sh`):
+- [x] `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil` shows the
+      clock/avatar/password-pill matching hyprlock's look — check this
+      *before* enabling sddm as the display manager
+- [x] After enabling sddm + reboot: Geist renders correctly in the greeter
+      (catches a stale/missing `Fonts/` bundle)
+- [x] Hyprland is selectable in the session picker
+- [x] Suspend/Restart/Shutdown all work, Shutdown shown in accent red
+
 ## Keybind cheatsheet (end-4 style)
 
 Ported from end-4/dots-hyprland, minus the Quickshell-only widgets (overview,
@@ -239,6 +299,10 @@ instead of the Quickshell overview.
   can't read Hyprland variables — grep for the old hex when changing a color).
   Stage 3 mirrors: `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css`,
   `qt5ct/colors/hyprveil.conf`, `qt6ct/colors/hyprveil.conf`, `starship.toml`.
+  Stage 4 mirror: `sddm/hyprveil/Components/Palette.qml` (also hardcoded, same
+  "can't read Hyprland variables — keep in sync manually" caveat as hyprlock);
+  re-run step 2 of `scripts/06-install-fedora-sddm.sh` after editing it to
+  copy the change into `/usr/share/sddm/themes/hyprveil`.
 - **Gaps / border width / corner radius / animation speed** → `hypr/variables.conf`.
 - **Blur strength** → `decoration.blur.size` / `.passes` in `appearance.conf`.
 - **Monitor layout** → `hypr/monitors.conf`.

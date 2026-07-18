@@ -2,7 +2,9 @@
 # One-shot install + config: runs backup, all package stages (01-04), copies every
 # config/ directory into ~/.config, and applies the theme. Equivalent to running
 # 00 through 04 by hand plus the manual "cp -r config/..." steps each of their
-# banners tell you to run afterward.
+# banners tell you to run afterward. Also offers the Stage 4 extra (SDDM login
+# screen, scripts/06) as a separately confirmed final step, since that one
+# changes the system display manager rather than just ~/.config.
 #
 # Safe to re-run. Every destructive step still asks before it acts; only the
 # config copy is unconditional (00-backup.sh runs first so your old files are saved).
@@ -83,6 +85,19 @@ else
     echo "Not running inside Hyprland yet — log in to it, then run:"
     echo "  hyprctl reload && pkill waybar; waybar & disown"
     echo "  ~/.config/hypr/scripts/apply-theme.sh"
+fi
+
+echo
+echo "########## Optional: Stage 4 extra — SDDM login screen ##########"
+echo "This is the only piece of hyprveil that touches system files"
+echo "(/usr/share/sddm/, /etc/sddm.conf.d/) and can replace your display manager."
+echo "It walks through its own separately-confirmed steps (preview, install,"
+echo "theme copy, then — last and separate — actually enabling sddm.service)."
+read -p "Run scripts/06-install-fedora-sddm.sh now? [y/N] " ans3
+if [[ "$ans3" == "y" || "$ans3" == "Y" ]]; then
+    "$REPO/scripts/06-install-fedora-sddm.sh"
+else
+    echo "Skipped — run it any time later: ./scripts/06-install-fedora-sddm.sh"
 fi
 
 echo
