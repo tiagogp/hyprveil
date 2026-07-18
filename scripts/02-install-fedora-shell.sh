@@ -1,65 +1,110 @@
 #!/usr/bin/env bash
-# Stage 2 packages: everything the desktop shell design needs — Waybar, Rofi,
-# mako, hyprlock, hypridle, hyprpaper, wlogout — plus fonts and the wallpaper.
-# Assumes the solopasha/hyprland COPR is already enabled (scripts/01).
-# Review before running — sudo lines are separate so you can inspect each.
+# Stage 2: Fedora-aware shell, utility, font, and wallpaper installation.
 set -euo pipefail
 
-echo "== Shell components (hyprlock/hypridle/hyprpaper/hyprpicker come from the COPR) =="
-echo "  sudo dnf install -y waybar rofi-wayland mako hyprlock hypridle hyprpaper hyprpicker wlogout pavucontrol fira-code-fonts papirus-icon-theme"
-read -p "Run this now? [y/N] " ans
-if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
-    sudo dnf install -y waybar rofi-wayland mako hyprlock hypridle hyprpaper hyprpicker wlogout pavucontrol fira-code-fonts papirus-icon-theme
-fi
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+. "$REPO/scripts/lib/install-common.sh"
 
-echo "== Keybind utilities (end-4-style: screenshots, clipboard history, media, OCR) =="
-echo "  sudo dnf install -y grim slurp cliphist wl-clipboard playerctl brightnessctl btop jq rofimoji tesseract"
-read -p "Run this now? [y/N] " ansu
-if [[ "$ansu" == "y" || "$ansu" == "Y" ]]; then
-    sudo dnf install -y grim slurp cliphist wl-clipboard playerctl brightnessctl btop jq rofimoji tesseract \
-        || echo "If rofimoji isn't packaged on your release: pipx install rofimoji (SUPER+Period). tesseract is only needed for SUPER+SHIFT+X OCR."
-fi
+echo "== Stage 2: Fedora and repository detection =="
+hv_load_fedora
+hv_check_supported_release || true
+hv_show_enabled_repos
 
-echo "== Fonts: Geist (UI) + Nerd Font symbols (Waybar/Rofi icons) — no sudo, installs to ~/.local/share/fonts =="
-read -p "Download and install now? [y/N] " ans2
-if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
+STAGE_FAIL=0
+hv_install_group required "Fedora desktop shell" - \
+    waybar rofi-wayland wlogout pavucontrol fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
+
+echo
+echo "== Notification backend =="
+saved_backend=$(hv_notification_backend || true)
+case "$saved_backend" in
+    mako)
+        echo "Keeping saved Mako fallback; the SwayNC COPR will not be offered on this rerun."
+        hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        ;;
+    swaync)
+        echo "Keeping saved SwayNC backend."
+        hv_install_group required "SwayNC notification center" \
+            "erikreider/SwayNotificationCenter" SwayNotificationCenter || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        ;;
+    *)
+        echo "SwayNC provides popup history, clear-all, and persistent do-not-disturb."
+        hv_install_group optional "SwayNC notification center" \
+            "erikreider/SwayNotificationCenter" SwayNotificationCenter
+        if command -v swaync >/dev/null 2>&1 \
+            || { command -v rpm >/dev/null 2>&1 && rpm -q SwayNotificationCenter >/dev/null 2>&1; }; then
+            "$REPO/scripts/07-select-notification-backend.sh" --backend swaync
+        else
+            hv_warn "SwayNC was not installed; preserving notifications with the official Mako fallback"
+            hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
+            "$REPO/scripts/07-select-notification-backend.sh" --backend mako
+        fi
+        ;;
+esac
+
+hv_install_group required "Hyprland lock, idle, and wallpaper services" "solopasha/hyprland" \
+    hyprlock hypridle hyprpaper || STAGE_FAIL=1
+
+hv_install_group optional "color picker shortcut" "solopasha/hyprland" hyprpicker
+
+hv_install_group optional "Bluetooth status and manager" - bluez blueman
+
+hv_install_group required "Waybar helper and desktop-entry dock runtime" - jq util-linux glib2 socat
+
+hv_install_group optional "screenshots, clipboard, media, brightness, and OCR" - \
+    grim slurp cliphist wl-clipboard playerctl brightnessctl btop rofimoji tesseract
+
+echo
+echo "== Fonts: Geist and Nerd Font symbols (user-local) =="
+if hv_confirm "Download and install the user-local fonts?"; then
     FONTDIR="$HOME/.local/share/fonts"
     mkdir -p "$FONTDIR"
     TMP=$(mktemp -d)
     trap 'rm -rf "$TMP"' EXIT
 
-    echo "-- Geist --"
     if curl -fL "https://github.com/vercel/geist-font/releases/download/v1.7.2/geist-font-v1.7.2.zip" -o "$TMP/geist.zip"; then
-        unzip -o -j "$TMP/geist.zip" "geist-font/Geist/ttf/*.ttf" -d "$FONTDIR/geist" || echo "Geist zip layout unexpected — install manually from https://vercel.com/font"
+        mkdir -p "$TMP/geist"
+        if unzip -o -j "$TMP/geist.zip" "geist-font/Geist/ttf/*.ttf" -d "$TMP/geist"; then
+            if [ -e "$FONTDIR/geist" ]; then
+                backup=$(hv_new_backup_dir)
+                hv_backup_item "$FONTDIR/geist" "$backup/fonts"
+            fi
+            rm -rf "$FONTDIR/geist"
+            mv "$TMP/geist" "$FONTDIR/geist"
+        else
+            hv_warn "Geist archive layout changed; see https://vercel.com/font"
+        fi
     else
-        echo "Geist download failed — install manually from https://vercel.com/font"
+        hv_warn "Geist download failed; the desktop will use its fallback UI font"
     fi
-
-    echo "-- Nerd Font symbols --"
     if curl -fL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip" -o "$TMP/nerd.zip"; then
-        unzip -o -j "$TMP/nerd.zip" "*.ttf" -d "$FONTDIR/nerd-symbols"
+        mkdir -p "$TMP/nerd-symbols"
+        if unzip -o -j "$TMP/nerd.zip" "*.ttf" -d "$TMP/nerd-symbols"; then
+            if [ -e "$FONTDIR/nerd-symbols" ]; then
+                backup=$(hv_new_backup_dir)
+                hv_backup_item "$FONTDIR/nerd-symbols" "$backup/fonts"
+            fi
+            rm -rf "$FONTDIR/nerd-symbols"
+            mv "$TMP/nerd-symbols" "$FONTDIR/nerd-symbols"
+        fi
     else
-        echo "Nerd symbols download failed — get NerdFontsSymbolsOnly from https://www.nerdfonts.com/font-downloads"
+        hv_warn "Nerd symbols download failed; bar icons may render as boxes"
     fi
-
-    fc-cache -f
-fi
-
-echo "== Wallpaper (Elliott Engelmann, Unsplash) -> ~/.config/hypr/wallpaper.jpg =="
-echo "  Required: hyprpaper.conf points at this file and hyprpaper will show no background at all until it exists."
-read -p "Download now? [y/N] " ans3
-if [[ "$ans3" == "y" || "$ans3" == "Y" ]]; then
-    mkdir -p "$HOME/.config/hypr"
-    if ! curl -fL "https://unsplash.com/photos/DjlKxYFJlTc/download?force=true&w=3840" \
-        -o "$HOME/.config/hypr/wallpaper.jpg"; then
-        echo "Download failed — save any dark desert-dune wallpaper to ~/.config/hypr/wallpaper.jpg"
-    fi
-else
-    echo "Skipped — remember to save any wallpaper to ~/.config/hypr/wallpaper.jpg before starting Hyprland,"
-    echo "or hyprpaper will start with no background."
+    command -v fc-cache >/dev/null && fc-cache -f
 fi
 
 echo
-echo "Stage 2 install done. Now copy configs (from the repo root):"
-echo "  cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout ~/.config/"
-echo "Then: hyprctl reload && pkill waybar; waybar & disown"
+echo "== Bundled fallback wallpaper =="
+mkdir -p "$HV_CONFIG_HOME/hypr"
+wallpaper_tmp=$(mktemp "$HV_CONFIG_HOME/hypr/.wallpaper-default.XXXXXX")
+cp -a "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+    "$wallpaper_tmp"
+mv -f "$wallpaper_tmp" "$HV_CONFIG_HOME/hypr/wallpaper-default.jpg"
+echo "Installed $HV_CONFIG_HOME/hypr/wallpaper-default.jpg; saved wallpaper choices remain unchanged."
+
+echo
+echo "Stage 2 complete. Package choices were recorded in $HV_SOURCE_LOG"
+exit "$STAGE_FAIL"

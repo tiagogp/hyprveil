@@ -4,19 +4,24 @@
 set -euo pipefail
 
 STAMP=$(date +%Y%m%d-%H%M%S)
-DEST="$HOME/.config-backup-$STAMP"
+DEST="${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/backups/manual-$STAMP"
+suffix=0
+while [ -e "$DEST" ]; do
+    suffix=$((suffix + 1))
+    DEST="${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/backups/manual-$STAMP-$suffix"
+done
 mkdir -p "$DEST"
 
-for d in hypr waybar kitty rofi wofi mako dunst hypr-lock zsh; do
+for d in hypr waybar kitty rofi wofi swaync mako dunst hypr-lock wlogout gtk-3.0 gtk-4.0 qt5ct qt6ct; do
     if [ -e "$HOME/.config/$d" ]; then
-        cp -r "$HOME/.config/$d" "$DEST/$d"
+        cp -a "$HOME/.config/$d" "$DEST/$d"
         echo "backed up ~/.config/$d -> $DEST/$d"
     fi
 done
 
 for f in "$HOME/.zshrc" "$HOME/.bashrc"; do
     if [ -e "$f" ]; then
-        cp "$f" "$DEST/$(basename "$f")"
+        cp -a "$f" "$DEST/$(basename "$f")"
         echo "backed up $f -> $DEST/$(basename "$f")"
     fi
 done

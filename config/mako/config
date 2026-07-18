@@ -45,3 +45,7 @@ text-color=#9A9CA5
 background-color=#16181D73
 border-color=#FFFFFF0F
 text-color=#9A9CA5
+
+# The fallback Waybar right-click toggles this persistent-for-the-session mode.
+[mode=do-not-disturb]
+invisible=1

@@ -6,8 +6,8 @@
 #      required commands installed, fonts available, Hyprland parse check
 #      (--verify-config, if your Hyprland build supports it).
 #   2. Nested test — only when run from inside a Wayland session: boots
-#      Hyprland in a window using THIS repo's configs via a staged
-#      XDG_CONFIG_HOME. Your real ~/.config (e.g. end-4) is never touched.
+#      Hyprland in a window with config, state, cache, data, home, and runtime
+#      paths redirected to an isolated temporary tree.
 #
 # Run from the repo root: ./scripts/03-test-config.sh
 set -uo pipefail
@@ -15,6 +15,8 @@ set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 CONF="$REPO/config"
 FAIL=0
+# shellcheck disable=SC1091
+. "$REPO/scripts/lib/install-common.sh"
 
 ok()   { printf '  \033[32mOK\033[0m   %s\n' "$1"; }
 warn() { printf '  \033[33mWARN\033[0m %s\n' "$1"; }
@@ -22,43 +24,106 @@ bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$1"; FAIL=1; }
 
 echo "== Phase 1: static checks =="
 
+# --- Fedora and selected package sources ---
+if hv_load_fedora; then
+    ok "Fedora detected: $HV_OS_NAME"
+    hv_check_supported_release || warn "release is outside the documented rolling support pair"
+    if [ -s "$HV_SOURCE_LOG" ]; then
+        ok "chosen package sources: $HV_SOURCE_LOG"
+        while IFS=$'\t' read -r package source feature; do
+            printf '       %-24s %-22s %s\n' "$package" "$source" "$feature"
+        done < "$HV_SOURCE_LOG"
+    else
+        warn "no package sources recorded yet (run an installer stage or scripts/09-dependency-report.sh)"
+    fi
+else
+    warn "not running on Fedora; package-source validation is unavailable"
+fi
+
 # --- config files exist ---
 for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.conf \
          hypr/appearance.conf hypr/animations.conf hypr/window-rules.conf \
          hypr/keybindings.conf hypr/autostart.conf hypr/hyprlock.conf \
          hypr/hypridle.conf hypr/hyprpaper.conf hypr/scripts/zoom.sh \
          hypr/scripts/apply-theme.sh \
-         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-icons.json \
+         hypr/scripts/hardware-action.sh hypr/scripts/notification-daemon.sh \
+         hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
+         hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
+         hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
+         hypr/profiles/form-factor/desktop.conf \
+         hypr/profiles/form-factor/laptop.conf hypr/profiles/gpu/generic.conf \
+         hypr/profiles/gpu/intel.conf hypr/profiles/gpu/amd.conf hypr/profiles/gpu/nvidia.conf \
+         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-lib.sh \
+         waybar/scripts/dock-manager.sh waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
+         waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
+         waybar/scripts/notification.sh \
          kitty/kitty.conf \
-         rofi/config.rasi rofi/hyprveil.rasi mako/config \
+         rofi/config.rasi rofi/hyprveil.rasi swaync/config.json swaync/style.css \
          wlogout/layout wlogout/style.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-4.0/settings.ini gtk-4.0/gtk.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \
          qt6ct/qt6ct.conf qt6ct/colors/hyprveil.conf \
          starship.toml zsh/.zshrc; do
-    [ -f "$CONF/$f" ] && ok "config/$f" || bad "missing config/$f"
+    if [ -f "$CONF/$f" ]; then
+        ok "config/$f"
+    else
+        bad "missing config/$f"
+    fi
 done
 
 # --- waybar JSON (strip // comments) + wlogout layout ---
 if command -v python3 >/dev/null; then
-    python3 - "$CONF" <<'PY' && ok "waybar config.jsonc + wlogout layout parse as JSON" || bad "JSON error in waybar config or wlogout layout (see above)"
+if python3 - "$CONF" <<'PY'
 import json, re, sys
 conf = sys.argv[1]
 src = re.sub(r'^\s*//.*$', '', open(f'{conf}/waybar/config.jsonc').read(), flags=re.M)
 json.loads(src)
+json.load(open(f'{conf}/swaync/config.json'))
+json.load(open(f'{conf}/waybar/scripts/dock-icons.json'))
 for line in open(f'{conf}/wlogout/layout'):
     if line.strip():
         json.loads(line)
 PY
+then
+    ok "Waybar, SwayNC, dock icons, and wlogout configs parse as JSON"
+else
+    bad "JSON error in Waybar, SwayNC, dock icons, or wlogout config (see above)"
+fi
 else
     warn "python3 not found — skipped JSON validation"
 fi
 
+# --- executable entrypoints ---
+while IFS= read -r script; do
+    if [ -x "$script" ]; then
+        ok "executable: ${script#"$REPO/"}"
+    else
+        bad "script is not executable: ${script#"$REPO/"}"
+    fi
+done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print | sort)
+
 # --- commands the configs call ---
-NEEDED="hyprctl kitty waybar rofi mako makoctl hyprlock hypridle hyprpaper wlogout grim slurp wl-copy cliphist playerctl hyprpicker jq flock"
-OPTIONAL="rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
+NEEDED="hyprctl kitty waybar rofi hyprlock hypridle hyprpaper wlogout jq flock gio socat"
+OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
+notification_backend=$(hv_notification_backend || true)
+case "$notification_backend" in
+    swaync) NEEDED="$NEEDED swaync swaync-client" ;;
+    mako)
+        NEEDED="$NEEDED mako makoctl"
+        if [ -f "$CONF/mako/config" ]; then
+            ok "config/mako/config"
+        else
+            bad "missing Mako fallback config"
+        fi
+        ;;
+    *) warn "notification backend not selected (run scripts/07-select-notification-backend.sh)" ;;
+esac
 for c in $NEEDED; do
-    command -v "$c" >/dev/null && ok "command: $c" || bad "command missing: $c (scripts/01 + 02 install these)"
+    if command -v "$c" >/dev/null; then
+        ok "command: $c"
+    else
+        bad "command missing: $c (scripts/01 + 02 install these)"
+    fi
 done
 for c in $OPTIONAL; do
     command -v "$c" >/dev/null || warn "optional command missing: $c"
@@ -70,23 +135,60 @@ done
 # pipeline's exit status even though the match succeeded. Capture output first.
 if command -v fc-list >/dev/null; then
     FONT_LIST="$(fc-list)"
-    grep -qi "geist"        <<<"$FONT_LIST" && ok "font: Geist"        || warn "font Geist not installed (script 02 fonts step)"
-    grep -qi "fira code"    <<<"$FONT_LIST" && ok "font: Fira Code"    || warn "font Fira Code not installed"
-    grep -qi "symbols nerd" <<<"$FONT_LIST" && ok "font: Nerd symbols" || warn "Nerd symbols font missing — bar/launcher icons will be boxes"
+    if grep -qi "geist" <<<"$FONT_LIST"; then ok "font: Geist"; else warn "font Geist not installed (script 02 fonts step)"; fi
+    if grep -qi "fira code" <<<"$FONT_LIST"; then ok "font: Fira Code"; else warn "font Fira Code not installed"; fi
+    if grep -qi "symbols nerd" <<<"$FONT_LIST"; then ok "font: Nerd symbols"; else warn "Nerd symbols font missing — bar/launcher icons will be boxes"; fi
 fi
 
-# --- wallpaper ---
-[ -f "$HOME/.config/hypr/wallpaper.jpg" ] \
-    && ok "wallpaper present at ~/.config/hypr/wallpaper.jpg" \
-    || warn "no wallpaper yet (script 02 downloads it) — hyprpaper will just log an error"
+# --- wallpaper and motion state ---
+if [ -f "$HV_CONFIG_HOME/hypr/wallpaper-default.jpg" ]; then
+    ok "bundled fallback wallpaper is installed"
+else
+    warn "bundled fallback is installed during deployment; repo validation uses the design asset"
+fi
+if [ -f "$HV_NOTIFICATION_STATE" ]; then
+    if grep -Eq '^(swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
+        ok "notification backend state is valid"
+    else
+        bad "invalid notification backend state (run scripts/07-select-notification-backend.sh)"
+    fi
+fi
+if [ -f "$HV_STATE_HOME/dock-pins.json" ]; then
+    if jq -e 'type == "array" and length <= 10 and all(.[];
+        type == "object" and (.app_id | type == "string" and length > 0) and
+        ((.desktop_id == null) or (.desktop_id | type == "string")))' \
+        "$HV_STATE_HOME/dock-pins.json" >/dev/null; then
+        ok "dock state has the P1 schema"
+    else
+        bad "malformed dock state (run dock-manager.sh list to preserve and recover it)"
+    fi
+fi
+if [ -f "$HV_STATE_HOME/wallpapers.json" ]; then
+    if jq -e '.version == 1 and (.fallback | type == "object") and (.monitors | type == "object")' \
+        "$HV_STATE_HOME/wallpapers.json" >/dev/null; then
+        ok "wallpaper state has the P3 schema"
+    else
+        bad "malformed wallpaper state (run wallpaper.sh restore to preserve and recover it)"
+    fi
+fi
+if [ -f "$HV_STATE_HOME/motion-profile" ]; then
+    if grep -Eq '^(standard|reduced)$' "$HV_STATE_HOME/motion-profile"; then
+        ok "motion profile state is valid"
+    else
+        bad "invalid motion profile state (run motion-profile.sh --ensure to recover it)"
+    fi
+fi
 
 # --- Hyprland parse check on a staged copy (also used by phase 2) ---
 stage_configs() {
     STAGE="$(mktemp -d /tmp/hyprveil-test.XXXXXX)"
     cp -r "$CONF/." "$STAGE/"
     # repo configs reference ~/.config/hypr — point them at the stage instead
-    sed -i "s|~/.config/hypr|$STAGE/hypr|g" "$STAGE/hypr/hyprland.conf" "$STAGE/hypr/keybindings.conf" "$STAGE/hypr/autostart.conf" 2>/dev/null
-    sed -i "s|~/.config/hypr/wallpaper.jpg|$STAGE/hypr/wallpaper.jpg|g" "$STAGE/hypr/hyprpaper.conf"
+    while IFS= read -r file; do
+        sed -i "s|~/.config/hypr|$STAGE/hypr|g" "$file"
+    done < <(find "$STAGE/hypr" -type f -name '*.conf')
+    cp "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+        "$STAGE/hypr/wallpaper-default.jpg"
     [ -f "$HOME/.config/hypr/wallpaper.jpg" ] && cp "$HOME/.config/hypr/wallpaper.jpg" "$STAGE/hypr/wallpaper.jpg"
     chmod +x "$STAGE/hypr/scripts/"*.sh 2>/dev/null
     chmod +x "$STAGE/waybar/scripts/"*.sh 2>/dev/null
@@ -100,6 +202,8 @@ if command -v Hyprland >/dev/null; then
         else
             bad "Hyprland config has errors — see /tmp/hyprveil-verify.log"
         fi
+        rm -rf "${STAGE:?}"
+        unset STAGE
     else
         warn "this Hyprland build has no --verify-config; parse errors will show on nested launch instead"
     fi
@@ -118,63 +222,35 @@ echo "Static checks passed."
 if [ -z "${WAYLAND_DISPLAY:-}" ]; then
     echo "Not inside a Wayland session — skipping the nested live test."
     echo "Log into any Wayland desktop (your current one is fine) and re-run to boot"
-    echo "hyprveil in a window without touching your real config."
+    echo "hyprveil in a window without touching your real config or state."
     exit 0
 fi
 
 echo
 echo "== Phase 2: nested live test =="
-echo "This boots Hyprland IN A WINDOW using the repo's configs (staged copy,"
-echo "your ~/.config stays untouched). Exit the nested session with SUPER+SHIFT+Q."
-read -p "Launch nested session now? [y/N] " ans
+echo "This boots Hyprland IN A WINDOW using isolated config and state paths."
+echo "Your real home and XDG directories stay untouched. Exit with SUPER+SHIFT+Q."
+read -r -p "Launch nested session now? [y/N] " ans
 [[ "$ans" == "y" || "$ans" == "Y" ]] || exit 0
 
-[ -n "${STAGE:-}" ] || stage_configs
-
-# waybar/rofi/mako/kitty inside the nested session read the staged configs
-export XDG_CONFIG_HOME="$STAGE"
-echo "staged config: $STAGE (kept after exit for inspection; rm -rf it when done)"
-Hyprland -c "$STAGE/hypr/hyprland.conf"
-echo "Nested session ended. Logs above; staged config left at $STAGE"
+"$REPO/scripts/08-test-nested-session.sh" --backend "${notification_backend:-swaync}" --keep-stage
+echo "Nested session ended. The isolated stage path is shown above for inspection."
 
 echo
-TARGETS="hypr waybar kitty rofi mako wlogout gtk-3.0 gtk-4.0"
-INSTALLED=()
-for t in $TARGETS; do
-    [ -e "$HOME/.config/$t" ] && INSTALLED+=("$t")
-done
-[ -e "$HOME/.config/starship.toml" ] && INSTALLED+=("starship.toml")
-
-install_fresh() {
-    cp -r "$CONF/hypr" "$CONF/waybar" "$CONF/kitty" "$CONF/rofi" "$CONF/mako" "$CONF/wlogout" \
-          "$CONF/gtk-3.0" "$CONF/gtk-4.0" "$CONF/starship.toml" "$HOME/.config/"
-    chmod +x "$HOME/.config/hypr/scripts/"*.sh 2>/dev/null
-    chmod +x "$HOME/.config/waybar/scripts/"*.sh 2>/dev/null
-    echo "Installed to ~/.config. Reload with: hyprctl reload && pkill waybar; waybar & disown"
-}
-
-if [ "${#INSTALLED[@]}" -gt 0 ]; then
-    echo "Already installed: found existing ${INSTALLED[*]} in ~/.config"
-    echo "A plain copy would merge into these and can leave stale files behind"
-    echo "(e.g. old waybar modules this repo no longer ships)."
-    read -p "Do a clean install now — backup, remove the above, then copy fresh? [y/N] " ans2
-    if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
-        echo "Backing up existing configs first..."
-        "$REPO/scripts/00-backup.sh"
-        for t in "${INSTALLED[@]}"; do
-            rm -rf "$HOME/.config/$t"
-        done
-        install_fresh
+if hv_confirm "Looked right? Back up and replace the managed configs now?"; then
+    hv_deploy_configs
+    if [ -f "$HV_STATE_HOME/hardware-profile.conf" ]; then
+        "$REPO/scripts/06-select-profile.sh" --ensure
     else
-        echo "Skipped. Re-run this script when ready for a clean install."
+        "$REPO/scripts/06-select-profile.sh"
     fi
+    if [ -f "$HV_NOTIFICATION_STATE" ]; then
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+    else
+        "$REPO/scripts/07-select-notification-backend.sh"
+    fi
+    "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
+    echo "Installed to $HV_CONFIG_HOME. Reload with: hyprctl reload && pkill waybar; waybar & disown"
 else
-    read -p "Looked right? Install these configs into ~/.config for real now? [y/N] " ans2
-    if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
-        install_fresh
-    else
-        echo "Skipped. Install later by re-running this script, or manually:"
-        echo "  cp -r config/hypr config/waybar config/kitty config/rofi config/mako config/wlogout \\"
-        echo "        config/gtk-3.0 config/gtk-4.0 config/starship.toml ~/.config/"
-    fi
+    echo "Skipped. Re-run this script or install.sh when ready."
 fi

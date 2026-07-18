@@ -1,31 +1,16 @@
 #!/usr/bin/env bash
-# Drives the waybar "dock" bar's custom/dock-<N> module pool (see config.jsonc).
-# Each slot polls `render <N>` for its icon; pinned apps (persisted below) are
-# listed first, followed by one entry per running window not already pinned.
-# Right-clicking a slot toggles that app's pinned state.
-#
-# Usage: dock.sh render <slot> | dock.sh click <slot> <left|middle|right>
+# Render, focus, launch, close, and right-click-toggle Waybar dock slots.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 ICONS_FILE="$SCRIPT_DIR/dock-icons.json"
-
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil"
-PINS_FILE="$STATE_DIR/dock-pins.json"
-LOCK_FILE="$STATE_DIR/dock-pins.lock"
-
-mkdir -p "$STATE_DIR"
-[ -f "$PINS_FILE" ] || echo "[]" > "$PINS_FILE"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/dock-lib.sh"
 
 icon_for() {
     jq -r --arg id "$1" '(.[$id] // ._default)' "$ICONS_FILE"
 }
 
-# Apps with a real (colored) icon file wired up in style.css — see the
-# ".dock-btn.app-<slug>" rules there. Render sends a blank space instead of
-# the Nerd Font glyph for these so the background-image shows through
-# instead of a monochrome symbol; anything not listed here still falls back
-# to the glyph from dock-icons.json.
 has_image_icon() {
     case "$1" in
         spotify|code|brave-browser|discord|org.gnome.nautilus|kitty) return 0 ;;
@@ -33,117 +18,111 @@ has_image_icon() {
     esac
 }
 
-# Pinned apps (state order) first, then one entry per running window whose
-# class isn't already pinned (hyprctl's own order).
 build_list() {
-    local pins clients active_addr
-    pins=$(cat "$PINS_FILE")
-    clients=$(hyprctl clients -j)
-    active_addr=$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty')
-
-    jq -n --argjson pins "$pins" --argjson clients "$clients" --arg active "$active_addr" '
+    local pins clients active_addr curr_ws
+    pins=$(dock_read_state)
+    clients=$(hyprctl clients -j 2>/dev/null || printf '[]')
+    active_addr=$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty' || true)
+    # Which workspace is on screen right now, so the unpinned "running" icons
+    # only reflect apps on the current tab instead of every workspace at once.
+    curr_ws=$(hyprctl monitors -j 2>/dev/null | jq -r '(map(select(.focused)) | first.activeWorkspace.id) // empty' || true)
+    jq -n --argjson pins "$pins" --argjson clients "$clients" --arg active "$active_addr" \
+        --argjson curr_ws "${curr_ws:-null}" '
       ($pins | map(.app_id)) as $pinned_ids
-      | ($clients | map(select(.class != ""))) as $wins
+      | ($clients | map(select((.class // "") != ""))) as $wins
       | ($pins | map(
           . as $p
           | ($wins | map(select((.class|ascii_downcase) == $p.app_id)) | .[0]) as $w
-          | {
-              kind: "pinned",
-              app_id: $p.app_id,
-              exec: $p.exec,
-              title: ($w.title // $p.app_id),
-              address: ($w.address // null),
-              running: ($w != null),
-              active: (($w.address // "") == $active)
-            }
+          | {kind:"pinned", app_id:$p.app_id, desktop_id:$p.desktop_id,
+             title:($w.title // $p.app_id), address:($w.address // null),
+             running:($w != null), active:(($w.address // "") == $active)}
         )) as $pinned_items
       | ($wins
           | map(select((.class|ascii_downcase) as $c | ($pinned_ids | index($c)) | not))
-          | map({
-              kind: "running",
-              app_id: (.class|ascii_downcase),
-              exec: null,
-              title: .title,
-              address: .address,
-              running: true,
-              active: (.address == $active)
-            })
-        ) as $running_items
+          | (if $curr_ws != null then map(select(.workspace.id == $curr_ws)) else . end)
+          | unique_by(.class | ascii_downcase)
+          | map({kind:"running", app_id:(.class|ascii_downcase), desktop_id:"",
+                 title:.title, address:.address, running:true, active:(.address == $active)})) as $running_items
       | $pinned_items + $running_items
     '
 }
 
 cmd_render() {
-    local slot="$1" item app_id title kind running active glyph classes
+    local slot=$1 item app_id title kind running active glyph classes
     item=$(build_list | jq ".[$slot]")
-    if [ "$item" = "null" ]; then
-        echo '{"text":"","tooltip":""}'
+    if [ "$item" = null ]; then
+        jq -nc '{text:"",tooltip:""}'
         return
     fi
-
     app_id=$(jq -r '.app_id' <<<"$item")
     title=$(jq -r '.title' <<<"$item")
     kind=$(jq -r '.kind' <<<"$item")
     running=$(jq -r '.running' <<<"$item")
     active=$(jq -r '.active' <<<"$item")
     glyph=$(icon_for "$app_id")
-
     classes='["dock-btn"'
-    [ "$kind" = "pinned" ] && classes="$classes,\"pinned\""
-    [ "$running" = "true" ] && classes="$classes,\"running\""
-    [ "$active" = "true" ] && classes="$classes,\"active\""
+    [ "$kind" = pinned ] && classes+=',"pinned"'
+    [ "$running" = true ] && classes+=',"running"'
+    [ "$active" = true ] && classes+=',"active"'
     if has_image_icon "$app_id"; then
-        classes="$classes,\"app-$(printf '%s' "$app_id" | tr -c 'a-zA-Z0-9_-' '-')\""
+        classes+=',"app-'"$(printf '%s' "$app_id" | tr -c 'a-zA-Z0-9_-' '-')"'"'
         glyph=" "
     fi
-    classes="$classes]"
-
+    classes+=']'
     jq -nc --arg text "$glyph" --arg tooltip "$title" --argjson class "$classes" \
-        '{text: $text, tooltip: $tooltip, class: $class}'
+        '{text:$text, tooltip:$tooltip, class:$class}'
+}
+
+launch_desktop() {
+    local desktop_id=$1 record file
+    [ -n "$desktop_id" ] || { dock_message "This preserved pin has no matching desktop entry; remove it or add the application again."; return; }
+    record=$(dock_desktop_record "$desktop_id") || { dock_message "Desktop entry '$desktop_id' is no longer installed."; return; }
+    file=$(cut -f4 <<<"$record")
+    if command -v gtk-launch >/dev/null 2>&1; then
+        if [ "${HYPRVEIL_NO_DETACH:-0}" = 1 ]; then gtk-launch "$desktop_id"; else setsid -f gtk-launch "$desktop_id" >/dev/null 2>&1; fi
+    elif command -v gio >/dev/null 2>&1; then
+        if [ "${HYPRVEIL_NO_DETACH:-0}" = 1 ]; then gio launch "$file"; else setsid -f gio launch "$file" >/dev/null 2>&1; fi
+    else
+        dock_message "Cannot launch '$desktop_id': install GTK (gtk-launch) or GLib (gio)."
+    fi
 }
 
 cmd_click() {
-    local slot="$1" button="$2" item
+    local slot=$1 button=$2 item kind app_id desktop_id address running resolved
     item=$(build_list | jq ".[$slot]")
-    [ "$item" = "null" ] && return 0
-
-    local kind app_id address running exec_cmd
+    [ "$item" != null ] || return 0
     kind=$(jq -r '.kind' <<<"$item")
     app_id=$(jq -r '.app_id' <<<"$item")
+    desktop_id=$(jq -r '.desktop_id' <<<"$item")
     address=$(jq -r '.address // empty' <<<"$item")
     running=$(jq -r '.running' <<<"$item")
-    exec_cmd=$(jq -r '.exec // empty' <<<"$item")
-
     case "$button" in
         left)
-            if [ "$running" = "true" ] && [ -n "$address" ]; then
+            if [ "$running" = true ] && [ -n "$address" ]; then
                 hyprctl dispatch focuswindow "address:$address" >/dev/null
-            elif [ "$kind" = "pinned" ]; then
-                setsid -f bash -c "${exec_cmd:-$app_id}" >/dev/null 2>&1 &
+            elif [ "$kind" = pinned ]; then
+                launch_desktop "$desktop_id"
             fi
             ;;
-        middle)
-            [ -n "$address" ] && hyprctl dispatch closewindow "address:$address" >/dev/null
-            ;;
+        middle) [ -z "$address" ] || hyprctl dispatch closewindow "address:$address" >/dev/null ;;
         right)
-            (
-                flock -x 200
-                if [ "$kind" = "pinned" ]; then
-                    jq --arg id "$app_id" 'map(select(.app_id != $id))' "$PINS_FILE" > "$PINS_FILE.tmp"
+            if [ "$kind" = pinned ]; then
+                "$SCRIPT_DIR/dock-manager.sh" remove "${desktop_id:-$app_id}"
+            else
+                resolved=$(dock_resolve_class "$app_id" || true)
+                if [ -n "$resolved" ]; then
+                    "$SCRIPT_DIR/dock-manager.sh" add "$resolved"
                 else
-                    # Best-effort launch command: the window class itself. Fix
-                    # up "exec" by hand in the state file for apps where that
-                    # guess is wrong (e.g. Flatpaks, Electron apps).
-                    jq --arg id "$app_id" '. + [{app_id: $id, exec: $id}]' "$PINS_FILE" > "$PINS_FILE.tmp"
+                    dock_message "No installed desktop entry matches window class '$app_id'; use the dock manager to choose it."
                 fi
-                mv "$PINS_FILE.tmp" "$PINS_FILE"
-            ) 200>"$LOCK_FILE"
+            fi
             ;;
+        *) printf 'unknown dock button: %s\n' "$button" >&2; exit 2 ;;
     esac
 }
 
 case "${1:-}" in
     render) cmd_render "$2" ;;
     click) cmd_click "$2" "$3" ;;
-    *) echo "usage: $0 render <slot> | click <slot> <left|middle|right>" >&2; exit 1 ;;
+    *) printf 'usage: %s render <slot> | click <slot> <left|middle|right>\n' "$0" >&2; exit 2 ;;
 esac

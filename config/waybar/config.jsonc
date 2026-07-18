@@ -17,9 +17,14 @@
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["hyprland/window"],
     "modules-right": [
+      "custom/media-previous",
+      "custom/media-label",
+      "custom/media-toggle",
+      "custom/media-next",
+      "custom/bluetooth",
       "network",
       "pulseaudio",
-      "battery",
+      "custom/battery",
       "custom/notifications",
       "clock",
       "custom/power"
@@ -34,6 +39,46 @@
     "hyprland/window": {
       "max-length": 64,
       "separate-outputs": true
+    },
+
+    "custom/media-previous": {
+      "exec": "~/.config/waybar/scripts/media.sh render previous",
+      "on-click": "~/.config/waybar/scripts/media.sh previous",
+      "return-type": "json",
+      "interval": 2,
+      "hide-empty-text": true
+    },
+
+    "custom/media-label": {
+      "exec": "~/.config/waybar/scripts/media.sh render label",
+      "on-click": "~/.config/waybar/scripts/media.sh toggle",
+      "return-type": "json",
+      "interval": 2,
+      "hide-empty-text": true
+    },
+
+    "custom/media-toggle": {
+      "exec": "~/.config/waybar/scripts/media.sh render toggle",
+      "on-click": "~/.config/waybar/scripts/media.sh toggle",
+      "return-type": "json",
+      "interval": 2,
+      "hide-empty-text": true
+    },
+
+    "custom/media-next": {
+      "exec": "~/.config/waybar/scripts/media.sh render next",
+      "on-click": "~/.config/waybar/scripts/media.sh next",
+      "return-type": "json",
+      "interval": 2,
+      "hide-empty-text": true
+    },
+
+    "custom/bluetooth": {
+      "exec": "~/.config/waybar/scripts/bluetooth.sh render",
+      "on-click": "~/.config/waybar/scripts/bluetooth.sh open",
+      "return-type": "json",
+      "interval": 5,
+      "hide-empty-text": true
     },
 
     "network": {
@@ -53,18 +98,31 @@
       "on-click": "pavucontrol"
     },
 
-    "battery": {
-      "format": "{icon} {capacity}%",
-      "format-charging": "󰂄 {capacity}%",
-      "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
-      "states": { "warning": 20, "critical": 10 },
-      "interval": 30
+    "custom/battery": {
+      "exec": "~/.config/waybar/scripts/battery.sh",
+      "return-type": "json",
+      "interval": 30,
+      "hide-empty-text": true
     },
 
     "custom/notifications": {
-      "format": "󰂚",
-      "tooltip": false,
-      "on-click": "makoctl dismiss --all"
+      "format": "{icon}",
+      "format-icons": {
+        "notification": "󱅫",
+        "none": "󰂜",
+        "dnd-notification": "󰂠",
+        "dnd-none": "󰪓",
+        "inhibited-notification": "󰂛",
+        "inhibited-none": "󰪑",
+        "dnd-inhibited-notification": "󰂛",
+        "dnd-inhibited-none": "󰪑"
+      },
+      "return-type": "json",
+      "exec": "~/.config/waybar/scripts/notification.sh listen",
+      "on-click": "~/.config/waybar/scripts/notification.sh toggle",
+      "on-click-right": "~/.config/waybar/scripts/notification.sh dnd",
+      "escape": true,
+      "tooltip": true
     },
 
     "clock": {
@@ -90,10 +148,14 @@
     // scripts/dock.sh: pinned apps first, then running windows not already
     // pinned. Left-click activates (or launches a pinned-but-closed app),
     // middle-click closes, right-click toggles that app's pinned state —
-    // pins persist in ~/.local/state/hyprveil/dock-pins.json. Add more
-    // slots the same way if 10 isn't enough. Icon glyphs come from
+    // pins persist in ~/.local/state/hyprveil/dock-pins.json. The fixed
+    // ten-slot pool is also the manager's pin limit. Icon glyphs come from
     // scripts/dock-icons.json — add an app's class there for a real icon
     // instead of the generic fallback.
+    // The "active" highlight refreshes on SIGRTMIN+8, sent by
+    // scripts/dock-watch.sh (Hyprland focus/open/close events) and by
+    // dock-lib.sh (pin changes); "interval": 30 is only a fallback in case
+    // that watcher isn't running.
     "modules-center": [
       "custom/launcher",
       "custom/dock-0",
@@ -111,7 +173,8 @@
     "custom/launcher": {
       "format": "󰍜",
       "tooltip-format": "Launcher",
-      "on-click": "pkill rofi || rofi -show drun"
+      "on-click": "pkill rofi || rofi -show drun",
+      "on-click-right": "~/.config/waybar/scripts/dock-manager.sh manage"
     },
 
     "custom/dock-0": {
@@ -120,7 +183,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 0 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 0 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-1": {
@@ -129,7 +193,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 1 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 1 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-2": {
@@ -138,7 +203,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 2 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 2 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-3": {
@@ -147,7 +213,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 3 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 3 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-4": {
@@ -156,7 +223,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 4 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 4 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-5": {
@@ -165,7 +233,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 5 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 5 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-6": {
@@ -174,7 +243,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 6 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 6 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-7": {
@@ -183,7 +253,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 7 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 7 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-8": {
@@ -192,7 +263,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 8 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 8 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     },
     "custom/dock-9": {
@@ -201,7 +273,8 @@
       "on-click-middle": "~/.config/waybar/scripts/dock.sh click 9 middle",
       "on-click-right": "~/.config/waybar/scripts/dock.sh click 9 right",
       "return-type": "json",
-      "interval": 1,
+      "interval": 3,
+      "signal": 8,
       "hide-empty-text": true
     }
   }

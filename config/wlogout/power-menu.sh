@@ -32,9 +32,9 @@ monitor_size=$(
 )
 
 if [ -n "$monitor_size" ]; then
-  set -- $monitor_size
-  screen_width=$1
-  screen_height=$2
+  read -r screen_width screen_height <<EOF
+$monitor_size
+EOF
 fi
 
 strip_width=$((buttons * button_size + (buttons - 1) * column_gap))

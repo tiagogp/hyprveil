@@ -1,0 +1,388 @@
+#!/usr/bin/env bash
+# Shared Fedora detection, repository selection, state, and config deployment.
+# This file is sourced by the installer stages; it is not meant to be run directly.
+
+HV_REPO="${HV_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+HV_STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
+HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
+HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
+
+hv_ok()   { printf '  OK   %s\n' "$*"; }
+hv_warn() { printf '  WARN %s\n' "$*" >&2; }
+hv_bad()  { printf '  FAIL %s\n' "$*" >&2; }
+
+hv_confirm() {
+    local prompt=$1 answer
+    if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
+        printf '%s [automatic yes]\n' "$prompt"
+        return 0
+    fi
+    read -r -p "$prompt [y/N] " answer
+    [[ "$answer" = y || "$answer" = Y ]]
+}
+
+hv_load_fedora() {
+    local os_release=${HYPRVEIL_OS_RELEASE:-/etc/os-release}
+    if [ ! -r "$os_release" ]; then
+        hv_bad "cannot read $os_release"
+        return 1
+    fi
+
+    local ID='' VERSION_ID='' PRETTY_NAME=''
+    # os-release is a shell-compatible, distribution-owned data file.
+    # shellcheck disable=SC1090
+    . "$os_release"
+    HV_OS_ID=${ID:-unknown}
+    HV_FEDORA_VERSION=${VERSION_ID:-unknown}
+    HV_OS_NAME=${PRETTY_NAME:-$HV_OS_ID $HV_FEDORA_VERSION}
+    if [ "$HV_OS_ID" != fedora ]; then
+        hv_bad "Hyprveil's package installer supports Fedora; detected $HV_OS_NAME"
+        return 1
+    fi
+}
+
+hv_supported_releases() {
+    # shellcheck disable=SC1091
+    . "$HV_REPO/support/fedora-releases.conf"
+    printf '%s\n' "$HYPRVEIL_SUPPORTED_FEDORA"
+}
+
+hv_check_supported_release() {
+    local supported release
+    supported=$(hv_supported_releases)
+    for release in $supported; do
+        if [ "$HV_FEDORA_VERSION" = "$release" ]; then
+            hv_ok "Fedora $HV_FEDORA_VERSION is in the supported release pair ($supported)"
+            return 0
+        fi
+    done
+    hv_warn "Fedora $HV_FEDORA_VERSION is outside the supported release pair ($supported)"
+    hv_warn "repository probing will still run, but this combination is not release-tested"
+    return 1
+}
+
+hv_dnf() {
+    "${HYPRVEIL_DNF:-dnf}" "$@"
+}
+
+hv_is_official_repo() {
+    case "$1" in
+        fedora|fedora-debuginfo|fedora-source|updates|updates-debuginfo|updates-source|updates-testing|updates-testing-debuginfo|updates-testing-source)
+            return 0
+            ;;
+        *) return 1 ;;
+    esac
+}
+
+hv_enabled_repo_ids() {
+    hv_dnf -q repolist --enabled 2>/dev/null \
+        | awk '$1 == "repo" && $2 == "id" {next} $1 !~ /^(Updating|Repositories)/ {print $1}' \
+        | sed '/^$/d'
+}
+
+hv_show_enabled_repos() {
+    local repos
+    if ! command -v "${HYPRVEIL_DNF:-dnf}" >/dev/null 2>&1; then
+        hv_bad "dnf is unavailable; package sources cannot be probed"
+        return 1
+    fi
+    repos=$(hv_enabled_repo_ids || true)
+    if [ -n "$repos" ]; then
+        printf 'Enabled repositories:\n'
+        while IFS= read -r repo; do
+            printf '  %s\n' "$repo"
+        done <<<"$repos"
+    else
+        hv_warn "dnf returned no enabled repositories"
+    fi
+}
+
+hv_package_repos() {
+    local package=$1
+    hv_dnf -q repoquery --available --qf '%{repoid}\n' "$package" 2>/dev/null \
+        | sed '/^$/d' | sort -u
+}
+
+hv_official_package_source() {
+    local package=$1 repo
+    local -a args=(-q)
+    while IFS= read -r repo; do
+        hv_is_official_repo "$repo" && args+=("--repo=$repo")
+    done < <(hv_enabled_repo_ids)
+    [ "${#args[@]}" -gt 1 ] || return 1
+    args+=(repoquery --available --latest-limit=1 --qf '%{repoid}\n' "$package")
+    hv_dnf "${args[@]}" 2>/dev/null | sed '/^$/d' | sed -n '1p'
+}
+
+hv_package_source() {
+    local package=$1 repo first=
+    repo=$(hv_official_package_source "$package" || true)
+    if [ -n "$repo" ] && hv_is_official_repo "$repo"; then
+        printf '%s\n' "$repo"
+        return 0
+    fi
+    while IFS= read -r repo; do
+        [ -n "$repo" ] || continue
+        [ -n "$first" ] || first=$repo
+        if hv_is_official_repo "$repo"; then
+            printf '%s\n' "$repo"
+            return 0
+        fi
+    done < <(hv_package_repos "$package")
+    if [ -n "$first" ]; then
+        printf '%s\n' "$first"
+        return 0
+    fi
+    printf 'unavailable\n'
+    return 1
+}
+
+hv_record_source() {
+    local package=$1 source=$2 feature=$3 temp
+    mkdir -p "$HV_STATE_HOME"
+    touch "$HV_SOURCE_LOG"
+    temp=$(mktemp "$HV_STATE_HOME/.package-sources.XXXXXX")
+    awk -F '\t' -v p="$package" '$1 != p' "$HV_SOURCE_LOG" > "$temp"
+    printf '%s\t%s\t%s\n' "$package" "$source" "$feature" >> "$temp"
+    sort -o "$temp" "$temp"
+    mv -f "$temp" "$HV_SOURCE_LOG"
+}
+
+hv_source_recorded() {
+    local package=$1
+    [ -s "$HV_SOURCE_LOG" ] && awk -F '\t' -v p="$package" '$1 == p {found=1} END {exit !found}' "$HV_SOURCE_LOG"
+}
+
+hv_notification_backend() {
+    local backend=
+    if [ -r "$HV_NOTIFICATION_STATE" ]; then
+        IFS= read -r backend < "$HV_NOTIFICATION_STATE" || true
+    fi
+    case "$backend" in
+        swaync|mako) printf '%s\n' "$backend" ;;
+        *) return 1 ;;
+    esac
+}
+
+hv_copr_enabled() {
+    local project=$1 normalized
+    normalized=${project//\//:}
+    hv_enabled_repo_ids | grep -Fq ":$normalized"
+}
+
+hv_copr_repo_for_package() {
+    local package=$1 project=$2 normalized repo
+    normalized=${project//\//:}
+    while IFS= read -r repo; do
+        case "$repo" in
+            *":$normalized") printf '%s\n' "$repo"; return 0 ;;
+        esac
+    done < <(hv_package_repos "$package")
+    return 1
+}
+
+hv_root() {
+    if [ "${HYPRVEIL_NO_SUDO:-0}" = 1 ] || [ "${EUID:-$(id -u)}" -eq 0 ]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
+hv_enable_copr() {
+    local project=$1 reason=$2
+    if hv_copr_enabled "$project"; then
+        hv_ok "COPR $project is already enabled; no repository change needed"
+        return 0
+    fi
+
+    printf '\nCOPR fallback requested: %s\nReason: %s\n' "$project" "$reason"
+    printf 'Fedora official repositories were probed first and do not provide the affected package(s).\n'
+    if ! hv_confirm "Enable COPR $project?"; then
+        hv_warn "declined COPR $project; repository configuration was not changed"
+        return 1
+    fi
+    hv_root "${HYPRVEIL_DNF:-dnf}" copr enable -y "$project"
+}
+
+hv_official_repo_args() {
+    local repo found=0
+    while IFS= read -r repo; do
+        if hv_is_official_repo "$repo"; then
+            printf '%s\n' "--enable-repo=$repo"
+            found=1
+        fi
+    done < <(hv_enabled_repo_ids)
+    [ "$found" -eq 1 ]
+}
+
+hv_install_from_repos() {
+    local extra_repo=$1
+    shift
+    local -a args=(-y '--disable-repo=*')
+    local arg
+    while IFS= read -r arg; do
+        [ -n "$arg" ] && args+=("$arg")
+    done < <(hv_official_repo_args || true)
+    if [ -n "$extra_repo" ] && ! hv_is_official_repo "$extra_repo"; then
+        args+=("--enable-repo=$extra_repo")
+    fi
+    args+=(install "$@")
+    hv_root "${HYPRVEIL_DNF:-dnf}" "${args[@]}"
+}
+
+# Install a group using official repositories first. A named COPR is considered
+# only for packages missing from official Fedora repositories.
+# Usage: hv_install_group required|optional "feature" "copr/project or -" packages...
+hv_install_group() {
+    local importance=$1 feature=$2 copr=$3
+    shift 3
+    local package source
+    local -a official=() fallback=() still_missing=()
+
+    printf '\n== Package source probe: %s ==\n' "$feature"
+    for package in "$@"; do
+        source=$(hv_package_source "$package" || true)
+        if hv_is_official_repo "$source"; then
+            printf '  %-32s official (%s)\n' "$package" "$source"
+            official+=("$package")
+        else
+            printf '  %-32s not in official enabled repositories\n' "$package"
+            fallback+=("$package")
+        fi
+    done
+
+    if [ "${#official[@]}" -gt 0 ] && hv_confirm "Install official Fedora packages for $feature?"; then
+        hv_install_from_repos "" "${official[@]}"
+        for package in "${official[@]}"; do
+            source=$(hv_package_source "$package" || true)
+            hv_record_source "$package" "$source" "$feature"
+        done
+    fi
+
+    [ "${#fallback[@]}" -gt 0 ] || return 0
+    if [ "$copr" = - ]; then
+        for package in "${fallback[@]}"; do
+            hv_record_source "$package" unavailable "$feature"
+            if [ "$importance" = optional ]; then
+                hv_warn "$package unavailable: only optional feature '$feature' will remain disabled"
+            else
+                hv_bad "$package unavailable: required feature '$feature' cannot start"
+            fi
+        done
+        [ "$importance" = optional ]
+        return
+    fi
+
+    if ! hv_enable_copr "$copr" "$feature requires packages unavailable from enabled official Fedora repositories"; then
+        for package in "${fallback[@]}"; do
+            hv_record_source "$package" unavailable "$feature"
+        done
+        [ "$importance" = optional ] && return 0
+        hv_bad "required feature '$feature' cannot be installed without its missing packages"
+        return 1
+    fi
+
+    for package in "${fallback[@]}"; do
+        source=$(hv_copr_repo_for_package "$package" "$copr" || true)
+        if [ -z "$source" ]; then
+            still_missing+=("$package")
+            hv_record_source "$package" unavailable "$feature"
+        else
+            if hv_confirm "Install $package from $source?"; then
+                hv_install_from_repos "$source" "$package"
+                hv_record_source "$package" "$source" "$feature"
+            else
+                hv_record_source "$package" declined "$feature"
+            fi
+        fi
+    done
+    if [ "${#still_missing[@]}" -gt 0 ]; then
+        hv_warn "unavailable after enabling $copr: ${still_missing[*]}"
+        [ "$importance" = optional ]
+    fi
+}
+
+hv_new_backup_dir() {
+    local stamp dir suffix=0
+    stamp=$(date +%Y%m%d-%H%M%S)
+    dir="$HV_STATE_HOME/backups/$stamp"
+    while [ -e "$dir" ]; do
+        suffix=$((suffix + 1))
+        dir="$HV_STATE_HOME/backups/$stamp-$suffix"
+    done
+    mkdir -p "$dir"
+    printf '%s\n' "$dir"
+}
+
+hv_backup_item() {
+    local source=$1 backup=$2 label=${3:-$(basename "$1")}
+    [ -e "$source" ] || return 0
+    mkdir -p "$backup"
+    cp -a "$source" "$backup/$label"
+}
+
+# Replace only Hyprveil-managed trees. Existing targets are backed up first,
+# replacement removes stale managed files, and persistent state remains outside
+# the config tree. User wallpaper files are explicitly carried forward, while the
+# repository's design wallpaper is installed as an always-available fallback.
+hv_deploy_configs() {
+    local backup staged target name starship_tmp backend inactive_backend
+    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0)
+    backend=$(hv_notification_backend || printf 'swaync\n')
+    names+=("$backend")
+    if [ "$backend" = swaync ]; then
+        inactive_backend=mako
+    else
+        inactive_backend=swaync
+    fi
+    mkdir -p "$HV_CONFIG_HOME"
+    backup=$(hv_new_backup_dir)
+
+    for name in "${names[@]}"; do
+        target="$HV_CONFIG_HOME/$name"
+        staged=$(mktemp -d "$HV_CONFIG_HOME/.hyprveil-$name.XXXXXX")
+        cp -a "$HV_REPO/config/$name/." "$staged/"
+        if [ "$name" = hypr ]; then
+            if [ -f "$target/wallpaper.jpg" ]; then
+                cp -a "$target/wallpaper.jpg" "$staged/wallpaper.jpg"
+            fi
+            cp -a "$HV_REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+                "$staged/wallpaper-default.jpg"
+        fi
+        if [ -e "$target" ]; then
+            mkdir -p "$backup/config"
+            cp -a "$target" "$backup/config/$name"
+            rm -rf "$target"
+        fi
+        mv "$staged" "$target"
+    done
+
+    # Hyprveil used to deploy Mako unconditionally. Remove the inactive managed
+    # tree during upgrades so a stale daemon configuration cannot be mistaken for
+    # the selected backend; preserve it in the same timestamped backup first.
+    target="$HV_CONFIG_HOME/$inactive_backend"
+    if [ -e "$target" ]; then
+        mkdir -p "$backup/config"
+        cp -a "$target" "$backup/config/$inactive_backend"
+        rm -rf "$target"
+    fi
+
+    target="$HV_CONFIG_HOME/starship.toml"
+    starship_tmp=$(mktemp "$HV_CONFIG_HOME/.hyprveil-starship.XXXXXX")
+    cp -a "$HV_REPO/config/starship.toml" "$starship_tmp"
+    if [ -e "$target" ]; then
+        mkdir -p "$backup/config"
+        cp -a "$target" "$backup/config/starship.toml"
+    fi
+    mv -f "$starship_tmp" "$target"
+    chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
+
+    if [ -d "$backup/config" ]; then
+        printf 'Existing configuration backed up to %s\n' "$backup"
+    else
+        rmdir "$backup" 2>/dev/null || true
+    fi
+    printf 'Hyprveil-managed configuration installed without merging stale files.\n'
+}

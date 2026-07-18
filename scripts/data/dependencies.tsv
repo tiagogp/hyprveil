@@ -1,0 +1,27 @@
+# importance|package|command|feature
+required|hyprland|Hyprland|Hyprland session
+required|kitty|kitty|terminal
+required|polkit-gnome|polkit-gnome-authentication-agent-1|authentication agent
+required|xdg-desktop-portal-hyprland|xdg-desktop-portal-hyprland|desktop portal
+required|waybar|waybar|desktop bars
+required|rofi-wayland|rofi|application launcher
+backend|SwayNotificationCenter|swaync|SwayNC notification center
+backend|mako|mako|Mako notification fallback
+required|hyprlock|hyprlock|screen lock
+required|hypridle|hypridle|idle management
+required|hyprpaper|hyprpaper|wallpaper
+required|wlogout|wlogout|power menu
+required|jq|jq|JSON state helpers
+required|util-linux|flock|atomic dock and wallpaper state
+required|glib2|gio|desktop-entry dock launching
+required|socat|socat|instant dock focus updates
+optional|bluez|bluetoothctl|Bluetooth status
+optional|blueman|blueman-manager|Bluetooth management
+optional|brightnessctl|brightnessctl|laptop brightness keys
+optional|playerctl|playerctl|media keys and Waybar media controls
+optional|rofimoji|rofimoji|emoji picker
+optional|tesseract|tesseract|screen OCR
+optional|btop|btop|task manager
+optional|code|code|editor shortcut
+optional|firefox|firefox|browser shortcut
+optional|nautilus|nautilus|file manager shortcut

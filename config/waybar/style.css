@@ -61,17 +61,76 @@ window#waybar {
 /* right: status cluster */
 #network,
 #pulseaudio,
-#battery,
+#custom-bluetooth,
+#custom-battery,
 #custom-notifications {
   color: #9a9ca5;
   padding: 0 8px;
 }
 
-#battery.warning {
+/* MPRIS is four adjacent custom modules so every visible control is clickable. */
+#custom-media-previous,
+#custom-media-label,
+#custom-media-toggle,
+#custom-media-next {
+  color: #9a9ca5;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0 5px;
+}
+
+#custom-media-previous {
+  padding-left: 8px;
+  border-radius: 8px 0 0 8px;
+}
+
+#custom-media-label {
+  color: #f5f5f7;
+  font-size: 12px;
+  padding-left: 3px;
+  padding-right: 3px;
+}
+
+#custom-media-next {
+  padding-right: 8px;
+  margin-right: 4px;
+  border-radius: 0 8px 8px 0;
+}
+
+#custom-media-previous:hover,
+#custom-media-toggle:hover,
+#custom-media-next:hover {
+  color: #e14658;
+}
+
+#custom-bluetooth.connected {
+  color: #e14658;
+}
+
+#custom-bluetooth.disabled {
+  color: #6b6e78;
+}
+
+#custom-notifications.notification {
+  color: #e14658;
+}
+
+#custom-notifications.dnd-notification,
+#custom-notifications.dnd-none {
+  color: #6b6e78;
+}
+
+#custom-notifications.inhibited-notification,
+#custom-notifications.inhibited-none,
+#custom-notifications.dnd-inhibited-notification,
+#custom-notifications.dnd-inhibited-none {
   color: #e1a346;
 }
 
-#battery.critical {
+#custom-battery.warning {
+  color: #e1a346;
+}
+
+#custom-battery.critical {
   color: #e5484d;
 }
 
