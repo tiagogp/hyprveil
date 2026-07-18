@@ -82,3 +82,15 @@ button:hover {
 #reboot:focus, #reboot:active, #reboot:hover {
   background-image: image(url("assets/reboot-accent.svg"));
 }
+
+/* wlogout 1.2.2 ignores the layout file's height/width fields (verified by
+   testing 0.05 vs 0.50 — identical output) and always packs the label
+   flush against the button's right edge instead of centering it. These
+   per-button margins compensate so each label centers under its icon;
+   values are (56px button - label's own rendered width) / 2, measured
+   directly off a live render, so they have to be re-measured by eye if the
+   font or label text ever changes. */
+#lock label { margin-right: 15px; }
+#logout label { margin-right: 9px; }
+#suspend label { margin-right: 4px; }
+#reboot label { margin-right: 8px; }

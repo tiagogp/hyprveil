@@ -18,9 +18,9 @@
     "modules-center": ["hyprland/window"],
     "modules-right": [
       "custom/media-previous",
-      "custom/media-label",
       "custom/media-toggle",
       "custom/media-next",
+      "custom/media-label",
       "custom/bluetooth",
       "network",
       "pulseaudio",
@@ -49,14 +49,6 @@
       "hide-empty-text": true
     },
 
-    "custom/media-label": {
-      "exec": "~/.config/waybar/scripts/media.sh render label",
-      "on-click": "~/.config/waybar/scripts/media.sh toggle",
-      "return-type": "json",
-      "interval": 2,
-      "hide-empty-text": true
-    },
-
     "custom/media-toggle": {
       "exec": "~/.config/waybar/scripts/media.sh render toggle",
       "on-click": "~/.config/waybar/scripts/media.sh toggle",
@@ -68,6 +60,13 @@
     "custom/media-next": {
       "exec": "~/.config/waybar/scripts/media.sh render next",
       "on-click": "~/.config/waybar/scripts/media.sh next",
+      "return-type": "json",
+      "interval": 2,
+      "hide-empty-text": true
+    },
+
+    "custom/media-label": {
+      "exec": "~/.config/waybar/scripts/media.sh render label",
       "return-type": "json",
       "interval": 2,
       "hide-empty-text": true

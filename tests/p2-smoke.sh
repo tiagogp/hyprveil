@@ -33,6 +33,25 @@ grep -q 'clear-all-button.*true' < <(tr -d '\n' < "$REPO/config/swaync/config.js
 grep -q '"dnd"' "$REPO/config/swaync/config.json" || fail "SwayNC DND widget missing"
 ok "SwayNC JSON, urgency treatments, clear-all, and DND are configured"
 
+python3 - "$REPO" <<'PY' || fail "SwayNC control-center widgets are missing or malformed"
+import json, sys
+repo = sys.argv[1]
+cfg = json.load(open(f"{repo}/config/swaync/config.json"))
+for widget in ("mpris", "buttons-grid", "volume"):
+    assert widget in cfg["widgets"], f"{widget} not enabled"
+    assert widget in cfg["widget-config"], f"{widget} has no widget-config entry"
+actions = cfg["widget-config"]["buttons-grid"]["actions"]
+assert len(actions) >= 1, "buttons-grid has no actions"
+for action in actions:
+    assert action["label"], "buttons-grid action missing a label"
+    assert action["command"], "buttons-grid action missing a command"
+PY
+for widget_class in widget-mpris widget-buttons-grid widget-volume widget-slider; do
+    grep -q "\.$widget_class" "$REPO/config/swaync/style.css" \
+        || fail "missing style for .$widget_class"
+done
+ok "SwayNC control-center widgets (mpris, buttons-grid, volume) and their styles are present"
+
 for state in notification none dnd-notification dnd-none inhibited-notification \
              inhibited-none dnd-inhibited-notification dnd-inhibited-none; do
     grep -q "\"$state\"" "$REPO/config/waybar/config.jsonc" \

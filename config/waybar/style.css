@@ -68,31 +68,30 @@ window#waybar {
   padding: 0 8px;
 }
 
-/* MPRIS is four adjacent custom modules so every visible control is clickable. */
+/* MPRIS is four adjacent custom modules so every visible control is clickable.
+   Order (left to right): previous, toggle, next, label — the three transport
+   buttons form one rounded cluster, and the label is its own trailing cap, so
+   the pill doesn't end up with icons on one side and none on the other. */
 #custom-media-previous,
 #custom-media-label,
 #custom-media-toggle,
 #custom-media-next {
   color: #9a9ca5;
   background: rgba(255, 255, 255, 0.04);
-  padding: 0 5px;
+  padding: 0 7px;
 }
 
 #custom-media-previous {
-  padding-left: 8px;
+  padding-left: 10px;
   border-radius: 8px 0 0 8px;
 }
 
 #custom-media-label {
   color: #f5f5f7;
   font-size: 12px;
-  padding-left: 3px;
-  padding-right: 3px;
-}
-
-#custom-media-next {
-  padding-right: 8px;
-  margin-right: 4px;
+  padding-left: 6px;
+  padding-right: 10px;
+  margin-right: 6px;
   border-radius: 0 8px 8px 0;
 }
 

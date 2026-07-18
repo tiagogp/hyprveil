@@ -6,10 +6,13 @@ in the tooltip with battery percentages when BlueZ exposes them. Left-click open
 Blueman. If Blueman is absent, a desktop notification explains which package to
 install without stopping Waybar.
 
-The MPRIS area has previous, play/pause, and next buttons around an `artist — title`
-label. It controls the first playing Playerctl player, or the first paused player
-when none is playing. Stale players are skipped and the entire area hides when no
-usable player exists. Labels are markup-escaped and shortened to 48 characters.
+The MPRIS area is a previous/play-pause/next control cluster followed by an
+`artist — title` label, so the pill always reads as one balanced group instead of
+icons split across both ends of the label. It controls the first playing Playerctl
+player, or the first paused player when none is playing. Stale players are skipped
+and the entire area hides when no usable player exists. Labels are markup-escaped
+and shortened to 48 characters. Only the play/pause icon toggles playback; the
+label itself has no click action.
 
 ## Managing dock pins
 

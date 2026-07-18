@@ -5,14 +5,13 @@
   "layer": "overlay",
   "control-center-layer": "top",
   "control-center-width": 390,
-  "control-center-margin-top": 64,
-  "control-center-margin-bottom": 12,
-  "control-center-margin-right": 12,
-  "control-center-margin-left": 12,
+  "control-center-margin-top": 10,
+  "control-center-margin-bottom": 10,
+  "control-center-margin-right": 10,
+  "control-center-margin-left": 10,
   "notification-window-width": 360,
-  "notification-icon-size": 40,
   "notification-body-image-height": 120,
-  "notification-body-image-width": 180,
+  "notification-body-image-width": 200,
   "timeout": 6,
   "timeout-low": 4,
   "timeout-critical": 0,
@@ -23,11 +22,7 @@
   "notification-grouping": true,
   "hide-on-clear": false,
   "hide-on-action": true,
-  "widgets": [
-    "title",
-    "dnd",
-    "notifications"
-  ],
+  "widgets": ["title", "dnd", "mpris", "buttons-grid", "volume", "notifications"],
   "widget-config": {
     "title": {
       "text": "Notifications",
@@ -36,6 +31,38 @@
     },
     "dnd": {
       "text": "Do not disturb"
+    },
+    "mpris": {
+      "show-album-art": "when-available",
+      "autohide": true
+    },
+    "buttons-grid": {
+      "buttons-per-row": 4,
+      "actions": [
+        {
+          "label": "󰌾",
+          "type": "normal",
+          "command": "loginctl lock-session"
+        },
+        {
+          "label": "",
+          "type": "normal",
+          "command": "~/.config/hypr/scripts/wallpaper.sh pick"
+        },
+        {
+          "label": "󰕾",
+          "type": "normal",
+          "command": "pavucontrol"
+        },
+        {
+          "label": "󰐥",
+          "type": "normal",
+          "command": "~/.config/wlogout/power-menu.sh"
+        }
+      ]
+    },
+    "volume": {
+      "label": "Volume"
     }
   }
 }
