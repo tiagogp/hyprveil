@@ -1,18 +1,25 @@
 # Notifications — glass cards, top-right, per the design mockup.
 # Palette mirror of hypr/colors.conf — keep in sync manually.
+# Not reproducible in mako: the mockup's per-card relative timestamp
+# ("now" / "2m ago") and the tinted circle behind the icon — mako has no
+# timestamp format token and draws app icons as-is, with no icon backdrop.
 
 font=Geist 10.5
 width=340
 height=140
-margin=24
+# outer-margin (edge of screen) + margin (between/around each card) add
+# together: 19+5=24px from the screen edge, 5+5=10px between stacked cards.
+outer-margin=19
+margin=5
 padding=16
 anchor=top-right
 
-background-color=#16181DE0
+background-color=#16181D99
 text-color=#F5F5F7
 border-color=#FFFFFF1A
 border-size=1
 border-radius=14
+icon-border-radius=9
 
 icons=1
 max-icon-size=36
@@ -28,6 +35,13 @@ format=<b>%s</b>\n<span color="#9A9CA5">%b</span>
 border-color=#E14658
 default-timeout=0
 
+# faded, lower-elevation treatment — mirrors the mockup's older/read card
 [urgency=low]
-background-color=#16181DB3
+background-color=#16181D73
+border-color=#FFFFFF0F
+text-color=#9A9CA5
+
+[expiring=true]
+background-color=#16181D73
+border-color=#FFFFFF0F
 text-color=#9A9CA5

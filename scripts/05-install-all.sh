@@ -45,6 +45,7 @@ if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
     cp -r "$CONF"/hypr "$CONF"/waybar "$CONF"/kitty "$CONF"/rofi "$CONF"/mako \
           "$CONF"/wlogout "$CONF"/gtk-3.0 "$CONF"/gtk-4.0 "$HOME/.config/"
     chmod +x "$HOME/.config/hypr/scripts/"*.sh 2>/dev/null || true
+    chmod +x "$HOME/.config/waybar/scripts/"*.sh 2>/dev/null || true
     cp "$CONF/starship.toml" "$HOME/.config/starship.toml"
     echo "Configs copied."
 else

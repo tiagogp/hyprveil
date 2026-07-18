@@ -7,6 +7,7 @@
     muted:       #9A9CA5;
     dim:         #6B6E78;
     hairline:    rgba(255, 255, 255, 10%);
+    hairline-2:  rgba(255, 255, 255, 6%);
     accent:      #E14658;
     accent-dim:  rgba(225, 70, 88, 14%);
 
@@ -32,18 +33,19 @@ inputbar {
     padding: 16px 18px;
     spacing: 10px;
     border: 0 0 1px 0;
-    border-color: @hairline;
+    border-color: @hairline-2;
 }
 
 textbox-prompt-icon {
     expand: false;
     str: "󰍉";
     text-color: @muted;
-    font: "Symbols Nerd Font 13";
+    font: "Symbols Nerd Font 15";
     vertical-align: 0.5;
 }
 
 entry {
+    font: "Geist 15";
     placeholder: "Search";
     placeholder-color: @dim;
     text-color: @text;

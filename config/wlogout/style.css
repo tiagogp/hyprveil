@@ -1,45 +1,84 @@
-/* Power menu from the design mockup: dimmed backdrop, row of round glass
-   buttons, Shutdown in accent. Icons ship with the wlogout package.
-   Palette mirror of hypr/colors.conf — keep in sync manually. */
+/* Power menu from the design mockup: dimmed backdrop, compact circular glass
+   icon buttons with a label below each, Shutdown in accent. Palette mirrors
+   hypr/colors.conf; keep in sync manually.
+
+   Each button's ring + icon glyph are baked into ONE svg per button per state
+   (assets/<name>-default.svg / -accent.svg), built from the design mockup's
+   own icon paths, colored explicitly (#F5F5F7 default / #E14658 accent).
+   Two reasons this isn't done as CSS border + system icon PNGs:
+   - wlogout draws the label *inside* the same box as the icon, and that box
+     is stretched by the grid to fill its cell, so a CSS `border-radius: 50%`
+     ring turns into an ellipse the moment the cell is taller than it is wide
+     (which it has to be, to leave room for the label under the icon). Baking
+     the ring into a fixed 56x56 svg sidesteps the box's real dimensions.
+   - the system's bundled wlogout icon PNGs come out a fixed theme purple no
+     matter what `color` is set to, and don't match the design's icon shapes
+     anyway (its "suspend" is a tray/box, not a pause glyph) — so they're
+     replaced outright instead of tinted.
+
+   wlogout lays buttons out in a grid; config/wlogout/power-menu.sh computes
+   monitor-specific margins so the grid cells land at the mockup's 56px ring
+   size with 28px gaps. Keep visual styling here and geometry in the launcher. */
 
 * {
-    background-image: none;
-    font-family: "Geist", sans-serif;
-    font-size: 12.5px;
+  background-image: none;
+  font-family: "Geist", sans-serif;
+  font-size: 12.5px;
+  font-weight: 400;
 }
 
 window {
-    background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.50);
 }
 
 button {
-    background-color: rgba(22, 24, 29, 0.62);
-    color: #9A9CA5;
-    border: 1.5px solid #2A2D35;
-    border-radius: 22px;
-    margin: 220px 10px;
-    padding: 24px 12px 12px 12px;
-    background-repeat: no-repeat;
-    background-position: center 38%;
-    background-size: 22%;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  background-color: transparent;
+  color: #9a9ca5;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 56px 56px;
+  box-shadow: none;
+  outline-style: none;
 }
 
+#shutdown,
 button:focus,
 button:active,
 button:hover {
-    background-color: rgba(225, 70, 88, 0.12);
-    border-color: #E14658;
-    color: #E14658;
+  color: #e14658;
 }
 
+#lock {
+  background-image: image(url("assets/lock-default.svg"));
+}
+#logout {
+  background-image: image(url("assets/logout-default.svg"));
+}
+#suspend {
+  background-image: image(url("assets/suspend-default.svg"));
+}
+#reboot {
+  background-image: image(url("assets/reboot-default.svg"));
+}
 #shutdown {
-    background-color: rgba(225, 70, 88, 0.12);
-    border-color: #E14658;
-    color: #E14658;
+  background-image: image(url("assets/shutdown-accent.svg"));
 }
 
-#lock     { background-image: image(url("/usr/share/wlogout/icons/lock.png")); }
-#logout   { background-image: image(url("/usr/share/wlogout/icons/logout.png")); }
-#suspend  { background-image: image(url("/usr/share/wlogout/icons/suspend.png")); }
-#reboot   { background-image: image(url("/usr/share/wlogout/icons/reboot.png")); }
-#shutdown { background-image: image(url("/usr/share/wlogout/icons/shutdown.png")); }
+#lock:focus, #lock:active, #lock:hover {
+  background-image: image(url("assets/lock-accent.svg"));
+}
+#logout:focus, #logout:active, #logout:hover {
+  background-image: image(url("assets/logout-accent.svg"));
+}
+#suspend:focus, #suspend:active, #suspend:hover {
+  background-image: image(url("assets/suspend-accent.svg"));
+}
+#reboot:focus, #reboot:active, #reboot:hover {
+  background-image: image(url("assets/reboot-accent.svg"));
+}

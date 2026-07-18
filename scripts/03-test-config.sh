@@ -28,7 +28,8 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/keybindings.conf hypr/autostart.conf hypr/hyprlock.conf \
          hypr/hypridle.conf hypr/hyprpaper.conf hypr/scripts/zoom.sh \
          hypr/scripts/apply-theme.sh \
-         waybar/config.jsonc waybar/style.css kitty/kitty.conf \
+         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-icons.json \
+         kitty/kitty.conf \
          rofi/config.rasi rofi/hyprveil.rasi mako/config \
          wlogout/layout wlogout/style.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-4.0/settings.ini gtk-4.0/gtk.css \
@@ -54,7 +55,7 @@ else
 fi
 
 # --- commands the configs call ---
-NEEDED="hyprctl kitty waybar rofi mako makoctl hyprlock hypridle hyprpaper wlogout grim slurp wl-copy cliphist playerctl hyprpicker jq"
+NEEDED="hyprctl kitty waybar rofi mako makoctl hyprlock hypridle hyprpaper wlogout grim slurp wl-copy cliphist playerctl hyprpicker jq flock"
 OPTIONAL="rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
 for c in $NEEDED; do
     command -v "$c" >/dev/null && ok "command: $c" || bad "command missing: $c (scripts/01 + 02 install these)"
@@ -88,6 +89,7 @@ stage_configs() {
     sed -i "s|~/.config/hypr/wallpaper.jpg|$STAGE/hypr/wallpaper.jpg|g" "$STAGE/hypr/hyprpaper.conf"
     [ -f "$HOME/.config/hypr/wallpaper.jpg" ] && cp "$HOME/.config/hypr/wallpaper.jpg" "$STAGE/hypr/wallpaper.jpg"
     chmod +x "$STAGE/hypr/scripts/"*.sh 2>/dev/null
+    chmod +x "$STAGE/waybar/scripts/"*.sh 2>/dev/null
 }
 
 if command -v Hyprland >/dev/null; then
@@ -146,6 +148,8 @@ done
 install_fresh() {
     cp -r "$CONF/hypr" "$CONF/waybar" "$CONF/kitty" "$CONF/rofi" "$CONF/mako" "$CONF/wlogout" \
           "$CONF/gtk-3.0" "$CONF/gtk-4.0" "$CONF/starship.toml" "$HOME/.config/"
+    chmod +x "$HOME/.config/hypr/scripts/"*.sh 2>/dev/null
+    chmod +x "$HOME/.config/waybar/scripts/"*.sh 2>/dev/null
     echo "Installed to ~/.config. Reload with: hyprctl reload && pkill waybar; waybar & disown"
 }
 

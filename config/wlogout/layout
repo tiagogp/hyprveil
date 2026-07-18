@@ -1,5 +1,5 @@
-{"label":"lock","action":"loginctl lock-session","text":"Lock","keybind":"l"}
-{"label":"logout","action":"hyprctl dispatch exit","text":"Logout","keybind":"e"}
-{"label":"suspend","action":"systemctl suspend","text":"Suspend","keybind":"u"}
-{"label":"reboot","action":"systemctl reboot","text":"Restart","keybind":"r"}
-{"label":"shutdown","action":"systemctl poweroff","text":"Shutdown","keybind":"s"}
+{"label":"lock","action":"loginctl lock-session","text":"Lock","keybind":"l","height":0.74,"width":0.50,"circular":true}
+{"label":"logout","action":"hyprctl dispatch exit","text":"Logout","keybind":"e","height":0.74,"width":0.50,"circular":true}
+{"label":"suspend","action":"systemctl suspend","text":"Suspend","keybind":"u","height":0.74,"width":0.50,"circular":true}
+{"label":"reboot","action":"systemctl reboot","text":"Restart","keybind":"r","height":0.74,"width":0.50,"circular":true}
+{"label":"shutdown","action":"systemctl poweroff","text":"Shutdown","keybind":"s","height":0.74,"width":0.50,"circular":true}

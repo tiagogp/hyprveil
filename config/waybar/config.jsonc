@@ -1,9 +1,10 @@
 // Two bars from one waybar process:
 //  1. "top"  — the design mockup's glass top bar (workspaces / title / status)
-//  2. "dock" — bottom centered pill, ported from end-4's dock: pinned apps +
-//     running apps (wlr/taskbar), styled like the mockup's bottom pill.
+//  2. "dock" — bottom centered pill, styled like the mockup's bottom pill.
+//     Pinned + running apps are driven by scripts/dock.sh (see its header
+//     comment and the "custom/dock-0" entry below for how pinning works).
 [
-{
+  {
     "name": "top",
     "layer": "top",
     "position": "top",
@@ -15,82 +16,193 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["hyprland/window"],
-    "modules-right": ["network", "pulseaudio", "battery", "custom/notifications", "clock"],
+    "modules-right": [
+      "network",
+      "pulseaudio",
+      "battery",
+      "custom/notifications",
+      "clock",
+      "custom/power"
+    ],
 
     "hyprland/workspaces": {
-        "format": "{id}",
-        "on-click": "activate",
-        "persistent-workspaces": { "*": 5 }
+      "format": "{id}",
+      "on-click": "activate",
+      "persistent-workspaces": { "*": 5 }
     },
 
     "hyprland/window": {
-        "max-length": 64,
-        "separate-outputs": true
+      "max-length": 64,
+      "separate-outputs": true
     },
 
     "network": {
-        "format-wifi": "󰖩",
-        "format-ethernet": "󰈀",
-        "format-disconnected": "󰖪",
-        "tooltip-format": "{ifname}: {ipaddr}",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-        "on-click": "nm-connection-editor"
+      "format-wifi": "󰖩",
+      "format-ethernet": "󰈀",
+      "format-disconnected": "󰖪",
+      "tooltip-format": "{ifname}: {ipaddr}",
+      "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+      "on-click": "nm-connection-editor"
     },
 
     "pulseaudio": {
-        "format": "{icon}",
-        "format-muted": "󰝟",
-        "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
-        "tooltip-format": "{desc}: {volume}%",
-        "on-click": "pavucontrol"
+      "format": "{icon}",
+      "format-muted": "󰝟",
+      "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
+      "tooltip-format": "{desc}: {volume}%",
+      "on-click": "pavucontrol"
     },
 
     "battery": {
-        "format": "{icon} {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
-        "states": { "warning": 20, "critical": 10 },
-        "interval": 30
+      "format": "{icon} {capacity}%",
+      "format-charging": "󰂄 {capacity}%",
+      "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
+      "states": { "warning": 20, "critical": 10 },
+      "interval": 30
     },
 
     "custom/notifications": {
-        "format": "󰂚",
-        "tooltip": false,
-        "on-click": "makoctl dismiss --all"
+      "format": "󰂚",
+      "tooltip": false,
+      "on-click": "makoctl dismiss --all"
     },
 
     "clock": {
-        "format": "{:%I:%M %p}",
-        "tooltip-format": "{:%A, %B %e — %Y}"
+      "format": "{:%I:%M %p}",
+      "tooltip-format": "{:%A, %B %e — %Y}"
+    },
+
+    "custom/power": {
+      "format": "󰐥",
+      "tooltip-format": "Power menu",
+      "on-click": "~/.config/wlogout/power-menu.sh"
     }
-},
-{
+  },
+  {
     "name": "dock",
     "layer": "top",
     "position": "bottom",
-    "height": 48,
+    "height": 44,
     "margin-bottom": 6,
     "spacing": 0,
 
-    // Pin an app by adding a "custom/<name>" entry here (format = Nerd Font glyph,
-    // on-click = launch command) and appending "custom/<name>" to modules-center
-    // below, before "wlr/taskbar". Give it a #custom-<name> rule in style.css —
-    // copy the #custom-launcher block as a template.
-    "modules-center": ["custom/launcher", "wlr/taskbar"],
+    // "custom/dock-0".."custom/dock-9" are a fixed pool of slots driven by
+    // scripts/dock.sh: pinned apps first, then running windows not already
+    // pinned. Left-click activates (or launches a pinned-but-closed app),
+    // middle-click closes, right-click toggles that app's pinned state —
+    // pins persist in ~/.local/state/hyprveil/dock-pins.json. Add more
+    // slots the same way if 10 isn't enough. Icon glyphs come from
+    // scripts/dock-icons.json — add an app's class there for a real icon
+    // instead of the generic fallback.
+    "modules-center": [
+      "custom/launcher",
+      "custom/dock-0",
+      "custom/dock-1",
+      "custom/dock-2",
+      "custom/dock-3",
+      "custom/dock-4",
+      "custom/dock-5",
+      "custom/dock-6",
+      "custom/dock-7",
+      "custom/dock-8",
+      "custom/dock-9"
+    ],
 
     "custom/launcher": {
-        "format": "󰍜",
-        "tooltip-format": "Launcher",
-        "on-click": "pkill rofi || rofi -show drun"
+      "format": "󰍜",
+      "tooltip-format": "Launcher",
+      "on-click": "pkill rofi || rofi -show drun"
     },
 
-    "wlr/taskbar": {
-        "format": "{icon}",
-        "icon-size": 20,
-        "tooltip-format": "{title}",
-        "on-click": "activate",
-        "on-click-middle": "close",
-        "ignore-list": []
+    "custom/dock-0": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 0",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 0 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 0 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 0 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-1": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 1",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 1 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 1 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 1 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-2": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 2",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 2 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 2 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 2 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-3": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 3",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 3 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 3 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 3 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-4": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 4",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 4 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 4 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 4 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-5": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 5",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 5 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 5 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 5 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-6": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 6",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 6 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 6 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 6 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-7": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 7",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 7 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 7 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 7 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-8": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 8",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 8 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 8 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 8 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
+    },
+    "custom/dock-9": {
+      "exec": "~/.config/waybar/scripts/dock.sh render 9",
+      "on-click": "~/.config/waybar/scripts/dock.sh click 9 left",
+      "on-click-middle": "~/.config/waybar/scripts/dock.sh click 9 middle",
+      "on-click-right": "~/.config/waybar/scripts/dock.sh click 9 right",
+      "return-type": "json",
+      "interval": 1,
+      "hide-empty-text": true
     }
-}
+  }
 ]

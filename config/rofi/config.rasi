@@ -6,7 +6,7 @@ configuration {
     show-icons: true;
     icon-theme: "Papirus-Dark";
     display-drun: "";
-    drun-display-format: "{name}\n<span size='small' foreground='#9A9CA5'>{generic}</span>";
+    drun-display-format: "<b>{name}</b>\n<span size='small' foreground='#9A9CA5'>{generic}</span>";
     font: "Geist 12";
     terminal: "kitty";
 }
