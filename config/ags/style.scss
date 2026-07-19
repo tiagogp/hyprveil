@@ -1,0 +1,443 @@
+// Glass theme for the Hyprveil quick-settings panel + notification popups.
+// Palette mirror of config/hypr/colors.conf — keep the neutrals in sync
+// manually, as with waybar/style.css and swaync/style.css. The accent trio is
+// generated from the wallpaper into _accent.scss (see docs/ACCENT.md).
+@use "accent" as *;
+$bg: rgba(15, 17, 21, 0.82);
+$surface: rgba(22, 24, 29, 0.88);
+$elevated: rgba(28, 31, 38, 0.94);
+$text: #f5f5f7;
+$muted: #9a9ca5;
+$dim: #6b6e78;
+$border: rgba(255, 255, 255, 0.10);
+$warning: #e1a346;
+$error: #e5484d;
+$radius: 14px;
+
+* {
+    font-family: "Geist", "Symbols Nerd Font", sans-serif;
+    color: $text;
+}
+
+window.QuickSettings,
+window.NotificationPopups,
+window.Wallpapers {
+    background: transparent;
+}
+
+/* ---------- Quick Settings panel ---------- */
+.qs-panel {
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 16px;
+    margin: 8px;
+    padding: 12px;
+    min-width: 360px;
+}
+
+.qs-titlebar {
+    margin-bottom: 6px;
+    padding: 2px 4px;
+
+    .qs-title {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .qs-close {
+        background: rgba($text, 0.08);
+        border: none;
+        border-radius: 999px;
+        color: $muted;
+        min-height: 24px;
+        min-width: 24px;
+
+        &:hover {
+            background: $accent-soft;
+            color: $accent;
+        }
+    }
+}
+
+.qs-section {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: $radius;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.qs-section-header {
+    margin-bottom: 6px;
+
+    .qs-section-icon {
+        color: $accent;
+        font-size: 15px;
+        margin-right: 8px;
+    }
+
+    .qs-section-title {
+        font-size: 14px;
+        // GTK's CSS parser only accepts font weights in hundreds; anything else
+        // is rejected and takes the rest of the stylesheet down with it.
+        font-weight: 600;
+    }
+
+    button {
+        background: rgba($text, 0.07);
+        border: 1px solid $border;
+        border-radius: 9px;
+        color: $muted;
+        margin-left: 6px;
+        min-height: 26px;
+        min-width: 26px;
+
+        &:hover {
+            background: $accent-soft;
+            color: $accent;
+        }
+    }
+}
+
+.qs-switch {
+    background: rgba($text, 0.1);
+    border: 1px solid $border;
+    border-radius: 999px;
+    min-width: 46px;
+    min-height: 26px;
+    margin-left: 6px;
+
+    &:checked {
+        background: $accent;
+    }
+
+    slider {
+        background: $text;
+        border-radius: 999px;
+        min-height: 20px;
+        min-width: 20px;
+    }
+}
+
+.qs-empty,
+.notif-empty {
+    color: $dim;
+    font-size: 12.5px;
+    padding: 8px 4px;
+}
+
+.qs-advanced {
+    background: transparent;
+    border: none;
+    color: $muted;
+    font-size: 12.5px;
+    margin-top: 4px;
+    padding: 6px 4px;
+
+    &:hover {
+        color: $accent;
+    }
+}
+
+/* ---------- Wi-Fi ---------- */
+// GTK's CSS has no max-height/max-width, and an unknown property discards the
+// whole stylesheet, so scroll areas set their height with heightRequest in code.
+// Keep preserved /* */ comments ASCII-only: any non-ASCII byte makes dart-sass
+// emit `@charset`, which GTK rejects as an unknown at-rule.
+.wifi-list,
+.bt-list,
+.notif-history {
+    min-height: 60px;
+}
+
+.wifi-ap,
+.bt-device {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 8px;
+
+    &:hover {
+        background: $elevated;
+    }
+
+    &.active,
+    &.connected {
+        background: $accent-soft;
+
+        .wifi-ap-name,
+        .bt-device-name {
+            color: $accent;
+        }
+    }
+}
+
+.wifi-ap-signal,
+.bt-device-icon {
+    margin-right: 10px;
+    color: $muted;
+}
+
+.wifi-ap-lock,
+.wifi-ap-active,
+.bt-device-state {
+    color: $accent;
+    margin-left: 8px;
+}
+
+.bt-device-battery {
+    color: $muted;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* ---------- Wallpaper picker ---------- */
+.qs-wallpapers {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: $radius;
+    margin-top: 10px;
+    padding: 10px 12px;
+
+    .qs-section-icon {
+        margin-right: 8px;
+    }
+
+    .qs-wallpapers-chevron {
+        color: $dim;
+        margin-left: 8px;
+    }
+
+    &:hover {
+        background: $elevated;
+
+        .qs-wallpapers-chevron {
+            color: $accent;
+        }
+    }
+}
+
+.wp-panel {
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 16px;
+    margin: 8px;
+    padding: 12px;
+    min-width: 620px;
+}
+
+.wp-titlebar {
+    margin-bottom: 8px;
+    padding: 2px 4px;
+
+    .wp-title {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .wp-close {
+        background: rgba($text, 0.08);
+        border: none;
+        border-radius: 999px;
+        color: $muted;
+        min-height: 24px;
+        min-width: 24px;
+
+        &:hover {
+            background: $accent-soft;
+            color: $accent;
+        }
+    }
+}
+
+.wp-controls {
+    margin-bottom: 10px;
+}
+
+.wp-segmented {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 2px;
+
+    .wp-segment {
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        color: $muted;
+        font-size: 12.5px;
+        padding: 5px 10px;
+
+        &:hover {
+            color: $text;
+        }
+
+        &.active {
+            background: $accent-soft;
+            color: $accent;
+            font-weight: 600;
+        }
+    }
+}
+
+.wp-grid {
+    padding: 2px;
+}
+
+.wp-tile {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: 12px;
+    padding: 6px;
+
+    &:hover {
+        background: $elevated;
+        border-color: rgba($accent, 0.4);
+    }
+
+    /* The selection Hyprveil would restore for the current target. */
+    &.active {
+        background: $accent-soft;
+        border-color: $accent;
+
+        .wp-tile-name {
+            color: $accent;
+            font-weight: 600;
+        }
+    }
+}
+
+.wp-tile-name {
+    color: $muted;
+    font-size: 11.5px;
+    margin-top: 6px;
+}
+
+.wp-empty {
+    color: $dim;
+    font-size: 12.5px;
+    min-height: 200px;
+    padding: 16px;
+}
+
+.wp-status {
+    color: $warning;
+    font-size: 12px;
+    margin-top: 8px;
+    padding: 0 4px;
+}
+
+/* ---------- Notifications (panel + popups) ---------- */
+.qs-dnd-toggle:checked,
+.notif-history .notification-card {
+    // panel cards inherit the shared card styling below
+}
+
+.popup-list {
+    margin: 8px;
+    min-width: 360px;
+}
+
+.notification-card {
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: $radius;
+    margin: 4px 0;
+    padding: 10px 12px;
+
+    &.low {
+        background: rgba($surface, 0.72);
+        color: $muted;
+    }
+
+    &.critical {
+        border-color: $accent;
+        background: rgba($accent, 0.12);
+
+        .notif-summary {
+            color: $accent;
+        }
+    }
+}
+
+.notif-header {
+    margin-bottom: 4px;
+
+    .notif-app-icon {
+        margin-right: 8px;
+    }
+
+    .notif-app-name {
+        color: $muted;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .notif-time {
+        color: $dim;
+        font-size: 11.5px;
+        margin: 0 6px;
+    }
+
+    .notif-close {
+        background: rgba($text, 0.08);
+        border: none;
+        border-radius: 999px;
+        color: $muted;
+        min-height: 20px;
+        min-width: 20px;
+
+        &:hover {
+            background: $accent-soft;
+            color: $accent;
+        }
+    }
+}
+
+.notif-summary {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.notif-text {
+    color: $muted;
+    font-size: 12.5px;
+}
+
+.notif-actions {
+    margin-top: 8px;
+
+    .notif-action {
+        background: $accent-soft;
+        border: none;
+        border-radius: 10px;
+        color: $accent;
+        margin: 0 3px;
+        padding: 7px 10px;
+
+        &:hover {
+            background: rgba($accent, 0.28);
+        }
+    }
+}
+
+/* Scrollbars */
+scrollbar {
+    background: transparent;
+
+    slider {
+        background: rgba($text, 0.16);
+        border-radius: 999px;
+        min-width: 6px;
+        min-height: 8px;
+
+        &:hover {
+            background: rgba($text, 0.3);
+        }
+    }
+}

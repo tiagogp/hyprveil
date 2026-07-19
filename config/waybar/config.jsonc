@@ -73,20 +73,26 @@
     },
 
     "custom/bluetooth": {
+      // Left-click opens the AGS quick-settings panel (Bluetooth section);
+      // if AGS isn't running (SwayNC/Mako fallback backend) fall back to Blueman.
       "exec": "~/.config/waybar/scripts/bluetooth.sh render",
-      "on-click": "~/.config/waybar/scripts/bluetooth.sh open",
+      "on-click": "ags request -i hyprveil toggle-quicksettings 2>/dev/null || ~/.config/waybar/scripts/bluetooth.sh open",
+      "on-click-right": "~/.config/waybar/scripts/bluetooth.sh open",
       "return-type": "json",
       "interval": 5,
       "hide-empty-text": true
     },
 
     "network": {
+      // Left-click opens the AGS quick-settings panel (Wi-Fi section);
+      // right-click and the AGS-absent fallback open nm-connection-editor.
       "format-wifi": "󰖩",
       "format-ethernet": "󰈀",
       "format-disconnected": "󰖪",
       "tooltip-format": "{ifname}: {ipaddr}",
       "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-      "on-click": "nm-connection-editor"
+      "on-click": "ags request -i hyprveil toggle-quicksettings 2>/dev/null || nm-connection-editor",
+      "on-click-right": "nm-connection-editor"
     },
 
     "pulseaudio": {
