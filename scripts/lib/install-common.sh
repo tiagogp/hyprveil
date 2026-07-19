@@ -330,6 +330,13 @@ hv_backup_item() {
 hv_deploy_configs() {
     local backup staged target name starship_tmp backend other
     local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell)
+    # quickshell is deployed unconditionally, like waybar, and is deliberately
+    # NOT in all_backends even though it is selectable in
+    # 07-select-notification-backend.sh. Everything in all_backends that is not
+    # the active choice gets REMOVED below, so listing it here would delete the
+    # shell's config on every upgrade that selected a different backend. What
+    # the selection decides is whether the daemon launches, not whether its
+    # config exists — the same split waybar has always had.
     local -a all_backends=(ags swaync mako) inactive_backends=()
     backend=$(hv_notification_backend || printf 'ags\n')
     names+=("$backend")

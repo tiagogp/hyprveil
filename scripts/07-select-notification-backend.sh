@@ -32,7 +32,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-valid_backend() { [[ "$1" = ags || "$1" = swaync || "$1" = mako ]]; }
+valid_backend() { [[ "$1" = quickshell || "$1" = ags || "$1" = swaync || "$1" = mako ]]; }
 
 saved=
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
@@ -50,10 +50,10 @@ fi
 
 if ! valid_backend "$BACKEND"; then
     if [ ! -t 0 ]; then
-        printf 'No saved notification backend; pass --backend ags|swaync|mako.\n' >&2
+        printf 'No saved notification backend; pass --backend quickshell|ags|swaync|mako.\n' >&2
         exit 2
     fi
-    read -r -p 'Notification backend (ags/swaync/mako) [ags]: ' BACKEND
+    read -r -p 'Notification backend (quickshell/ags/swaync/mako) [ags]: ' BACKEND
     BACKEND=${BACKEND:-ags}
 fi
 valid_backend "$BACKEND" || { printf 'Invalid notification backend: %s\n' "$BACKEND" >&2; exit 2; }

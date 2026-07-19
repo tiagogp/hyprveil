@@ -42,6 +42,12 @@ install_swaync_or_mako() {
 
 saved_backend=$(hv_notification_backend || true)
 case "$saved_backend" in
+    quickshell)
+        echo "Keeping saved Quickshell shell + notifications backend."
+        hv_install_group required "Quickshell shell (bar, dock, notifications)" \
+            "errornointernet/quickshell" quickshell || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        ;;
     mako)
         echo "Keeping saved Mako fallback; the AGS/SwayNC COPRs will not be offered on this rerun."
         hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
