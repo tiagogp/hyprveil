@@ -402,7 +402,8 @@ hv_deploy_configs() {
         cp -a "$target" "$backup/config/starship.toml"
     fi
     mv -f "$starship_tmp" "$target"
-    chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
+    chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/hypr/scripts/lib/"*.sh \
+        "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
 
     if [ -d "$backup/config" ]; then
         printf 'Existing configuration backed up to %s\n' "$backup"

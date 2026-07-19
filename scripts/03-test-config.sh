@@ -48,6 +48,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/scripts/apply-theme.sh \
          hypr/scripts/hardware-action.sh hypr/scripts/notification-daemon.sh \
          hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
+         hypr/scripts/lib/render-lib.sh \
          hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
          hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
          hypr/profiles/form-factor/desktop.conf \

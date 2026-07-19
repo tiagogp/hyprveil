@@ -9,10 +9,12 @@
 # (mako, qt5ct/qt6ct, the wlogout icon SVGs).
 set -uo pipefail
 
-STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HV_LOG_PREFIX=Accent
+# shellcheck source=lib/render-lib.sh
+. "$SCRIPT_DIR/lib/render-lib.sh"
+
 STATE_FILE="$STATE_HOME/accent.json"
-LOCK_FILE="$STATE_HOME/accent.lock"
-CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 
 # The palette's designed accent. Every template ships with this value baked in,
 # so an unrendered checkout and a freshly deployed config look identical.
@@ -36,9 +38,6 @@ managed config tree, which would otherwise leave the default-red fragments in
 place; run it by hand after editing a .in template.
 EOF
 }
-
-die() { printf 'Accent: %s\n' "$*" >&2; exit 2; }
-warn() { printf 'Accent: %s\n' "$*" >&2; }
 
 # --------------------------------------------------------------------------
 # Extraction
@@ -197,64 +196,6 @@ extract_accent() {
     printf '%s\n' "$hex"
 }
 
-# Shifts lightness by a signed percentage, holding hue and saturation. Used for
-# the hover shade and the lock screen's dim fill.
-shade() {
-    local hex=$1 delta=$2
-    printf '%s %s\n' "${hex#\#}" "$delta" | awk '
-        function max3(a, b, c) { return (a > b ? (a > c ? a : c) : (b > c ? b : c)) }
-        function min3(a, b, c) { return (a < b ? (a < c ? a : c) : (b < c ? b : c)) }
-        function hue2rgb(p, q, t) {
-            if (t < 0) t += 1
-            if (t > 1) t -= 1
-            if (t < 1/6) return p + (q - p) * 6 * t
-            if (t < 1/2) return q
-            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
-            return p
-        }
-        {
-            hex = $1; delta = $2 + 0
-            r = strtonum("0x" substr(hex, 1, 2)) / 255
-            g = strtonum("0x" substr(hex, 3, 2)) / 255
-            b = strtonum("0x" substr(hex, 5, 2)) / 255
-            mx = max3(r, g, b); mn = min3(r, g, b); d = mx - mn
-            L = (mx + mn) / 2
-            if (d == 0) { H = 0; S = 0 }
-            else {
-                S = (L > 0.5) ? d / (2 - mx - mn) : d / (mx + mn)
-                if (mx == r)      H = (g - b) / d + (g < b ? 6 : 0)
-                else if (mx == g) H = (b - r) / d + 2
-                else              H = (r - g) / d + 4
-                H /= 6
-            }
-            L += delta
-            if (L < 0) L = 0
-            if (L > 1) L = 1
-            if (S == 0) { r = g = b = L }
-            else {
-                q = (L < 0.5) ? L * (1 + S) : L + S - L * S
-                p = 2 * L - q
-                r = hue2rgb(p, q, H + 1/3); g = hue2rgb(p, q, H); b = hue2rgb(p, q, H - 1/3)
-            }
-            printf "#%02x%02x%02x\n", r * 255 + 0.5, g * 255 + 0.5, b * 255 + 0.5
-        }
-    '
-}
-
-rgb_triplet() {
-    local hex=${1#\#}
-    printf '%d,%d,%d\n' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
-}
-
-valid_hex() { [[ "$1" =~ ^#[0-9A-Fa-f]{6}$ ]]; }
-
-normalize_hex() {
-    local hex=$1
-    [[ "$hex" = \#* ]] || hex="#$hex"
-    valid_hex "$hex" || return 1
-    printf '#%s\n' "$(printf '%s' "${hex#\#}" | tr '[:upper:]' '[:lower:]')"
-}
-
 # --------------------------------------------------------------------------
 # State
 # --------------------------------------------------------------------------
@@ -331,20 +272,6 @@ auto_enabled() {
 # Rendering
 # --------------------------------------------------------------------------
 
-# Writes $2.. as the content of $1, but only when it differs. Skipping identical
-# writes keeps the reload step from restarting components that would render the
-# same pixels, which matters because a wallpaper cycle can fire on every login.
-write_if_changed() {
-    local target=$1 content=$2 dir
-    dir=$(dirname "$target")
-    [ -d "$dir" ] || return 0
-    if [ -f "$target" ] && [ "$(cat "$target")" = "$content" ]; then
-        return 1
-    fi
-    printf '%s\n' "$content" > "$target"
-    return 0
-}
-
 render_hypr() {
     local accent=$1 hover=$2
     local content
@@ -407,94 +334,36 @@ active_border_color     $accent"
     write_if_changed "$CONFIG_HOME/kitty/accent.conf" "$content"
 }
 
-# mako, the Qt color schemes, and the wlogout icon SVGs have no include
-# mechanism, so each is regenerated from a `.in` template that carries an
-# @accent@ placeholder. The templates ship alongside the outputs, which is what
-# makes rendering idempotent instead of a repeated search-and-replace over a
-# file whose current color we would otherwise have to guess.
-render_template() {
-    local template=$1 target=$2 accent=$3 hover=$4 rgb=$5 content
-    [ -f "$template" ] || return 1
-    content=$(sed \
-        -e "s/@accent@/$accent/g" \
-        -e "s/@accent-upper@/$(printf '%s' "$accent" | tr '[:lower:]' '[:upper:]')/g" \
-        -e "s/@accent-bare@/${accent#\#}/g" \
-        -e "s/@accent-hover@/$hover/g" \
-        -e "s/@accent-hover-bare@/${hover#\#}/g" \
-        -e "s/@accent-rgb@/$rgb/g" \
-        "$template")
-    write_if_changed "$target" "$content"
+# Loads the accent placeholders into the table render_template expands. Only
+# these six keys are set, so a template that also carries design tokens keeps
+# its @token@ markers untouched — that separation is what lets theme.sh own the
+# token-bearing templates without either renderer writing the other's files.
+load_accent_tokens() {
+    local accent=$1 hover=$2 rgb=$3
+    HV_TOKENS=(
+        [accent]="$accent"
+        [accent-upper]="$(printf '%s' "$accent" | tr '[:lower:]' '[:upper:]')"
+        [accent-bare]="${accent#\#}"
+        [accent-hover]="$hover"
+        [accent-hover-bare]="${hover#\#}"
+        [accent-rgb]="$rgb"
+    )
 }
 
 render_templated_consumers() {
-    local accent=$1 hover=$2 rgb=$3 changed=0 dir name
-    render_template "$CONFIG_HOME/mako/config.in" "$CONFIG_HOME/mako/config" \
-        "$accent" "$hover" "$rgb" && changed=1
+    local changed=0 dir name
+    render_template "$CONFIG_HOME/mako/config.in" "$CONFIG_HOME/mako/config" && changed=1
     for dir in qt5ct qt6ct; do
         render_template "$CONFIG_HOME/$dir/colors/hyprveil.conf.in" \
-            "$CONFIG_HOME/$dir/colors/hyprveil.conf" "$accent" "$hover" "$rgb" && changed=1
+            "$CONFIG_HOME/$dir/colors/hyprveil.conf" && changed=1
     done
     # wlogout bakes the ring and glyph of each button into one SVG per state, so
     # the accent variants are recolored rather than styled.
     for name in lock logout reboot shutdown suspend; do
         render_template "$CONFIG_HOME/wlogout/assets/src/$name-accent.svg" \
-            "$CONFIG_HOME/wlogout/assets/$name-accent.svg" "$accent" "$hover" "$rgb" && changed=1
+            "$CONFIG_HOME/wlogout/assets/$name-accent.svg" && changed=1
     done
     return "$((1 - changed))"
-}
-
-# --------------------------------------------------------------------------
-# Live reload
-# --------------------------------------------------------------------------
-
-reload_waybar() {
-    pgrep -x waybar >/dev/null 2>&1 || return 0
-    pkill -SIGUSR2 -x waybar >/dev/null 2>&1 || warn "could not signal Waybar to reload"
-}
-
-reload_swaync() {
-    pgrep -x swaync >/dev/null 2>&1 || return 0
-    command -v swaync-client >/dev/null 2>&1 || return 0
-    swaync-client --reload-css >/dev/null 2>&1 || warn "could not reload the SwayNC stylesheet"
-}
-
-reload_mako() {
-    pgrep -x mako >/dev/null 2>&1 || return 0
-    command -v makoctl >/dev/null 2>&1 || return 0
-    makoctl reload >/dev/null 2>&1 || warn "could not reload Mako"
-}
-
-# AGS compiles style.scss at startup, so a changed fragment only lands after the
-# sheet is recompiled and pushed back in. Restarting the shell would work too,
-# but it is also the notification daemon — dropping it would discard the
-# session's notification history.
-reload_ags() {
-    local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}" compiled
-    command -v ags >/dev/null 2>&1 || return 0
-    ags list 2>/dev/null | grep -Fxq "$instance" || return 0
-    command -v sass >/dev/null 2>&1 || { warn "dart-sass is missing; the panel keeps its old accent"; return 0; }
-    compiled="$STATE_HOME/ags-style.css"
-    mkdir -p "$STATE_HOME"
-    if ! sass --no-source-map "$CONFIG_HOME/ags/style.scss" "$compiled" 2>/dev/null; then
-        warn "could not compile the AGS stylesheet"
-        return 0
-    fi
-    ags request -i "$instance" "reload-css $compiled" >/dev/null 2>&1 \
-        || warn "could not push the stylesheet to the AGS shell"
-}
-
-reload_hyprland() {
-    command -v hyprctl >/dev/null 2>&1 || return 0
-    pgrep -x Hyprland >/dev/null 2>&1 || return 0
-    hyprctl reload >/dev/null 2>&1 || warn "could not reload Hyprland"
-}
-
-reload_all() {
-    reload_hyprland
-    reload_waybar
-    reload_swaync
-    reload_mako
-    reload_ags
 }
 
 # --------------------------------------------------------------------------
@@ -509,19 +378,18 @@ apply_accent() {
         hover=$(shade "$accent" 0.08)
     fi
     rgb=$(rgb_triplet "$accent")
+    load_accent_tokens "$accent" "$hover" "$rgb"
 
-    mkdir -p "$STATE_HOME"
-    exec 9>"$LOCK_FILE"
-    flock 9
-    save_state "$accent" "$source" || { flock -u 9; die "could not save accent state"; }
+    hv_lock
+    save_state "$accent" "$source" || { hv_unlock; die "could not save accent state"; }
 
     render_hypr "$accent" "$hover"
     render_gtk_css "$accent" "$hover" "$rgb"
     render_ags "$accent" "$hover" "$rgb"
     render_rofi "$accent" "$rgb"
     render_kitty "$accent"
-    render_templated_consumers "$accent" "$hover" "$rgb"
-    flock -u 9
+    render_templated_consumers
+    hv_unlock
 
     reload_all
     printf 'Accent: %s (from %s)\n' "$accent" "$source"
