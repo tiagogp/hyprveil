@@ -108,6 +108,14 @@ dock_state_valid() {
     ' "$1" >/dev/null 2>&1
 }
 
+dock_state_current() {
+    jq -e --argjson limit "$DOCK_LIMIT" '
+        type == "array" and length <= $limit and
+        all(.[]; type == "object" and (.app_id | type == "string" and length > 0) and
+            (.desktop_id | type == "string" and length > 0))
+    ' "$1" >/dev/null 2>&1
+}
+
 dock_ensure_state_locked() {
     local source normalized='[]' row app_id desktop_id resolved
     if [ ! -e "$DOCK_PINS_FILE" ]; then
@@ -153,7 +161,7 @@ dock_read_state() {
     # already atomic, so an unlocked read of an already-valid file is safe;
     # only fall back to the locked init/repair path when the file is missing
     # or malformed.
-    if [ -e "$DOCK_PINS_FILE" ] && dock_state_valid "$DOCK_PINS_FILE"; then
+    if [ -e "$DOCK_PINS_FILE" ] && dock_state_current "$DOCK_PINS_FILE"; then
         cat "$DOCK_PINS_FILE"
         return
     fi
