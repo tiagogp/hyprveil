@@ -176,4 +176,21 @@ hv_deploy_configs >/dev/null
 [ ! -e "$HYPRVEIL_CONFIG_HOME/mako" ] || fail "inactive Mako tree survived AGS deployment"
 ok "deployment installs only the AGS backend and backs up the inactive trees"
 
+# --- A misresolved HV_REPO must not destroy the installed configuration ---
+# Each target tree is removed immediately before its replacement is moved in, so
+# a source that does not exist used to empty the target and install nothing:
+# cp printed an error and the loop continued to the rm. Sourcing this library
+# from a shell without BASH_SOURCE (zsh) is one way to land there.
+deploy_guard_marker="$HYPRVEIL_CONFIG_HOME/hypr/hyprland.conf"
+[ -f "$deploy_guard_marker" ] || fail "fixture precondition: hypr was not deployed"
+(
+    HV_REPO="$TMP/definitely-not-the-repo"
+    hv_deploy_configs >/dev/null 2>&1
+) && fail "hv_deploy_configs succeeded against a missing source tree"
+[ -f "$deploy_guard_marker" ] \
+    || fail "a missing source tree destroyed the installed configuration"
+[ -s "$deploy_guard_marker" ] \
+    || fail "a missing source tree emptied the installed configuration"
+ok "deployment refuses a missing source tree instead of emptying the target"
+
 printf 'P5 smoke tests passed.\n'

@@ -336,13 +336,36 @@ hv_deploy_configs() {
     for other in "${all_backends[@]}"; do
         [ "$other" = "$backend" ] || inactive_backends+=("$other")
     done
+    # Every source tree is verified before anything is removed. Each target is
+    # deleted just before its replacement is moved into place, so a source that
+    # does not exist — a misresolved HV_REPO, an incomplete checkout — would
+    # otherwise delete a working configuration and install nothing in its place.
+    # The copy failing is not enough to prevent that on its own: cp reports the
+    # error and the loop carries on to the rm.
+    for name in "${names[@]}"; do
+        if [ ! -d "$HV_REPO/config/$name" ]; then
+            hv_bad "source tree missing: $HV_REPO/config/$name"
+            hv_bad "refusing to deploy; the existing configuration is untouched"
+            return 1
+        fi
+    done
+    if [ ! -f "$HV_REPO/config/starship.toml" ]; then
+        hv_bad "source file missing: $HV_REPO/config/starship.toml"
+        hv_bad "refusing to deploy; the existing configuration is untouched"
+        return 1
+    fi
+
     mkdir -p "$HV_CONFIG_HOME"
     backup=$(hv_new_backup_dir)
 
     for name in "${names[@]}"; do
         target="$HV_CONFIG_HOME/$name"
         staged=$(mktemp -d "$HV_CONFIG_HOME/.hyprveil-$name.XXXXXX")
-        cp -a "$HV_REPO/config/$name/." "$staged/"
+        if ! cp -a "$HV_REPO/config/$name/." "$staged/"; then
+            rm -rf "$staged"
+            hv_bad "could not stage $name from $HV_REPO/config/$name"
+            return 1
+        fi
         if [ "$name" = hypr ]; then
             if [ -f "$target/wallpaper.jpg" ]; then
                 cp -a "$target/wallpaper.jpg" "$staged/wallpaper.jpg"
