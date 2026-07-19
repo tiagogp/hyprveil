@@ -1,4 +1,6 @@
-/* Palette mirror of hypr/colors.conf. SwayNC is GTK4, so keep this self-contained. */
+/* Palette mirror of hypr/colors.conf. SwayNC is GTK4, so the neutrals stay
+   self-contained here; the accent is generated from the wallpaper. */
+@import url("accent.css");
 @define-color bg rgba(15, 17, 21, 0.82);
 @define-color surface rgba(22, 24, 29, 0.88);
 @define-color elevated rgba(28, 31, 38, 0.94);
@@ -6,8 +8,6 @@
 @define-color muted #9a9ca5;
 @define-color dim #6b6e78;
 @define-color border rgba(255, 255, 255, 0.10);
-@define-color accent #e14658;
-@define-color accent-soft rgba(225, 70, 88, 0.18);
 @define-color warning #e1a346;
 
 * {

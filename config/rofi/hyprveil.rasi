@@ -1,3 +1,6 @@
+/* accent / accent-dim are generated from the wallpaper — see docs/ACCENT.md. */
+@import "accent.rasi"
+
 /* Palette mirror of hypr/colors.conf — keep in sync manually. */
 
 * {
@@ -8,8 +11,6 @@
     dim:         #6B6E78;
     hairline:    rgba(255, 255, 255, 10%);
     hairline-2:  rgba(255, 255, 255, 6%);
-    accent:      #E14658;
-    accent-dim:  rgba(225, 70, 88, 14%);
 
     background-color: transparent;
     text-color: @text;

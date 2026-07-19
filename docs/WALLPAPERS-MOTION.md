@@ -6,10 +6,30 @@ tree, so installer reruns and upgrades do not reset them.
 ## Wallpaper picker
 
 Put JPG, JPEG, PNG, WebP, JXL, or BMP files anywhere below
-`~/Pictures/Wallpapers`, then press `SUPER+SHIFT+W`. The Rofi flow asks for an
-image, all connected monitors or one connected monitor, and `cover` or `contain`.
-An empty or missing wallpaper directory produces a message and makes no state
-change.
+`~/Pictures/Wallpapers`, then press `SUPER+SHIFT+W`.
+
+There are two front-ends over one helper:
+
+- **AGS thumbnail grid** (default when the AGS shell is running) — a glass window
+  showing every wallpaper as a thumbnail. Pick the target (**All monitors** or a
+  named output) and the fit (**Cover**/**Contain**) at the top, then click an image
+  to apply it immediately. The tile Hyprveil would restore for the current target is
+  outlined in the accent color. The window stays open so you can try several, and
+  `Escape` closes it. It is also reachable from the "Wallpapers…" row in the
+  quick-settings panel (`SUPER+N`), or with `ags request -i hyprveil
+  toggle-wallpapers`.
+- **Rofi flow** (fallback) — used whenever the AGS shell is not running, for example
+  with the SwayNC or Mako notification backend. It asks for an image, then all or one
+  connected monitor, then `cover` or `contain`.
+
+Both write the same state and use the same Hyprpaper IPC, so choices made in one are
+visible to the other. An empty or missing wallpaper directory produces a message and
+makes no state change.
+
+Thumbnails are scaled once and cached under
+`$XDG_CACHE_HOME/hyprveil/wallpaper-thumbs` keyed by file path and modification
+time, so reopening the grid is fast and editing an image refreshes its tile. The
+cache is disposable — delete it at any time.
 
 The helper is also available directly:
 
@@ -18,8 +38,12 @@ The helper is also available directly:
 ~/.config/hypr/scripts/wallpaper.sh apply "/path/with spaces/image.jpg"
 ~/.config/hypr/scripts/wallpaper.sh apply "/path/image.png" DP-1 contain
 ~/.config/hypr/scripts/wallpaper.sh apply "/path/image.png" cover
+~/.config/hypr/scripts/wallpaper.sh list
 ~/.config/hypr/scripts/wallpaper.sh restore
 ```
+
+`list` prints the catalog the grid renders — available images, connected outputs,
+and the saved fallback plus per-monitor selections — as JSON.
 
 An omitted monitor updates the fallback, clears older per-monitor overrides, and
 immediately targets every connected monitor. A named monitor gets its own mapping.
@@ -68,6 +92,17 @@ Then run `hyprctl reload`. Switching motion profiles does not change that global
 toggle.
 
 ## Recovery
+
+If the grid opens empty but `~/Pictures/Wallpapers` has images, check the helper
+directly — the grid renders exactly what this prints:
+
+```bash
+~/.config/hypr/scripts/wallpaper.sh list
+```
+
+If `SUPER+SHIFT+W` opens Rofi when you expected the grid, the AGS shell is not
+running (`ags list` should print `hyprveil`); see
+[QUICK-SETTINGS.md](QUICK-SETTINGS.md).
 
 If Hyprpaper is running but the background is wrong, restore the saved selection:
 

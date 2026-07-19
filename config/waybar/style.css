@@ -1,6 +1,11 @@
-/* Palette mirror of hypr/colors.conf — keep in sync manually (waybar can't read it).
+/* Palette mirror of hypr/colors.conf — keep the neutrals in sync manually
+   (waybar can't read it).
    bg #0F1115 · surface #16181D · elevated #1C1F26 · text #F5F5F7 · muted #9A9CA5
-   dim #6B6E78 · border #2A2D35 · accent #E14658 · warn #E1A346 · error #E5484D */
+   dim #6B6E78 · border #2A2D35 · warn #E1A346 · error #E5484D
+
+   The accent is generated from the wallpaper — never hardcode it here.
+   accent.css defines @accent / @accent-hover / @accent-soft. See docs/ACCENT.md. */
+@import url("accent.css");
 
 * {
   font-family: "Geist", "Symbols Nerd Font", sans-serif;
@@ -37,9 +42,9 @@ window#waybar {
 }
 
 #workspaces button.active {
-  background: rgba(225, 70, 88, 0.18);
-  border-color: #e14658;
-  color: #e14658;
+  background: @accent-soft;
+  border-color: @accent;
+  color: @accent;
 }
 
 #workspaces button.urgent {
@@ -98,11 +103,11 @@ window#waybar {
 #custom-media-previous:hover,
 #custom-media-toggle:hover,
 #custom-media-next:hover {
-  color: #e14658;
+  color: @accent;
 }
 
 #custom-bluetooth.connected {
-  color: #e14658;
+  color: @accent;
 }
 
 #custom-bluetooth.disabled {
@@ -110,7 +115,7 @@ window#waybar {
 }
 
 #custom-notifications.notification {
-  color: #e14658;
+  color: @accent;
 }
 
 #custom-notifications.dnd-notification,
@@ -142,7 +147,7 @@ window#waybar {
 
 /* power menu trigger — accent-red like the wlogout shutdown button */
 #custom-power {
-  color: #e14658;
+  color: @accent;
   font-size: 14px;
   min-width: 20px;
   min-height: 20px;
@@ -152,7 +157,7 @@ window#waybar {
 }
 
 #custom-power:hover {
-  background: rgba(225, 70, 88, 0.18);
+  background: @accent-soft;
 }
 
 /* ---- bottom dock (end-4-style, styled like the mockup's bottom pill) ---- */
@@ -172,7 +177,7 @@ window#waybar.dock .modules-center {
 
 /* launcher — always the leftmost dock icon, accent-colored for emphasis */
 #custom-launcher {
-  color: #e14658;
+  color: @accent;
   font-size: 19px;
   min-width: 40px;
   min-height: 40px;
@@ -217,7 +222,7 @@ window#waybar.dock .modules-center {
 
 .dock-btn.active {
   background: rgba(225, 70, 88, 0.15);
-  border-color: #e14658;
+  border-color: @accent;
   color: #f5f5f7;
 }
 

@@ -8,6 +8,7 @@ LOCK_FILE="$STATE_HOME/wallpapers.lock"
 WALLPAPER_DIR="${HYPRVEIL_WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEFAULT_WALLPAPER="${HYPRVEIL_DEFAULT_WALLPAPER:-$SCRIPT_DIR/../wallpaper-default.jpg}"
+ACCENT_HELPER="${HYPRVEIL_ACCENT_HELPER:-$SCRIPT_DIR/accent.sh}"
 
 usage() {
     cat <<'EOF'
@@ -15,9 +16,12 @@ Usage:
   wallpaper.sh pick
   wallpaper.sh apply PATH [MONITOR] [cover|contain]
   wallpaper.sh apply PATH [cover|contain]
+  wallpaper.sh list
   wallpaper.sh restore
 
 An omitted monitor updates the fallback and applies it to every connected monitor.
+`pick` opens the AGS grid when the shell is running and falls back to Rofi.
+`list` prints the catalog the AGS picker renders, as JSON.
 Selections are saved in $XDG_STATE_HOME/hyprveil/wallpapers.json.
 EOF
 }
@@ -117,8 +121,15 @@ monitor_connected() {
     return 1
 }
 
+# Prints Hyprpaper's request list, or fails when its IPC is not usable.
+# Current Hyprpaper prints usage on stdout but exits non-zero, and hyprctl prints
+# a connection error when the daemon is down, so readiness is decided by whether
+# the output actually advertises a wallpaper request — never by the exit status.
 hyprpaper_help() {
-    hyprctl hyprpaper --help 2>&1
+    local help
+    help=$(hyprctl hyprpaper --help 2>&1) || true
+    grep -Eq '(^|[[:space:]])(preload|wallpaper|reload)([[:space:]]|$)' <<<"$help" || return 1
+    printf '%s\n' "$help"
 }
 
 apply_ipc() {
@@ -126,17 +137,21 @@ apply_ipc() {
     [ -f "$path" ] || return 1
     help=$(hyprpaper_help) || return 1
 
+    # Fit travels as a `contain:` path prefix; only the oldest IPC took it as a
+    # separate field.
+    legacy_path=$path
+    [ "$fit" = cover ] || legacy_path="contain:$path"
+
     if grep -Eq '(^|[[:space:]])reload([[:space:]]|$)' <<<"$help"; then
-        legacy_path=$path
-        [ "$fit" = cover ] || legacy_path="contain:$path"
         hyprctl hyprpaper reload "$monitor,$legacy_path" >/dev/null
-    elif grep -Eq '(^|[[:space:]])wallpaper([[:space:]]|$)' <<<"$help"; then
-        hyprctl hyprpaper wallpaper "$monitor,$path,$fit" >/dev/null
     elif grep -Eq '(^|[[:space:]])preload([[:space:]]|$)' <<<"$help"; then
-        legacy_path=$path
-        [ "$fit" = cover ] || legacy_path="contain:$path"
+        # Current Hyprpaper: an image must be preloaded before it can be shown,
+        # and `wallpaper` takes `monitor,[contain:]path` — appending a third
+        # field makes it read "path,fit" as one filename and fail.
         hyprctl hyprpaper preload "$path" >/dev/null \
             && hyprctl hyprpaper wallpaper "$monitor,$legacy_path" >/dev/null
+    elif grep -Eq '(^|[[:space:]])wallpaper([[:space:]]|$)' <<<"$help"; then
+        hyprctl hyprpaper wallpaper "$monitor,$path,$fit" >/dev/null
     else
         warn "the running Hyprpaper exposes no supported wallpaper IPC request"
         return 1
@@ -204,6 +219,11 @@ apply_command() {
     save_selection "$path" "$monitor" "$fit" || die "could not save wallpaper state"
     flock -u 9
 
+    if [ -x "$ACCENT_HELPER" ] && "$ACCENT_HELPER" is-auto >/dev/null 2>&1; then
+        "$ACCENT_HELPER" from-wallpaper "$path" >/dev/null \
+            || warn "wallpaper was saved but the accent could not be derived"
+    fi
+
     runtime=$(runtime_path "$path") || return 0
     if [ -n "$monitor" ]; then
         if monitor_connected "$monitor"; then
@@ -256,9 +276,61 @@ rofi_menu() {
     rofi -dmenu -i -p "$prompt"
 }
 
+# NUL-separated, sorted list of supported images below $WALLPAPER_DIR.
+find_images() {
+    [ -d "$WALLPAPER_DIR" ] || return 0
+    find "$WALLPAPER_DIR" -type f \( \
+        -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o \
+        -iname '*.webp' -o -iname '*.jxl' -o -iname '*.bmp' \) -print0 | sort -z
+}
+
+json_array() {
+    if [ "$#" -eq 0 ]; then
+        printf '[]\n'
+    else
+        printf '%s\0' "$@" | jq -Rs 'split("\u0000")[:-1]'
+    fi
+}
+
+# The catalog the AGS grid renders: available images, connected outputs, and the
+# saved selection it highlights as active.
+list_command() {
+    local -a images=() outputs=()
+    local path monitor images_json outputs_json
+    while IFS= read -r -d '' path; do
+        images+=("$path")
+    done < <(find_images)
+    while IFS= read -r monitor; do
+        [ -n "$monitor" ] && outputs+=("$monitor")
+    done < <(connected_monitors || true)
+
+    ensure_state || die "could not initialize wallpaper state"
+    images_json=$(json_array "${images[@]}")
+    outputs_json=$(json_array "${outputs[@]}")
+    jq -n \
+        --arg dir "$WALLPAPER_DIR" \
+        --argjson images "$images_json" \
+        --argjson outputs "$outputs_json" \
+        --slurpfile state "$STATE_FILE" \
+        '{dir: $dir, images: $images, outputs: $outputs,
+          fallback: $state[0].fallback, monitors: $state[0].monitors}'
+}
+
+# The AGS shell owns the graphical picker whenever it is running; Rofi is the
+# fallback for the SwayNC/Mako backends and for a session without the panel.
+ags_picker() {
+    local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
+    command -v ags >/dev/null 2>&1 || return 1
+    ags list 2>/dev/null | grep -Fxq "$instance" || return 1
+    ags request -i "$instance" toggle-wallpapers >/dev/null 2>&1
+}
+
 pick_command() {
     local -a paths=() labels=() monitors=()
     local path choice index target fit monitor
+    # The AGS grid shows thumbnails and stays open across selections; Rofi keeps
+    # the picker usable without the panel.
+    ags_picker && return 0
     if [ ! -d "$WALLPAPER_DIR" ]; then
         rofi -e "No wallpaper directory: $WALLPAPER_DIR" 2>/dev/null || true
         warn "create $WALLPAPER_DIR and add an image"
@@ -268,9 +340,7 @@ pick_command() {
         paths+=("$path")
         printf -v index '%03d' "${#paths[@]}"
         labels+=("$index  $(basename "$path")")
-    done < <(find "$WALLPAPER_DIR" -type f \( \
-        -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o \
-        -iname '*.webp' -o -iname '*.jxl' -o -iname '*.bmp' \) -print0 | sort -z)
+    done < <(find_images)
     if [ "${#paths[@]}" -eq 0 ]; then
         rofi -e "No supported images in $WALLPAPER_DIR" 2>/dev/null || true
         warn "no supported images found in $WALLPAPER_DIR"
@@ -304,6 +374,7 @@ shift 2>/dev/null || true
 case "$command" in
     pick) pick_command "$@" ;;
     apply) apply_command "$@" ;;
+    list) list_command "$@" ;;
     restore) restore_command "$@" ;;
     -h|--help) usage ;;
     *) usage >&2; exit 2 ;;

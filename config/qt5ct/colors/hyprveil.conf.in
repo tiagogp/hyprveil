@@ -1,0 +1,8 @@
+; Palette mirror of hypr/colors.conf — keep in sync manually.
+; 21 QPalette roles per line: WindowText, Button, Light, Midlight, Dark, Mid,
+; Text, BrightText, ButtonText, Base, Window, Shadow, Highlight, HighlightedText,
+; Link, LinkVisited, AlternateBase, NoRole, ToolTipBase, ToolTipText, PlaceholderText
+[ColorScheme]
+active_colors=#fff5f5f7, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #fff5f5f7, #ffffffff, #fff5f5f7, #ff16181d, #ff0f1115, #ff000000, #ff@accent-bare@, #fff5f5f7, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #fff5f5f7, #ff9a9ca5
+disabled_colors=#ff6b6e78, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #ff6b6e78, #ffffffff, #ff6b6e78, #ff16181d, #ff0f1115, #ff000000, #ff2a2d35, #ff9a9ca5, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #ff9a9ca5, #ff6b6e78
+inactive_colors=#fff5f5f7, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #fff5f5f7, #ffffffff, #fff5f5f7, #ff16181d, #ff0f1115, #ff000000, #ff@accent-bare@, #fff5f5f7, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #fff5f5f7, #ff9a9ca5

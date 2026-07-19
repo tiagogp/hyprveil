@@ -15,6 +15,7 @@ export HYPRVEIL_CONFIG_HOME="$TMP/config"
 export HYPRVEIL_DEFAULT_WALLPAPER="$TMP/config/hypr/wallpaper-default.jpg"
 export HYPRVEIL_WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 export HYPRVEIL_RESTORE_ATTEMPTS=1
+export HYPRVEIL_ACCENT_HELPER="$TMP/bin/accent.sh"
 export MOCK_ROOT="$TMP"
 mkdir -p "$HOME" "$HYPRVEIL_STATE_HOME" "$HYPRVEIL_CONFIG_HOME/hypr" \
     "$HYPRVEIL_WALLPAPER_DIR" "$TMP/bin"
@@ -22,6 +23,13 @@ cp -a "$REPO/config/hypr/motion" "$HYPRVEIL_CONFIG_HOME/hypr/motion"
 cp -a "$REPO/config/hypr/animations.conf" "$HYPRVEIL_CONFIG_HOME/hypr/animations.conf"
 printf 'default image\n' > "$HYPRVEIL_DEFAULT_WALLPAPER"
 export PATH="$TMP/bin:$PATH"
+
+cat > "$TMP/bin/accent.sh" <<'EOF'
+#!/usr/bin/env bash
+[ "${1:-}" = is-auto ] && exit 1
+exit 0
+EOF
+chmod +x "$TMP/bin/accent.sh"
 
 cat > "$TMP/bin/hyprctl" <<'EOF'
 #!/usr/bin/env bash
@@ -39,9 +47,13 @@ if [ "${1:-}" = hyprpaper ] && [ "${2:-}" = --help ]; then
     if [ "${MOCK_IPC:-modern}" = legacy ]; then
         printf 'preload PATH\nwallpaper MONITOR,PATH\nreload MONITOR,PATH\n'
     else
-        printf 'wallpaper MONITOR,PATH,FIT_MODE\nlistactive\n'
+        # Mirrors `hyprctl hyprpaper --help` on current Hyprpaper: no `reload`,
+        # and `wallpaper` takes monitor,[contain:]path with no fit field.
+        printf 'listactive\nlistloaded\npreload <path>\nunload <path>\nwallpaper\n'
     fi
-    exit 0
+    # Real Hyprpaper prints its usage and then exits non-zero; readiness must be
+    # judged from the text, so keep this failure status in the mock.
+    exit 1
 fi
 if [ "${1:-}" = reload ]; then
     printf 'compositor-reload\n' >> "$MOCK_ROOT/ipc.log"
@@ -75,6 +87,18 @@ case "$prompt" in
     *) exit 1 ;;
 esac
 EOF
+# A real `ags` may exist on the developer's PATH and a real shell may even be
+# running; mock it so picker routing is decided by MOCK_AGS_INSTANCE alone.
+cat > "$TMP/bin/ags" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+    list) [ -n "${MOCK_AGS_INSTANCE:-}" ] && printf '%s\n' "$MOCK_AGS_INSTANCE"; exit 0 ;;
+    request) shift; printf '%s\n' "$*" >> "$MOCK_ROOT/ags-requests"; exit 0 ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP/bin/ags"
+
 chmod +x "$TMP/bin/hyprctl" "$TMP/bin/rofi"
 
 WALLPAPER="$REPO/config/hypr/scripts/wallpaper.sh"
@@ -91,10 +115,14 @@ jq -e --arg path "$special" \
     '.version == 1 and .fallback == {path: $path, fit: "contain"} and .monitors == {}' \
     "$HYPRVEIL_STATE_HOME/wallpapers.json" >/dev/null \
     || fail "all-monitor selection was not saved safely"
-grep -Fqx $'hyprpaper\twallpaper\tDP-1,'"$special"',contain' "$TMP/ipc.log" \
+grep -Fqx $'hyprpaper\tpreload\t'"$special" "$TMP/ipc.log" \
+    || fail "modern IPC did not preload the image before showing it"
+grep -Fqx $'hyprpaper\twallpaper\tDP-1,contain:'"$special" "$TMP/ipc.log" \
     || fail "modern IPC did not target DP-1 with contain mode"
-grep -Fqx $'hyprpaper\twallpaper\tHDMI-A-1,'"$special"',contain' "$TMP/ipc.log" \
+grep -Fqx $'hyprpaper\twallpaper\tHDMI-A-1,contain:'"$special" "$TMP/ipc.log" \
     || fail "modern IPC did not target HDMI-A-1"
+grep -Fq ',contain\t' "$TMP/ipc.log" && fail "fit was sent as a separate field"
+grep -Fq "$special,contain" "$TMP/ipc.log" && fail "fit was appended to the path"
 [ "$(stat -c %a "$HYPRVEIL_STATE_HOME/wallpapers.json")" = 600 ] \
     || fail "wallpaper state permissions are not private"
 ok "special-character paths, persistent all-monitor replacement, and modern IPC work"
@@ -109,14 +137,14 @@ MOCK_MONITORS='[{"name":"DP-1"}]' "$WALLPAPER" restore
 grep -Fq $'\tDP-9,' "$TMP/ipc.log" && fail "restore did not ignore a disconnected mapping"
 : > "$TMP/ipc.log"
 MOCK_MONITORS='[{"name":"DP-9"}]' "$WALLPAPER" restore
-grep -Fqx $'hyprpaper\twallpaper\tDP-9,'"$special"',cover' "$TMP/ipc.log" \
+grep -Fqx $'hyprpaper\twallpaper\tDP-9,'"$special" "$TMP/ipc.log" \
     || fail "mapping was not restored when its monitor reconnected"
 ok "per-monitor choices persist across disconnection and reconnection"
 
 rm -f "$special"
 : > "$TMP/ipc.log"
 MOCK_MONITORS='[{"name":"DP-9"}]' "$WALLPAPER" restore 2> "$TMP/missing-warning"
-grep -Fqx $'hyprpaper\twallpaper\tDP-9,'"$HYPRVEIL_DEFAULT_WALLPAPER"',cover' "$TMP/ipc.log" \
+grep -Fqx $'hyprpaper\twallpaper\tDP-9,'"$HYPRVEIL_DEFAULT_WALLPAPER" "$TMP/ipc.log" \
     || fail "missing per-monitor file did not use bundled default"
 grep -q 'saved file is missing' "$TMP/missing-warning" \
     || fail "missing wallpaper fallback was not explained"
@@ -153,6 +181,45 @@ jq -e --arg path "$picker" '.monitors["DP-1"] == {path: $path, fit: "cover"}' \
     "$HYPRVEIL_STATE_HOME/wallpapers.json" >/dev/null \
     || fail "picker did not preserve its special-character path"
 ok "picker handles empty directories and special-character image names"
+
+# --- `list` feeds the AGS grid with the same catalog Rofi shows ---
+
+catalog=$("$WALLPAPER" list)
+jq -e --arg path "$picker" '.images | index($path) != null' <<<"$catalog" >/dev/null \
+    || fail "list omitted a special-character image"
+jq -e '.images | all(test("\\.(jpg|jpeg|png|webp|jxl|bmp)$"; "i"))' <<<"$catalog" >/dev/null \
+    || fail "list returned unsupported file types"
+jq -e '.outputs == ["DP-1", "HDMI-A-1"]' <<<"$catalog" >/dev/null \
+    || fail "list did not report connected outputs"
+jq -e --arg path "$picker" '.monitors["DP-1"].path == $path' <<<"$catalog" >/dev/null \
+    || fail "list did not report the saved per-monitor selection"
+jq -e '.fallback.path | type == "string"' <<<"$catalog" >/dev/null \
+    || fail "list did not report a fallback selection"
+
+# An unreadable wallpaper directory still yields a well-formed empty catalog, so
+# the grid can render its "add images here" state instead of failing to open.
+HYPRVEIL_WALLPAPER_DIR="$TMP/absent" "$WALLPAPER" list \
+    | jq -e '.images == [] and (.dir | type == "string")' >/dev/null \
+    || fail "list did not degrade to an empty catalog for a missing directory"
+ok "list reports images, outputs, and saved selections as JSON"
+
+# --- pick prefers the AGS grid only when that shell is actually running ---
+rm -f "$TMP/ags-requests"
+: > "$TMP/rofi-errors"
+MOCK_AGS_INSTANCE=hyprveil "$WALLPAPER" pick
+grep -q 'toggle-wallpapers' "$TMP/ags-requests" \
+    || fail "pick did not delegate to the running AGS grid"
+[ ! -s "$TMP/rofi-errors" ] || fail "pick ran the Rofi flow while the AGS grid was up"
+
+rm -f "$TMP/ags-requests"
+: > "$TMP/ipc.log"
+# No AGS instance: the Rofi flow must still work unchanged.
+MOCK_ROFI_TARGET=DP-1 MOCK_ROFI_FIT=contain "$WALLPAPER" pick
+[ ! -e "$TMP/ags-requests" ] || fail "pick contacted AGS when no instance was running"
+jq -e --arg path "$picker" '.monitors["DP-1"] == {path: $path, fit: "contain"}' \
+    "$HYPRVEIL_STATE_HOME/wallpapers.json" >/dev/null \
+    || fail "Rofi fallback did not apply its selection"
+ok "pick uses the AGS grid when present and falls back to Rofi otherwise"
 
 : > "$TMP/ipc.log"
 HYPRLAND_INSTANCE_SIGNATURE=mock "$MOTION" reduced >/dev/null

@@ -4,7 +4,9 @@
 
    Each button's ring + icon glyph are baked into ONE svg per button per state
    (assets/<name>-default.svg / -accent.svg), built from the design mockup's
-   own icon paths, colored explicitly (#F5F5F7 default / #E14658 accent).
+   own icon paths, colored explicitly (#F5F5F7 default / the accent).
+   The accent variants are regenerated from assets/src/ by hypr/scripts/accent.sh
+   whenever the wallpaper accent changes — edit assets/src/, never assets/.
    Two reasons this isn't done as CSS border + system icon PNGs:
    - wlogout draws the label *inside* the same box as the icon, and that box
      is stretched by the grid to fill its cell, so a CSS `border-radius: 50%`
@@ -19,6 +21,8 @@
    wlogout lays buttons out in a grid; config/wlogout/power-menu.sh computes
    monitor-specific margins so the grid cells land at the mockup's 56px ring
    size with 28px gaps. Keep visual styling here and geometry in the launcher. */
+
+@import url("accent.css");
 
 * {
   background-image: none;
@@ -51,7 +55,7 @@ button {
 button:focus,
 button:active,
 button:hover {
-  color: #e14658;
+  color: @accent;
 }
 
 #lock {

@@ -1,9 +1,8 @@
-/* Palette mirror of hypr/colors.conf — keep in sync manually.
+/* Palette mirror of hypr/colors.conf — keep the neutrals in sync manually.
  * adw-gtk3 reads these libadwaita-style named colors, so GTK3 apps pick up
- * the same red accent and dark neutrals as everything else. */
-@define-color accent_color #E86A79;
-@define-color accent_bg_color #E14658;
-@define-color accent_fg_color #F5F5F7;
+ * the same accent and dark neutrals as everything else.
+ * accent.css is generated from the wallpaper — see docs/ACCENT.md. */
+@import url("accent.css");
 
 @define-color window_bg_color #0F1115;
 @define-color window_fg_color #F5F5F7;
