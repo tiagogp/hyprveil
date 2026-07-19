@@ -27,9 +27,29 @@ accent family is stored in `$XDG_STATE_HOME/hyprveil/accent.json` and rendered b
 ~/.config/hypr/scripts/accent.sh auto off
 ```
 
-Wallpaper changes call `accent.sh from-wallpaper` when automatic tracking is on.
+## When the accent is derived
+
+With automatic tracking on (the default), the accent follows the wallpaper at
+three points:
+
+- **Picking a wallpaper** — `wallpaper.sh apply` calls `from-wallpaper` with the
+  chosen image, so `SUPER+SHIFT+W` recolors the desktop as well as the background.
+- **Logging in** — `wallpaper.sh restore` re-derives from the fallback wallpaper,
+  so the accent survives a session restart and cannot drift from the background.
+  A per-monitor override does not change this: the fallback is the system-wide
+  selection, and deriving once per screen would reload every component per screen.
+- **Reinstalling** — `install.sh` runs `accent.sh render` after replacing the
+  managed config trees, which otherwise restore the default-red fragments.
+
 If ImageMagick is missing or the image has no reliable hue, wallpaper selection
-still succeeds and the designed accent (`#e14658`) is kept.
+still succeeds and the designed accent (`#e14658`) is kept. Nothing on these paths
+is fatal — a failed extraction warns and never blocks a wallpaper change or a login.
+
+Applying an accent reloads Hyprland, Waybar, SwayNC, and Mako in place. The AGS
+shell is also the notification daemon, so rather than restarting it (which would
+discard the session's notification history) `accent.sh` recompiles `style.scss`
+with dart-sass and pushes the result via `ags request reload-css`. Without
+dart-sass installed the panel keeps its old accent until it next restarts.
 
 ## Editing
 

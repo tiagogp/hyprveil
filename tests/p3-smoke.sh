@@ -24,10 +24,17 @@ cp -a "$REPO/config/hypr/animations.conf" "$HYPRVEIL_CONFIG_HOME/hypr/animations
 printf 'default image\n' > "$HYPRVEIL_DEFAULT_WALLPAPER"
 export PATH="$TMP/bin:$PATH"
 
+# Logs each invocation so the wallpaper->accent hook can be asserted. MOCK_AUTO=off
+# reproduces `accent.sh auto off`, the documented opt-out.
 cat > "$TMP/bin/accent.sh" <<'EOF'
 #!/usr/bin/env bash
-[ "${1:-}" = is-auto ] && exit 1
-exit 0
+set -u
+printf '%s\n' "$*" >> "$MOCK_ROOT/accent.log"
+if [ "${1:-}" = is-auto ]; then
+    [ "${MOCK_AUTO:-on}" = on ]
+    exit $?
+fi
+[ "${MOCK_ACCENT_FAIL:-0}" != 1 ]
 EOF
 chmod +x "$TMP/bin/accent.sh"
 
@@ -126,6 +133,37 @@ grep -Fq "$special,contain" "$TMP/ipc.log" && fail "fit was appended to the path
 [ "$(stat -c %a "$HYPRVEIL_STATE_HOME/wallpapers.json")" = 600 ] \
     || fail "wallpaper state permissions are not private"
 ok "special-character paths, persistent all-monitor replacement, and modern IPC work"
+
+# --- wallpaper -> accent hook ---
+# Picking a wallpaper is what moves the system accent, so the helper must be
+# invoked with the chosen image and the failure must never abort the wallpaper.
+grep -Fqx "from-wallpaper $special" "$TMP/accent.log" \
+    || fail "apply did not derive the accent from the chosen wallpaper"
+: > "$TMP/accent.log"
+: > "$TMP/ipc.log"
+MOCK_MONITORS='[{"name":"DP-1"}]' "$WALLPAPER" restore
+grep -Fqx "from-wallpaper $special" "$TMP/accent.log" \
+    || fail "restore did not re-derive the accent at login"
+[ "$(grep -c '^from-wallpaper ' "$TMP/accent.log")" = 1 ] \
+    || fail "restore derived the accent more than once"
+# `auto off` must leave the wallpaper working and the accent untouched.
+: > "$TMP/accent.log"
+MOCK_AUTO=off "$WALLPAPER" apply "$special" contain
+grep -q '^from-wallpaper ' "$TMP/accent.log" \
+    && fail "auto off did not stop the accent from tracking the wallpaper"
+jq -e --arg path "$special" '.fallback.path == $path' \
+    "$HYPRVEIL_STATE_HOME/wallpapers.json" >/dev/null \
+    || fail "auto off prevented the wallpaper from being applied"
+# A failed extraction (greyscale image, missing ImageMagick) warns and continues.
+: > "$TMP/ipc.log"
+status=0
+MOCK_ACCENT_FAIL=1 "$WALLPAPER" apply "$special" contain 2> "$TMP/accent-warning" || status=$?
+[ "$status" -eq 0 ] || fail "a failed accent extraction aborted apply (exit $status)"
+grep -q 'accent could not be derived' "$TMP/accent-warning" \
+    || fail "a failed accent extraction was not explained"
+grep -Fqx $'hyprpaper\twallpaper\tDP-1,contain:'"$special" "$TMP/ipc.log" \
+    || fail "a failed accent extraction blocked the wallpaper"
+ok "accent tracks the wallpaper on apply and login, and opts out without blocking it"
 
 : > "$TMP/ipc.log"
 "$WALLPAPER" apply "$special" DP-9 cover >/dev/null 2>&1

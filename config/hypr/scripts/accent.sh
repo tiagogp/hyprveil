@@ -31,8 +31,9 @@ Usage:
   accent.sh auto [on|off]         follow wallpaper changes (default: on)
 
 `render` is the repair path: it rewrites all generated fragments from
-$XDG_STATE_HOME/hyprveil/accent.json, which is what restores the accent after
-the installer replaces a managed config tree.
+$XDG_STATE_HOME/hyprveil/accent.json. install.sh runs it after replacing a
+managed config tree, which would otherwise leave the default-red fragments in
+place; run it by hand after editing a .in template.
 EOF
 }
 

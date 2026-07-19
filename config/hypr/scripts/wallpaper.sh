@@ -202,6 +202,18 @@ save_selection() {
     return "$status"
 }
 
+# Re-render the accent family from an image. Always warn-only: neither picking a
+# wallpaper nor logging in may be blocked by a failed extraction, and `is-auto`
+# failing is the documented opt-out rather than an error.
+derive_accent() {
+    local image=$1
+    [ -n "$image" ] || return 0
+    [ -x "$ACCENT_HELPER" ] || return 0
+    "$ACCENT_HELPER" is-auto >/dev/null 2>&1 || return 0
+    "$ACCENT_HELPER" from-wallpaper "$image" >/dev/null \
+        || warn "the accent could not be derived from $image"
+}
+
 apply_command() {
     local path=${1:-} monitor=${2:-} fit=${3:-cover} runtime
     [ -n "$path" ] || die "apply requires a wallpaper path"
@@ -219,10 +231,7 @@ apply_command() {
     save_selection "$path" "$monitor" "$fit" || die "could not save wallpaper state"
     flock -u 9
 
-    if [ -x "$ACCENT_HELPER" ] && "$ACCENT_HELPER" is-auto >/dev/null 2>&1; then
-        "$ACCENT_HELPER" from-wallpaper "$path" >/dev/null \
-            || warn "wallpaper was saved but the accent could not be derived"
-    fi
+    derive_accent "$path"
 
     runtime=$(runtime_path "$path") || return 0
     if [ -n "$monitor" ]; then
@@ -269,6 +278,14 @@ restore_command() {
         apply_ipc "$monitor" "$runtime" "$fit" \
             || warn "could not restore wallpaper for $monitor"
     done < <(jq -r '.monitors | to_entries[] | [.key, .value.path, .value.fit] | @tsv' "$STATE_FILE")
+
+    # Keep the accent in step with the wallpaper across logins: a reinstall
+    # replaces the rendered fragments with the default-red copies, and a
+    # hand-edited state file can drift too. The fallback is the system-wide
+    # selection, so it stays the source even when a monitor overrides its own
+    # wallpaper - deriving per monitor would take the accent lock, rewrite every
+    # fragment and reload five daemons once per screen at every login.
+    derive_accent "$fallback_path"
 }
 
 rofi_menu() {

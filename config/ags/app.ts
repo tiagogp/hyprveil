@@ -81,6 +81,19 @@ App.start({
             case "notif-toggle":
                 App.toggle_window(QUICK_SETTINGS)
                 return res("ok")
+            // accent.sh compiles style.scss with dart-sass and pushes the result
+            // here rather than restarting the shell: this process is also the
+            // notification daemon, and a restart would discard the session's
+            // notification history. The path is absolute and may contain spaces.
+            case "reload-css": {
+                const path = request.trim().split(/\s+/).slice(1).join(" ")
+                if (!path) return res("reload-css requires a path")
+                // reset=true drops the previous sheet in the same call; without
+                // it the old accent rules stay loaded and win on specificity.
+                // Astal treats an existing filesystem path as a file to read.
+                App.apply_css(path, true)
+                return res("ok")
+            }
             default:
                 return res(`unknown request: ${request}`)
         }

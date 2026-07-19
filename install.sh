@@ -61,6 +61,13 @@ elif hv_confirm "Back up and replace Hyprveil-managed config trees now?"; then
     "$REPO/scripts/06-select-profile.sh" --ensure
     "$REPO/scripts/07-select-notification-backend.sh" --ensure
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
+    # Deployment replaced every generated accent fragment with the default-red
+    # copy committed to the repo. `render` rewrites them from the saved state,
+    # so a wallpaper-derived accent survives a rerun; with no state yet it
+    # simply re-renders the default, which is why it is safe on a fresh install.
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/accent.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/accent.sh" render || true
+    fi
     INSTALL_OK=1
 else
     echo "Skipped configuration deployment; package and hardware-profile state were retained."
