@@ -8,6 +8,9 @@
 // to defend against simply do not exist here.
 pragma Singleton
 
+// QtQuick, not just Quickshell: the `color` properties in the neutrals block are
+// a QtQuick type, and a Singleton without it fails to load.
+import QtQuick
 import Quickshell
 
 Singleton {
