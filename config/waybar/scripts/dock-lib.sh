@@ -52,7 +52,7 @@ dock_desktop_entries() {
             [ -n "$record" ] || continue
             seen[$id]=1
             printf '%s\t%s\t%s\n' "$id" "$record" "$file"
-        done < <(find "$dir" -type f -name '*.desktop' -print 2>/dev/null | LC_ALL=C sort)
+        done < <(find -L "$dir" -type f -name '*.desktop' -print 2>/dev/null | LC_ALL=C sort)
     done < <(dock_desktop_dirs)
 }
 

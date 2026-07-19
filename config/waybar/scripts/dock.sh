@@ -25,6 +25,10 @@ build_list() {
     active_addr=$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty' || true)
     # Which workspace is on screen right now, so the unpinned "running" icons
     # only reflect apps on the current tab instead of every workspace at once.
+    # Pinned icons still resolve their window across every workspace (click
+    # needs that address to focus-and-switch to it from anywhere) but carry
+    # an extra "onscreen" flag so the lit/dimmed look only reflects windows
+    # actually on the current tab, not ones running elsewhere off-screen.
     curr_ws=$(hyprctl monitors -j 2>/dev/null | jq -r '(map(select(.focused)) | first.activeWorkspace.id) // empty' || true)
     jq -n --argjson pins "$pins" --argjson clients "$clients" --arg active "$active_addr" \
         --argjson curr_ws "${curr_ws:-null}" '
@@ -35,20 +39,22 @@ build_list() {
           | ($wins | map(select((.class|ascii_downcase) == $p.app_id)) | .[0]) as $w
           | {kind:"pinned", app_id:$p.app_id, desktop_id:$p.desktop_id,
              title:($w.title // $p.app_id), address:($w.address // null),
-             running:($w != null), active:(($w.address // "") == $active)}
+             running:($w != null),
+             onscreen:($w != null and ($curr_ws == null or $w.workspace.id == $curr_ws)),
+             active:(($w.address // "") == $active)}
         )) as $pinned_items
       | ($wins
           | map(select((.class|ascii_downcase) as $c | ($pinned_ids | index($c)) | not))
           | (if $curr_ws != null then map(select(.workspace.id == $curr_ws)) else . end)
           | unique_by(.class | ascii_downcase)
           | map({kind:"running", app_id:(.class|ascii_downcase), desktop_id:"",
-                 title:.title, address:.address, running:true, active:(.address == $active)})) as $running_items
+                 title:.title, address:.address, running:true, onscreen:true, active:(.address == $active)})) as $running_items
       | $pinned_items + $running_items
     '
 }
 
 cmd_render() {
-    local slot=$1 item app_id title kind running active glyph classes
+    local slot=$1 item app_id title kind running onscreen active glyph classes
     item=$(build_list | jq ".[$slot]")
     if [ "$item" = null ]; then
         jq -nc '{text:"",tooltip:""}'
@@ -58,11 +64,12 @@ cmd_render() {
     title=$(jq -r '.title' <<<"$item")
     kind=$(jq -r '.kind' <<<"$item")
     running=$(jq -r '.running' <<<"$item")
+    onscreen=$(jq -r '.onscreen' <<<"$item")
     active=$(jq -r '.active' <<<"$item")
     glyph=$(icon_for "$app_id")
     classes='["dock-btn"'
     [ "$kind" = pinned ] && classes+=',"pinned"'
-    [ "$running" = true ] && classes+=',"running"'
+    [ "$running" = true ] && [ "$onscreen" = true ] && classes+=',"running"'
     [ "$active" = true ] && classes+=',"active"'
     if has_image_icon "$app_id"; then
         classes+=',"app-'"$(printf '%s' "$app_id" | tr -c 'a-zA-Z0-9_-' '-')"'"'
