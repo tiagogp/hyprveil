@@ -105,14 +105,16 @@ ok "Bluetooth handles unavailable, disabled, enabled, and connected states"
 
 rm -f "$TMP/notifications"
 rm -f "$TMP/bin/blueman-manager"
-"$REPO/config/waybar/scripts/bluetooth.sh" open 2>/dev/null
+HYPRVEIL_BLUEMAN_MANAGER="$TMP/bin/blueman-manager" \
+    "$REPO/config/waybar/scripts/bluetooth.sh" open 2>/dev/null
 grep -q 'Bluetooth manager unavailable' "$TMP/notifications" || fail "missing Blueman failure was not visible"
 cat > "$TMP/bin/blueman-manager" <<'EOF'
 #!/usr/bin/env bash
 printf 'opened\n' >> "$MOCK_ROOT/blueman-opened"
 EOF
 chmod +x "$TMP/bin/blueman-manager"
-"$REPO/config/waybar/scripts/bluetooth.sh" open
+HYPRVEIL_BLUEMAN_MANAGER="$TMP/bin/blueman-manager" \
+    "$REPO/config/waybar/scripts/bluetooth.sh" open
 for _ in 1 2 3 4 5; do
     [ -s "$TMP/blueman-opened" ] && break
     sleep 0.05

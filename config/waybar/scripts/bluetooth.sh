@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Render a resilient Bluetooth status module and open Blueman on demand.
 set -uo pipefail
+BLUEMAN_MANAGER="${HYPRVEIL_BLUEMAN_MANAGER:-blueman-manager}"
 
 empty() {
     jq -nc --arg state "${1:-unavailable}" \
@@ -61,8 +62,8 @@ render() {
 }
 
 open_manager() {
-    if command -v blueman-manager >/dev/null 2>&1; then
-        setsid -f blueman-manager >/dev/null 2>&1
+    if command -v "$BLUEMAN_MANAGER" >/dev/null 2>&1; then
+        setsid -f "$BLUEMAN_MANAGER" >/dev/null 2>&1
         return
     fi
     printf 'Bluetooth manager is unavailable: install blueman.\n' >&2
