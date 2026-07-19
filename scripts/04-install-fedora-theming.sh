@@ -75,8 +75,16 @@ if hv_confirm "Back up and install Qt theme configs?"; then
         rm -rf "${HV_CONFIG_HOME:?}/$toolkit"
         mkdir -p "$HV_CONFIG_HOME/$toolkit/colors"
         sed "s|__HOME__|$HOME|g" "$REPO/config/$toolkit/$toolkit.conf" > "$HV_CONFIG_HOME/$toolkit/$toolkit.conf"
-        cp -a "$REPO/config/$toolkit/colors/hyprveil.conf" "$HV_CONFIG_HOME/$toolkit/colors/"
+        # The .in template travels with the palette: accent.sh regenerates
+        # hyprveil.conf from it on every wallpaper change, and without it the
+        # Qt palette is the one consumer that silently keeps the designed red.
+        cp -a "$REPO/config/$toolkit/colors/hyprveil.conf" \
+            "$REPO/config/$toolkit/colors/hyprveil.conf.in" \
+            "$HV_CONFIG_HOME/$toolkit/colors/"
     done
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/accent.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/accent.sh" render || true
+    fi
 fi
 
 echo "== zsh: install ~/.zshrc and make zsh the login shell =="

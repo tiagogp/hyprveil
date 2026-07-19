@@ -202,6 +202,12 @@ grep -q "@define-color accent $accent;" "$C/waybar/accent.css" \
 grep -q "\$accent: $accent;" "$C/ags/_accent.scss" || fail "render skipped the AGS fragment"
 grep -q "accent.sh\" render\|accent.sh render" "$REPO/install.sh" \
     || fail "install.sh does not re-render the accent after replacing the config trees"
+# Every .in template must be deployed alongside its output, or that consumer
+# silently keeps the designed red: render_template returns early when the
+# template is absent. The Qt palettes are installed by the theming stage rather
+# than hv_deploy_configs, so they need their own check.
+grep -q 'hyprveil.conf.in' "$REPO/scripts/04-install-fedora-theming.sh" \
+    || fail "the theming stage installs the Qt palette without its .in template"
 ok "render repairs every fragment after a deployment, and the installer calls it"
 
 # --------------------------------------------------------------------------
