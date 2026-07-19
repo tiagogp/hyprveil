@@ -329,7 +329,7 @@ hv_backup_item() {
 # repository's design wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
     local backup staged target name starship_tmp backend other
-    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0)
+    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell)
     local -a all_backends=(ags swaync mako) inactive_backends=()
     backend=$(hv_notification_backend || printf 'ags\n')
     names+=("$backend")

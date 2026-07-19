@@ -92,7 +92,7 @@ ok "JSON and JSONC configs parse"
 
 for test in tests/p0-smoke.sh tests/p1-smoke.sh tests/p2-smoke.sh \
             tests/p3-smoke.sh tests/p4-nested-smoke.sh tests/p5-smoke.sh \
-            tests/p6-accent-smoke.sh; do
+            tests/p6-accent-smoke.sh tests/p7-token-smoke.sh; do
     printf '\n== %s ==\n' "$test"
     "$test"
 done

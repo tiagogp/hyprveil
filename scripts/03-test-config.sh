@@ -49,6 +49,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/scripts/hardware-action.sh hypr/scripts/notification-daemon.sh \
          hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
          hypr/scripts/lib/render-lib.sh \
+         hypr/tokens.conf hypr/scripts/accent.sh hypr/scripts/theme.sh \
          hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
          hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
          hypr/profiles/form-factor/desktop.conf \
@@ -60,6 +61,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          waybar/scripts/notification.sh waybar/accent.css \
          kitty/kitty.conf kitty/accent.conf \
          rofi/config.rasi rofi/hyprveil.rasi rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
+         swaync/style.css.in wlogout/style.css.in quickshell/Tokens.qml.in quickshell/Tokens.qml \
          ags/app.ts ags/style.scss ags/_accent.scss ags/tsconfig.json ags/widget/QuickSettings.tsx \
          ags/widget/Wifi.tsx ags/widget/Bluetooth.tsx ags/widget/Notifications.tsx \
          ags/widget/NotificationPopups.tsx \

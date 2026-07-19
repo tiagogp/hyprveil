@@ -105,6 +105,51 @@ write_if_changed() {
 # rendering; keys are placeholder names without the surrounding @.
 declare -A HV_TOKENS=()
 
+TOKENS_FILE="${HYPRVEIL_TOKENS_FILE:-$CONFIG_HOME/hypr/tokens.conf}"
+
+# Adds every design token to HV_TOKENS. Additive on purpose: a template that
+# carries both @radius-md-px@ and @accent@ has to be rendered by ONE writer, or
+# each pass would leave the other's placeholders in the file. accent.sh owns
+# those mixed templates and calls this first; theme.sh owns the token-only ones.
+#
+# tokens.conf guarantees every meaningful line is `$name = value` and nothing
+# else, which is what lets this be a regex rather than a parser — and what
+# tests/p7-token-smoke.sh enforces so it stays that way.
+#
+# Numeric tokens also get `-px` and `-ms` variants. They are generated
+# unconditionally rather than from a list of which token needs which unit,
+# because that list is a second table that drifts from this one; an unused
+# placeholder costs one sed clause and is never written anywhere.
+load_design_tokens() {
+    local line name value key points
+    [ -f "$TOKENS_FILE" ] || { warn "tokens file not found: $TOKENS_FILE"; return 1; }
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ "$line" =~ ^\$([a-zA-Z0-9-]+)[[:space:]]*=[[:space:]]*(.*)$ ]] || continue
+        name="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        # Trim trailing whitespace; tokens.conf aligns its `=` with spaces.
+        value="${value%"${value##*[![:space:]]}"}"
+        HV_TOKENS["$name"]="$value"
+        if [[ "$value" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            HV_TOKENS["$name-px"]="${value}px"
+            HV_TOKENS["$name-ms"]="${value}ms"
+        fi
+    done < "$TOKENS_FILE"
+
+    # Second pass, over a snapshot of the keys: bash gives no ordering guarantee
+    # for an associative array and inserting during iteration is undefined.
+    #
+    # `$ease-out-points = 0.16, 1, 0.3, 1` is stored bare because Hyprland's
+    # `bezier =` line wants it that way. CSS and QML want the same numbers
+    # wrapped, so @ease-out@ is derived rather than written twice.
+    for key in "${!HV_TOKENS[@]}"; do
+        [[ "$key" = *-points ]] || continue
+        points="${HV_TOKENS[$key]}"
+        HV_TOKENS["${key%-points}"]="cubic-bezier($points)"
+    done
+}
+
 # Escapes a value for use as a sed replacement. Today every token is numeric or
 # a hex color so none of these characters occur — which is exactly why the
 # escaping would be forgotten the first time a token holds a font name or a path.

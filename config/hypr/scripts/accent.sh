@@ -334,13 +334,19 @@ active_border_color     $accent"
     write_if_changed "$CONFIG_HOME/kitty/accent.conf" "$content"
 }
 
-# Loads the accent placeholders into the table render_template expands. Only
-# these six keys are set, so a template that also carries design tokens keeps
-# its @token@ markers untouched — that separation is what lets theme.sh own the
-# token-bearing templates without either renderer writing the other's files.
+# Loads the placeholders render_template expands: the design tokens first, then
+# the accent family on top.
+#
+# The templates below (mako, the Qt schemes, the wlogout SVGs) carry BOTH kinds
+# of placeholder, and render-lib's invariant is that no output has two writers —
+# a second pass from theme.sh would rewrite the file from the template and drop
+# whatever this one substituted. So this script owns them and needs both tables.
+# theme.sh owns the token-only consumers and calls back here to keep them fresh.
 load_accent_tokens() {
     local accent=$1 hover=$2 rgb=$3
-    HV_TOKENS=(
+    HV_TOKENS=()
+    load_design_tokens || warn "rendering without design tokens"
+    HV_TOKENS+=(
         [accent]="$accent"
         [accent-upper]="$(printf '%s' "$accent" | tr '[:lower:]' '[:upper:]')"
         [accent-bare]="${accent#\#}"
