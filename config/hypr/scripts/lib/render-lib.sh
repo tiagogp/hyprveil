@@ -227,6 +227,13 @@ reload_ags() {
         || warn "could not push the stylesheet to the AGS shell"
 }
 
+# Quickshell watches its own config directory and reloads on change, so writing
+# Accent.qml or Tokens.qml already is the reload — there is deliberately nothing
+# to send. This exists as a named no-op rather than an omission from reload_all,
+# so the next person looking for "where does the shell get told" finds the answer
+# instead of concluding it was forgotten.
+reload_quickshell() { :; }
+
 reload_hyprland() {
     command -v hyprctl >/dev/null 2>&1 || return 0
     pgrep -x Hyprland >/dev/null 2>&1 || return 0
@@ -239,4 +246,5 @@ reload_all() {
     reload_swaync
     reload_mako
     reload_ags
+    reload_quickshell
 }

@@ -359,6 +359,11 @@ load_accent_tokens() {
 render_templated_consumers() {
     local changed=0 dir name
     render_template "$CONFIG_HOME/mako/config.in" "$CONFIG_HOME/mako/config" && changed=1
+    # QML has no include mechanism for values, so the accent arrives as a
+    # generated singleton. Quickshell watches its config directory, which makes
+    # writing this file the reload as well — see reload_quickshell.
+    render_template "$CONFIG_HOME/quickshell/Accent.qml.in" \
+        "$CONFIG_HOME/quickshell/Accent.qml" && changed=1
     for dir in qt5ct qt6ct; do
         render_template "$CONFIG_HOME/$dir/colors/hyprveil.conf.in" \
             "$CONFIG_HOME/$dir/colors/hyprveil.conf" && changed=1
