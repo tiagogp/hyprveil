@@ -223,14 +223,71 @@ clean deployment and mocked upgrades. The milestone remains in progress until th
 Fedora 44 and 43 VM rows in `docs/VM-TEST-MATRIX.md` are completed; the release
 checklist intentionally forbids a template tag while those results are pending.
 
+## P5 — Unified quick-settings panel
+
+**Status:** In progress
+**Priority:** P5
+**Depends on:** P0 COPR consent + dependency detection; P2 notification-backend abstraction; AGS v2 / Astal, NetworkManager, BlueZ
+
+### Deliverables
+
+- Add a glass **quick-settings panel** built with AGS v2 / Astal (TypeScript, GTK
+  layer-shell) that unifies **Wi-Fi**, **Bluetooth**, and **notifications** in one
+  surface matching Hyprveil's design system.
+- Make AGS the default notification backend via `AstalNotifd` (popups, history,
+  clear-all, persistent DND), retiring SwayNC and Mako to selectable fallbacks; only
+  one daemon ever runs.
+- Wi-Fi section (`AstalNetwork`): toggle, rescan, signal-sorted network list, connect
+  (secured joins via the NetworkManager secret agent), with an advanced-settings
+  escape hatch.
+- Bluetooth section (`AstalBluetooth`): adapter power toggle, device list with
+  connect/disconnect and battery percentage, with a Blueman escape hatch.
+- Toggle the panel from `SUPER+N` and the Waybar Wi-Fi/Bluetooth/notification icons;
+  fall back to the external managers when AGS is not the active backend.
+- Add a **wallpaper grid**: thumbnails of `~/Pictures/Wallpapers` with monitor and
+  cover/contain controls, marking the selection that would be restored. It renders
+  `wallpaper.sh list` and applies through `wallpaper.sh apply`, so the P3 state
+  schema, atomic writes, and Hyprpaper IPC detection stay in one place. `SUPER+SHIFT+W`
+  opens the grid when the shell is running and the Rofi flow otherwise.
+- Install AGS + Astal from the `solopasha/hyprland` COPR behind the existing consent
+  prompt; declining preserves the SwayNC/Mako notification path.
+- Give the panel and popups glass blur via Hyprland layer rules.
+
+### Acceptance checklist
+
+- [x] Backend selection accepts `ags` (default), `swaync`, and `mako`; exactly one
+      daemon runs after a switch.
+- [x] The Waybar notification icon reflects the AGS count/DND status; toggle and DND
+      route through the AGS request bridge.
+- [x] Declining the AGS and SwayNC COPRs leaves repositories unchanged and selects the
+      Mako fallback.
+- [x] Deployment installs only the selected backend tree and backs up the inactive
+      ones; the AGS config deploys under `~/.config/ags`.
+- [x] Panel toggle, layer blur rules, and backend-aware autostart are wired.
+- [x] The wallpaper grid lists, applies, and marks per-monitor and all-monitor
+      selections through the shared helper; `SUPER+SHIFT+W` falls back to Rofi when
+      the shell is not running.
+- [ ] A live session confirms Wi-Fi scan/connect/toggle, Bluetooth power/connect/
+      battery, and notification popup/history/DND on both supported Fedora releases.
+
+P5 is covered by `tests/p5-smoke.sh`, which validates the AGS project structure and
+request handlers, `ags` backend selection and daemon exclusivity, the Waybar status
+bridge, the Hyprland/Waybar integration wiring, the layer blur rules, the stylesheet's
+Sass compatibility, and selected-only deployment. The wallpaper grid's helper contract
+(`list` output and AGS-versus-Rofi routing) is covered by `tests/p3-smoke.sh`
+alongside the state and IPC behavior it reuses. The
+milestone remains in progress until the live-session row is recorded in
+`docs/VM-TEST-MATRIX.md`.
+
 ## Planned interfaces and state
 
 | Component | Interface | Persistent state |
 |---|---|---|
-| Notification backend | `--backend swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
+| Notification backend | `--backend ags\|swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
+| Quick-settings panel | `ags request toggle-quicksettings\|notif-status\|notif-dnd\|notif-clear\|toggle-wallpapers` | None (live AstalNetwork/Bluetooth/Notifd state) |
 | Dock manager | `list`, `add`, `remove`, `move` | `$XDG_STATE_HOME/hyprveil/dock-pins.json` |
 | Media helper | `render`, `previous`, `toggle`, `next` | None |
-| Wallpaper helper | `pick`, `apply`, `restore` | `$XDG_STATE_HOME/hyprveil/wallpapers.json` |
+| Wallpaper helper | `pick`, `apply`, `list`, `restore` | `$XDG_STATE_HOME/hyprveil/wallpapers.json` |
 | Motion selector | `standard`, `reduced` | `$XDG_STATE_HOME/hyprveil/motion-profile` |
 
 State files must be schema-checked, written atomically, and recover from malformed
@@ -242,3 +299,5 @@ content by preserving the bad file for diagnosis and restoring safe defaults.
 - [Waybar](https://github.com/Alexays/Waybar)
 - [SwayNotificationCenter](https://github.com/ErikReider/SwayNotificationCenter)
 - [Hyprpaper](https://wiki.hypr.land/Hypr-Ecosystem/hyprpaper/)
+- [AGS (Aylur's GTK Shell)](https://aylur.github.io/ags/) and [Astal](https://aylur.github.io/astal/)
+- [`solopasha/hyprland` COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)

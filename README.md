@@ -12,9 +12,11 @@ project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
 See [ROADMAP.md](ROADMAP.md) for milestone status, [docs/INSTALL.md](docs/INSTALL.md)
 for repository and rerun behavior, [docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
 [docs/TOP-BAR-DOCK.md](docs/TOP-BAR-DOCK.md) for Bluetooth, media, and pin management,
-[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for SwayNC and the Mako fallback,
+[docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the AGS Wi-Fi/Bluetooth/notification panel,
+[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the AGS default plus SwayNC and Mako fallbacks,
 [docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor
 wallpapers and reduced motion,
+[docs/ACCENT.md](docs/ACCENT.md) for wallpaper-derived accent colors,
 [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for managed files, optional
 dependencies, keybindings, and state locations,
 [docs/RECOVERY.md](docs/RECOVERY.md) for component recovery and rollback, and
@@ -90,7 +92,8 @@ That completes the original roadmap.
   changes first: `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil`.
 
 **P3 customization** ✅
-- `SUPER+SHIFT+W` opens a Rofi wallpaper flow for image, connected monitor, and
+- `SUPER+SHIFT+W` opens the wallpaper picker: an AGS thumbnail grid when the shell
+  is running, otherwise a Rofi flow. Both choose image, connected monitor, and
   cover/contain fit; fallback and per-monitor choices restore after login.
 - The helper detects current and legacy Hyprpaper IPC and recovers safely from
   missing images or malformed JSON state.
@@ -308,7 +311,7 @@ instead of the Quickshell overview.
 | `SUPER+SHIFT+S` | region snip → clipboard |
 | `SUPER+SHIFT+X` | region OCR → clipboard (needs tesseract) |
 | `SUPER+SHIFT+C` | color picker |
-| `SUPER+SHIFT+W` | wallpaper picker (image / monitor / fit) |
+| `SUPER+SHIFT+W` | wallpaper picker — AGS thumbnail grid, or Rofi when the shell is down |
 | `SUPER+minus` / `equal` | screen zoom out / in |
 | `SUPER+SHIFT+P` / `N` / `B` / `M` | media play-pause / next / prev / mute |
 | `SUPER+Q` | close window (`+SHIFT+ALT` force-kill) |
