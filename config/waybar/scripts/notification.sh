@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Waybar bridge for SwayNC's streaming JSON and the supported Mako fallback.
+# Waybar bridge for the AGS panel, SwayNC's streaming JSON, and the Mako fallback.
 set -uo pipefail
 
 STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
 STATE_FILE="$STATE_HOME/notification-backend"
 DAEMON_HELPER="${HYPRVEIL_NOTIFICATION_HELPER:-$HOME/.config/hypr/scripts/notification-daemon.sh}"
+AGS_INSTANCE="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
 CLIENT_PID=
 
 cleanup() {
@@ -22,9 +23,23 @@ backend() {
         IFS= read -r selected < "$STATE_FILE" || true
     fi
     case "$selected" in
-        swaync|mako) printf '%s\n' "$selected" ;;
-        *) printf 'swaync\n' ;;
+        ags|swaync|mako) printf '%s\n' "$selected" ;;
+        *) printf 'ags\n' ;;
     esac
+}
+
+ags_render() {
+    # app.ts answers `notif-status` with Waybar-shaped {alt,class,text,tooltip}.
+    if command -v ags >/dev/null 2>&1 \
+        && ags list 2>/dev/null | grep -Fxq "$AGS_INSTANCE"; then
+        local out
+        out=$(ags request -i "$AGS_INSTANCE" notif-status 2>/dev/null) || out=
+        if [ -n "$out" ]; then
+            printf '%s\n' "$out"
+            return
+        fi
+    fi
+    printf '{"text":"","alt":"none","class":"unavailable","tooltip":"AGS unavailable"}\n'
 }
 
 mako_render() {
@@ -41,7 +56,13 @@ listen() {
     local selected
     while :; do
         selected=$(backend)
-        if [ "$selected" = swaync ]; then
+        if [ "$selected" = ags ]; then
+            # AGS has no streaming socket for the icon; poll while it stays selected.
+            while [ "$(backend)" = ags ]; do
+                ags_render
+                sleep 2
+            done
+        elif [ "$selected" = swaync ]; then
             if command -v swaync-client >/dev/null 2>&1; then
                 # Upstream's -swb stream supplies count plus empty, populated,
                 # DND, and inhibitor alt states for Waybar's format-icons map.
@@ -68,9 +89,14 @@ listen() {
 case "${1:-listen}" in
     listen) listen ;;
     render)
-        if [ "$(backend)" = swaync ] && command -v swaync-client >/dev/null 2>&1; then
-            exec swaync-client -swb
-        fi
+        case "$(backend)" in
+            ags) ags_render; exit 0 ;;
+            swaync)
+                if command -v swaync-client >/dev/null 2>&1; then
+                    exec swaync-client -swb
+                fi
+                ;;
+        esac
         mako_render
         ;;
     toggle|dnd) exec "$DAEMON_HELPER" "$1" ;;

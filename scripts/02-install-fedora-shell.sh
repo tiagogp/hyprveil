@@ -16,11 +16,34 @@ hv_install_group required "Fedora desktop shell" - \
     waybar rofi-wayland wlogout pavucontrol fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
 
 echo
-echo "== Notification backend =="
+echo "== Notification + quick-settings backend =="
+# AGS (Aylur's GTK Shell v2 / Astal) is the default: a glass quick-settings panel
+# for Wi-Fi + Bluetooth that also serves notifications via AstalNotifd. SwayNC and
+# Mako remain fallbacks. The Astal package names below come from solopasha/hyprland;
+# aylurs-gtk-shell2 pulls most as deps, and the widget libraries are listed
+# explicitly so `ags run` finds the AstalBluetooth/AstalNetwork/AstalNotifd typelibs.
+AGS_PACKAGES=(aylurs-gtk-shell2 astal-io astal-notifd astal-bluetooth astal-network astal-wireplumber)
+
+install_swaync_or_mako() {
+    # Shared fallback path when AGS is unavailable or declined.
+    echo "SwayNC provides popup history, clear-all, and persistent do-not-disturb."
+    hv_install_group optional "SwayNC notification center" \
+        "erikreider/SwayNotificationCenter" SwayNotificationCenter
+    # Gate on the installed package, not a stray swaync binary on PATH, so a
+    # declined COPR reliably falls through to the Mako fallback.
+    if command -v rpm >/dev/null 2>&1 && rpm -q SwayNotificationCenter >/dev/null 2>&1; then
+        "$REPO/scripts/07-select-notification-backend.sh" --backend swaync
+    else
+        hv_warn "SwayNC was not installed; preserving notifications with the official Mako fallback"
+        hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --backend mako
+    fi
+}
+
 saved_backend=$(hv_notification_backend || true)
 case "$saved_backend" in
     mako)
-        echo "Keeping saved Mako fallback; the SwayNC COPR will not be offered on this rerun."
+        echo "Keeping saved Mako fallback; the AGS/SwayNC COPRs will not be offered on this rerun."
         hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
         "$REPO/scripts/07-select-notification-backend.sh" --ensure
         ;;
@@ -30,17 +53,23 @@ case "$saved_backend" in
             "erikreider/SwayNotificationCenter" SwayNotificationCenter || STAGE_FAIL=1
         "$REPO/scripts/07-select-notification-backend.sh" --ensure
         ;;
+    ags)
+        echo "Keeping saved AGS quick-settings + notifications backend."
+        hv_install_group required "AGS quick-settings panel + notifications" \
+            "solopasha/hyprland" "${AGS_PACKAGES[@]}" || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        ;;
     *)
-        echo "SwayNC provides popup history, clear-all, and persistent do-not-disturb."
-        hv_install_group optional "SwayNC notification center" \
-            "erikreider/SwayNotificationCenter" SwayNotificationCenter
-        if command -v swaync >/dev/null 2>&1 \
-            || { command -v rpm >/dev/null 2>&1 && rpm -q SwayNotificationCenter >/dev/null 2>&1; }; then
-            "$REPO/scripts/07-select-notification-backend.sh" --backend swaync
+        echo "AGS is a glass quick-settings panel (Wi-Fi/Bluetooth) that also serves notifications (popups, history, DND)."
+        hv_install_group optional "AGS quick-settings panel + notifications" \
+            "solopasha/hyprland" "${AGS_PACKAGES[@]}"
+        # Gate on the package we tried to install, not any `ags` binary already on
+        # PATH — a stray/older ags must not mask a declined or failed COPR install.
+        if command -v rpm >/dev/null 2>&1 && rpm -q aylurs-gtk-shell2 >/dev/null 2>&1; then
+            "$REPO/scripts/07-select-notification-backend.sh" --backend ags
         else
-            hv_warn "SwayNC was not installed; preserving notifications with the official Mako fallback"
-            hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
-            "$REPO/scripts/07-select-notification-backend.sh" --backend mako
+            hv_warn "AGS was not installed; falling back to the SwayNC notification center"
+            install_swaync_or_mako
         fi
         ;;
 esac
@@ -55,7 +84,7 @@ hv_install_group optional "Bluetooth status and manager" - bluez blueman
 hv_install_group required "Waybar helper and desktop-entry dock runtime" - jq util-linux glib2 socat
 
 hv_install_group optional "screenshots, clipboard, media, brightness, and OCR" - \
-    grim slurp cliphist wl-clipboard playerctl brightnessctl btop rofimoji tesseract
+    grim slurp cliphist wl-clipboard playerctl brightnessctl btop rofimoji tesseract ImageMagick
 
 echo
 echo "== Fonts: Geist and Nerd Font symbols (user-local) =="

@@ -91,7 +91,7 @@ PY
 ok "JSON and JSONC configs parse"
 
 for test in tests/p0-smoke.sh tests/p1-smoke.sh tests/p2-smoke.sh \
-            tests/p3-smoke.sh tests/p4-nested-smoke.sh; do
+            tests/p3-smoke.sh tests/p4-nested-smoke.sh tests/p5-smoke.sh; do
     printf '\n== %s ==\n' "$test"
     "$test"
 done

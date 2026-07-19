@@ -160,7 +160,7 @@ hv_notification_backend() {
         IFS= read -r backend < "$HV_NOTIFICATION_STATE" || true
     fi
     case "$backend" in
-        swaync|mako) printf '%s\n' "$backend" ;;
+        ags|swaync|mako) printf '%s\n' "$backend" ;;
         *) return 1 ;;
     esac
 }
@@ -328,15 +328,14 @@ hv_backup_item() {
 # the config tree. User wallpaper files are explicitly carried forward, while the
 # repository's design wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
-    local backup staged target name starship_tmp backend inactive_backend
+    local backup staged target name starship_tmp backend other
     local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0)
-    backend=$(hv_notification_backend || printf 'swaync\n')
+    local -a all_backends=(ags swaync mako) inactive_backends=()
+    backend=$(hv_notification_backend || printf 'ags\n')
     names+=("$backend")
-    if [ "$backend" = swaync ]; then
-        inactive_backend=mako
-    else
-        inactive_backend=swaync
-    fi
+    for other in "${all_backends[@]}"; do
+        [ "$other" = "$backend" ] || inactive_backends+=("$other")
+    done
     mkdir -p "$HV_CONFIG_HOME"
     backup=$(hv_new_backup_dir)
 
@@ -359,15 +358,18 @@ hv_deploy_configs() {
         mv "$staged" "$target"
     done
 
-    # Hyprveil used to deploy Mako unconditionally. Remove the inactive managed
-    # tree during upgrades so a stale daemon configuration cannot be mistaken for
-    # the selected backend; preserve it in the same timestamped backup first.
-    target="$HV_CONFIG_HOME/$inactive_backend"
-    if [ -e "$target" ]; then
-        mkdir -p "$backup/config"
-        cp -a "$target" "$backup/config/$inactive_backend"
-        rm -rf "$target"
-    fi
+    # Only the selected notification backend's config is deployed. Remove the
+    # other managed backend trees during upgrades so a stale daemon configuration
+    # cannot be mistaken for the selected backend; preserve them in the same
+    # timestamped backup first.
+    for other in "${inactive_backends[@]}"; do
+        target="$HV_CONFIG_HOME/$other"
+        if [ -e "$target" ]; then
+            mkdir -p "$backup/config"
+            cp -a "$target" "$backup/config/$other"
+            rm -rf "$target"
+        fi
+    done
 
     target="$HV_CONFIG_HOME/starship.toml"
     starship_tmp=$(mktemp "$HV_CONFIG_HOME/.hyprveil-starship.XXXXXX")

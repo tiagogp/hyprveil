@@ -56,11 +56,14 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-lib.sh \
          waybar/scripts/dock-manager.sh waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
          waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
-         waybar/scripts/notification.sh \
-         kitty/kitty.conf \
-         rofi/config.rasi rofi/hyprveil.rasi swaync/config.json swaync/style.css \
-         wlogout/layout wlogout/style.css \
-         gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-4.0/settings.ini gtk-4.0/gtk.css \
+         waybar/scripts/notification.sh waybar/accent.css \
+         kitty/kitty.conf kitty/accent.conf \
+         rofi/config.rasi rofi/hyprveil.rasi rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
+         ags/app.ts ags/style.scss ags/_accent.scss ags/tsconfig.json ags/widget/QuickSettings.tsx \
+         ags/widget/Wifi.tsx ags/widget/Bluetooth.tsx ags/widget/Notifications.tsx \
+         ags/widget/NotificationPopups.tsx \
+         wlogout/layout wlogout/style.css wlogout/accent.css \
+         gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \
          qt6ct/qt6ct.conf qt6ct/colors/hyprveil.conf \
          starship.toml zsh/.zshrc; do

@@ -5,7 +5,9 @@ required|polkit-gnome|polkit-gnome-authentication-agent-1|authentication agent
 required|xdg-desktop-portal-hyprland|xdg-desktop-portal-hyprland|desktop portal
 required|waybar|waybar|desktop bars
 required|rofi-wayland|rofi|application launcher
-backend|SwayNotificationCenter|swaync|SwayNC notification center
+backend|aylurs-gtk-shell2|ags|AGS quick-settings panel (Wi-Fi/Bluetooth) + notifications
+backend|dart-sass|sass|AGS stylesheet compilation (see docs/QUICK-SETTINGS.md)
+backend|SwayNotificationCenter|swaync|SwayNC notification-center fallback
 backend|mako|mako|Mako notification fallback
 required|hyprlock|hyprlock|screen lock
 required|hypridle|hypridle|idle management
@@ -17,10 +19,12 @@ required|glib2|gio|desktop-entry dock launching
 required|socat|socat|instant dock focus updates
 optional|bluez|bluetoothctl|Bluetooth status
 optional|blueman|blueman-manager|Bluetooth management
+optional|NetworkManager|nmcli|Wi-Fi panel scan and connect
 optional|brightnessctl|brightnessctl|laptop brightness keys
 optional|playerctl|playerctl|media keys and Waybar media controls
 optional|rofimoji|rofimoji|emoji picker
 optional|tesseract|tesseract|screen OCR
+optional|ImageMagick|magick|wallpaper accent extraction
 optional|btop|btop|task manager
 optional|code|code|editor shortcut
 optional|firefox|firefox|browser shortcut

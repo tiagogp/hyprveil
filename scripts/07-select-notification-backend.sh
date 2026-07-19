@@ -12,11 +12,13 @@ STATE_INVALID=0
 
 usage() {
     cat <<'EOF'
-Usage: 07-select-notification-backend.sh [--ensure] [--backend swaync|mako]
+Usage: 07-select-notification-backend.sh [--ensure] [--backend ags|swaync|mako]
 
-SwayNC is the default full notification center. Mako is the supported fallback
-for systems where the SwayNC COPR was declined or is unavailable. With --ensure,
-an existing valid choice is retained without prompting or changing it.
+AGS is the default: a glass quick-settings panel that also serves notifications
+(popups, history, DND) via AstalNotifd. SwayNC is the notification-center
+fallback and Mako the minimal fallback, for systems where the AGS/SwayNC COPR was
+declined or is unavailable. With --ensure, an existing valid choice is retained
+without prompting or changing it.
 EOF
 }
 
@@ -30,7 +32,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-valid_backend() { [[ "$1" = swaync || "$1" = mako ]]; }
+valid_backend() { [[ "$1" = ags || "$1" = swaync || "$1" = mako ]]; }
 
 saved=
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
@@ -48,11 +50,11 @@ fi
 
 if ! valid_backend "$BACKEND"; then
     if [ ! -t 0 ]; then
-        printf 'No saved notification backend; pass --backend swaync|mako.\n' >&2
+        printf 'No saved notification backend; pass --backend ags|swaync|mako.\n' >&2
         exit 2
     fi
-    read -r -p 'Notification backend (swaync/mako) [swaync]: ' BACKEND
-    BACKEND=${BACKEND:-swaync}
+    read -r -p 'Notification backend (ags/swaync/mako) [ags]: ' BACKEND
+    BACKEND=${BACKEND:-ags}
 fi
 valid_backend "$BACKEND" || { printf 'Invalid notification backend: %s\n' "$BACKEND" >&2; exit 2; }
 
@@ -69,7 +71,9 @@ mv -f "$state_tmp" "$HV_NOTIFICATION_STATE"
 
 printf 'Notification backend selected: %s\n' "$BACKEND"
 if [ "$BACKEND" = mako ]; then
-    printf 'Mako fallback selected: popup notifications and DND remain available; history requires SwayNC.\n'
+    printf 'Mako fallback selected: popup notifications and DND remain available; history requires AGS or SwayNC.\n'
+elif [ "$BACKEND" = swaync ]; then
+    printf 'SwayNC fallback selected: full notification center, but the AGS quick-settings panel is inactive.\n'
 fi
 
 # An explicit live switch should not require logout. The Waybar bridge observes
