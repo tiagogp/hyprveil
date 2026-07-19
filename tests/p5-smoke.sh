@@ -97,7 +97,14 @@ cat > "$TMP/bin/pkill" <<'EOF'
 printf '%s\n' "$*" >> "$MOCK_ROOT/killed"
 EOF
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/bin/pgrep"
-chmod +x "$TMP/bin/ags" "$TMP/bin/pkill" "$TMP/bin/pgrep"
+# AGS shells out to dart-sass at startup, so the daemon requires it before it
+# commits to AGS. Mock it too, or these checks depend on the host's install.
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/sass"
+cat > "$TMP/bin/swaync" <<'EOF'
+#!/usr/bin/env bash
+printf 'started\n' >> "$MOCK_ROOT/swaync"
+EOF
+chmod +x "$TMP/bin/ags" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/sass" "$TMP/bin/swaync"
 
 # --- Backend selection accepts ags and defaults to it ---
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend"
@@ -116,6 +123,19 @@ grep -qx -- '-x swaync' "$TMP/killed" || fail "ags startup did not stop SwayNC"
 grep -qx -- '-x mako' "$TMP/killed" || fail "ags startup did not stop Mako"
 grep -qx run "$TMP/ags" || fail "ags run was not launched"
 ok "selecting ags stops the other daemons and launches the AGS shell"
+
+# --- Missing dart-sass degrades to a fallback instead of no notifications ---
+# `ags run` compiles style.scss on every start; without sass it exits and would
+# take notifications down with it, so the daemon must hand off to swaync/mako.
+rm -f "$TMP/ags" "$TMP/swaync"
+# /usr/bin supplies env(1); sass is mocked in $TMP/bin only, so dropping it here
+# makes it genuinely absent regardless of what the host has installed.
+mv "$TMP/bin/sass" "$TMP/sass.hidden"
+PATH="$TMP/bin:/usr/bin" "$REPO/config/hypr/scripts/notification-daemon.sh" start 2>/dev/null
+mv "$TMP/sass.hidden" "$TMP/bin/sass"
+[ -s "$TMP/swaync" ] || fail "missing dart-sass did not fall back to a working daemon"
+! grep -qx run "$TMP/ags" 2>/dev/null || fail "ags run was launched without dart-sass"
+ok "a missing dart-sass falls back instead of leaving the session without notifications"
 
 # --- Daemon toggle/dnd route to the AGS panel ---
 rm -f "$TMP/ags"

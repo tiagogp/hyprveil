@@ -24,6 +24,12 @@ ags_running() {
     ags list 2>/dev/null | grep -Fxq "$AGS_INSTANCE"
 }
 
+# AGS compiles style.scss with dart-sass on every start, so a missing sass aborts
+# the whole shell — notifications included. Both have to be present to commit.
+ags_ready() {
+    command -v ags >/dev/null 2>&1 && command -v sass >/dev/null 2>&1
+}
+
 ags_request() {
     command -v ags >/dev/null 2>&1 || return 1
     ags request -i "$AGS_INSTANCE" "$@" >/dev/null 2>&1
@@ -47,11 +53,18 @@ start_daemon() {
             pkill -x mako 2>/dev/null || true
             ags_running && return 0
         fi
-        if command -v ags >/dev/null 2>&1; then
+        if ags_ready; then
             exec ags run
         fi
-        printf 'AGS is selected but ags is unavailable; run scripts/02-install-fedora-shell.sh.\n' >&2
-        return 1
+        # Leaving the session with no notifications at all is the worst outcome,
+        # so demote to the first fallback that is actually installed.
+        if command -v ags >/dev/null 2>&1; then
+            printf 'AGS is selected but dart-sass is unavailable; falling back. Run scripts/02-install-fedora-shell.sh.\n' >&2
+        else
+            printf 'AGS is selected but ags is unavailable; falling back. Run scripts/02-install-fedora-shell.sh.\n' >&2
+        fi
+        selected=swaync
+        command -v swaync >/dev/null 2>&1 || selected=mako
     fi
 
     if [ "$selected" = swaync ]; then
