@@ -24,7 +24,7 @@ DEFAULT_HOVER="#e86a79"
 # The safe end of the adaptive chrome range, used before any wallpaper has been
 # measured. Deliberately the opaque end: an unrendered checkout shows a bar that
 # is legible on every wallpaper, and only measurement makes it glassier.
-DEFAULT_CHROME_ALPHA="0.76"
+DEFAULT_CHROME_ALPHA="0.87"
 
 usage() {
     cat <<'EOF'
@@ -194,13 +194,26 @@ score_histogram() {
 # Adaptive chrome alpha
 # --------------------------------------------------------------------------
 
-# The muted neutral ($text-muted in colors.conf) and the chrome tint the bar
-# fills with. Duplicated here rather than read from colors.conf because these
-# two are the binding constraint of the solve below, not styling: muted is the
-# faintest thing chrome ever draws, so it is what decides how glassy the bar is
-# allowed to be. See the contrast budget in docs/TOKENS.md.
+# The chrome tint the bar fills with, and the two neutrals that constrain it.
+# Duplicated here rather than read from colors.conf because they are the binding
+# constraint of the solve below, not styling. See the budget in docs/TOKENS.md.
+#
+# CHROME_FG is muted ($text-muted), the faintest TEXT chrome draws — the window
+# title and the clock, both at 13px. It sets the alpha.
+# CHROME_DIM is $text-dim, the faintest GLYPH chrome draws. It is darker than
+# muted and is NOT allowed to set the alpha: solving the bar opaque enough to
+# carry dim as text would cost every wallpaper a solid slab.
 CHROME_FG="9a9ca5"
+CHROME_DIM="6b6e78"
 CHROME_TINT="14161a"
+
+# Text below 18.66px regular is held to 4.5:1 (WCAG SC 1.4.3). The bar's title
+# and clock are 13px, so this is the floor the alpha solves against.
+#
+# The 3.0:1 this used to use is SC 1.4.11, which covers non-text UI components —
+# it never applied to the title. GLYPH_RATIO is where 3.0:1 legitimately belongs.
+CHROME_TEXT_RATIO="4.5"
+CHROME_GLYPH_RATIO="3.0"
 
 # Prints "rrggbb" for the brightest region of the strip the bar covers.
 #
@@ -231,8 +244,28 @@ chrome_band() {
         '
 }
 
+# The WCAG relative-luminance and contrast primitives, plus the alpha-blend the
+# bar actually performs. Shared verbatim by every solve below so the alpha and
+# the colours lifted against it can never disagree about what the bar looks like.
+CHROME_AWK_LIB='
+    function chan(hex, i) { return strtonum("0x" substr(hex, i, 2)) }
+    function lin(c) {
+        c /= 255
+        return (c <= 0.03928) ? c / 12.92 : ((c + 0.055) / 1.055) ^ 2.4
+    }
+    function lum(r, g, b) { return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b) }
+    function hexlum(hex) { return lum(chan(hex,1), chan(hex,3), chan(hex,5)) }
+    function ratio(a, b) { return (a > b) ? (a + 0.05)/(b + 0.05) : (b + 0.05)/(a + 0.05) }
+    function blendlum(band, tint, a,   r, g, b) {
+        r = chan(band,1)*(1-a) + chan(tint,1)*a
+        g = chan(band,3)*(1-a) + chan(tint,3)*a
+        b = chan(band,5)*(1-a) + chan(tint,5)*a
+        return lum(r, g, b)
+    }
+'
+
 # Prints the lowest alpha in [$chrome-alpha-min, $chrome-alpha] that keeps the
-# muted neutral at 3.0:1 over the measured band, stepping in hundredths.
+# muted neutral at 4.5:1 over the measured band, stepping in hundredths.
 #
 # Solved rather than interpolated from brightness: contrast is not linear in
 # alpha, and WCAG's ratio is over relative luminance with its own gamma curve.
@@ -241,21 +274,12 @@ chrome_band() {
 solve_chrome_alpha() {
     local band=$1 floor=$2 ceiling=$3
     awk -v band="$band" -v fg="$CHROME_FG" -v tint="$CHROME_TINT" \
-        -v floor="$floor" -v ceiling="$ceiling" '
-        function chan(hex, i) { return strtonum("0x" substr(hex, i, 2)) }
-        function lin(c) {
-            c /= 255
-            return (c <= 0.03928) ? c / 12.92 : ((c + 0.055) / 1.055) ^ 2.4
-        }
-        function lum(r, g, b) { return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b) }
-        function ratio(a, b) { return (a > b) ? (a + 0.05)/(b + 0.05) : (b + 0.05)/(a + 0.05) }
+        -v floor="$floor" -v ceiling="$ceiling" -v want="$CHROME_TEXT_RATIO" \
+        "$CHROME_AWK_LIB"'
         BEGIN {
-            lfg = lum(chan(fg,1), chan(fg,3), chan(fg,5))
+            lfg = hexlum(fg)
             for (a = floor; a <= ceiling + 0.0001; a += 0.01) {
-                r = chan(band,1)*(1-a) + chan(tint,1)*a
-                g = chan(band,3)*(1-a) + chan(tint,3)*a
-                b = chan(band,5)*(1-a) + chan(tint,5)*a
-                if (ratio(lfg, lum(r, g, b)) >= 3.0) { printf "%.2f\n", a; exit }
+                if (ratio(lfg, blendlum(band, tint, a)) >= want) { printf "%.2f\n", a; exit }
             }
             # No alpha in range clears the floor, so take the most opaque one.
             printf "%.2f\n", ceiling
@@ -263,11 +287,67 @@ solve_chrome_alpha() {
     '
 }
 
-# The alpha the bar and dock should use for this wallpaper. Warn-only in every
-# failure path: a wallpaper whose brightness cannot be measured must fall back
-# to the safe (opaque) end rather than block the accent render.
-extract_chrome_alpha() {
-    local image=$1 band floor ceiling
+# Prints the contrast the muted neutral actually gets at a given alpha, so the
+# caller can tell whether solve_chrome_alpha found an answer or ran out of range
+# and fell back to the ceiling. The old solve swallowed that difference silently,
+# which is how the bar shipped a wallpaper it could not make legible.
+chrome_text_ratio() {
+    local band=$1 alpha=$2
+    awk -v band="$band" -v fg="$CHROME_FG" -v tint="$CHROME_TINT" -v a="$alpha" \
+        "$CHROME_AWK_LIB"'
+        BEGIN { printf "%.2f\n", ratio(hexlum(fg), blendlum(band, tint, a)) }
+    '
+}
+
+# Prints the contrast a foreground gets on the solved chrome fill.
+chrome_ratio_for() {
+    local band=$1 alpha=$2 fg=${3#\#}
+    awk -v band="$band" -v fg="$fg" -v tint="$CHROME_TINT" -v a="$alpha" \
+        "$CHROME_AWK_LIB"'
+        BEGIN { printf "%.2f\n", ratio(hexlum(fg), blendlum(band, tint, a)) }
+    '
+}
+
+# Lightens a colour in HSL until it clears $CHROME_GLYPH_RATIO on the solved
+# chrome fill, and prints the result.
+#
+# This is the lever that keeps chrome glassy. The accent and $text-dim are the
+# darkest things the bar draws, and holding THEM at 3.0:1 through alpha alone
+# needs ~0.97 — a solid slab on any bright wallpaper, which throws away the
+# glass exactly where the wallpaper is most worth seeing. Lifting the two
+# offending colours costs a shade of fidelity to the wallpaper's accent and
+# keeps the surface.
+#
+# Capped at +0.30 lightness for two reasons: past that the lifted accent stops
+# reading as the same hue family as the accent everything else uses, and the
+# accent doubles as a FILL under $accent-fg (the notification badge), where
+# lifting cuts white-on-accent contrast. The cap holds accent-fg near 4:1 on the
+# badge. Returning short of the target is legal and warned about, not an error —
+# a 2.8:1 glyph is still better than the 1.5:1 the unlifted accent gave.
+lift_onto_chrome() {
+    local hex=$1 band=$2 alpha=$3 step lifted got
+    for step in 0.00 0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 \
+                0.20 0.22 0.24 0.26 0.28 0.30; do
+        lifted=$(shade "$hex" "$step")
+        got=$(chrome_ratio_for "$band" "$alpha" "$lifted")
+        if awk -v g="$got" -v w="$CHROME_GLYPH_RATIO" 'BEGIN{exit !(g >= w)}'; then
+            printf '%s\n' "$lifted"
+            return 0
+        fi
+    done
+    warn "$hex tops out at ${got}:1 on this wallpaper's chrome (want ${CHROME_GLYPH_RATIO}:1)"
+    printf '%s\n' "$lifted"
+}
+
+# The alpha the bar and dock should use for this wallpaper, and the band it was
+# solved from, printed as "alpha band". The band comes back so callers can store
+# it and re-lift the glyph colours later without re-reading the image; it is
+# empty when nothing could be measured.
+#
+# Warn-only in every failure path: a wallpaper whose brightness cannot be
+# measured must fall back to the safe (opaque) end rather than block the render.
+measure_chrome() {
+    local image=$1 band floor ceiling alpha got
     # Callers reach this before load_accent_tokens has populated the table, and
     # it is safe to fill here: load_accent_tokens resets HV_TOKENS anyway.
     [ -n "${HV_TOKENS[chrome-alpha]:-}" ] || load_design_tokens || true
@@ -275,15 +355,47 @@ extract_chrome_alpha() {
     ceiling=${HV_TOKENS[chrome-alpha]:-$DEFAULT_CHROME_ALPHA}
 
     if [ ! -f "$image" ] || ! magick_cmd >/dev/null 2>&1; then
-        printf '%s\n' "$ceiling"
+        printf '%s \n' "$ceiling"
         return 0
     fi
     if ! band=$(chrome_band "$image") || [ -z "$band" ]; then
         warn "could not measure $(basename "$image") behind the bar; keeping chrome opaque"
-        printf '%s\n' "$ceiling"
+        printf '%s \n' "$ceiling"
         return 0
     fi
-    solve_chrome_alpha "$band" "$floor" "$ceiling"
+
+    alpha=$(solve_chrome_alpha "$band" "$floor" "$ceiling")
+    # Say so when the range ran out. solve_chrome_alpha returns the ceiling both
+    # when the ceiling is the answer and when nothing in range was, and those are
+    # very different facts about the bar you are about to look at.
+    got=$(chrome_text_ratio "$band" "$alpha")
+    if awk -v g="$got" -v w="$CHROME_TEXT_RATIO" 'BEGIN{exit !(g < w)}'; then
+        warn "$(basename "$image") is too bright behind the bar: muted text reaches" \
+             "only ${got}:1 at the $ceiling ceiling (want ${CHROME_TEXT_RATIO}:1)"
+    fi
+    printf '%s %s\n' "$alpha" "$band"
+}
+
+# The alpha alone, for `accent.sh extract-chrome`.
+extract_chrome_alpha() {
+    measure_chrome "$1" | cut -d' ' -f1
+}
+
+# The chrome fill's two lifted glyph colours for a wallpaper, printed as
+# "accent-on-chrome dim-on-chrome". Derived from the band rather than stored,
+# so that `accent.sh set` — which changes the accent without touching the
+# wallpaper — re-lifts against the same measured strip.
+chrome_glyph_colors() {
+    local accent=$1 band=$2 alpha=$3
+    if [ -z "$band" ]; then
+        # Nothing measured yet. The unlifted colours are what the templates ship
+        # with, and they are correct at the opaque ceiling.
+        printf '%s %s\n' "$accent" "#$CHROME_DIM"
+        return 0
+    fi
+    printf '%s %s\n' \
+        "$(lift_onto_chrome "$accent" "$band" "$alpha")" \
+        "$(lift_onto_chrome "#$CHROME_DIM" "$band" "$alpha")"
 }
 
 extract_accent() {
@@ -314,10 +426,11 @@ default_state() {
           chromeAlpha: $chrome}'
 }
 
-# chromeAlpha is validated as OPTIONAL: it landed after version 1 shipped, and a
-# state file written by the previous version is not malformed — it just predates
-# the field. Treating its absence as corruption would throw away a user's accent
-# on upgrade. state_chrome_alpha supplies the default when it is missing.
+# chromeAlpha and chromeBand are validated as OPTIONAL: both landed after
+# version 1 shipped, and a state file written by a previous version is not
+# malformed — it just predates the field. Treating absence as corruption would
+# throw away a user's accent on upgrade. state_chrome_alpha and state_chrome_band
+# supply defaults when they are missing.
 valid_state() {
     jq -e '
         type == "object" and
@@ -326,7 +439,8 @@ valid_state() {
         (.accent | test("^#[0-9a-fA-F]{6}$")) and
         (.source | type == "string") and
         (.auto | type == "boolean") and
-        ((has("chromeAlpha") | not) or (.chromeAlpha | test("^[01](\\.[0-9]+)?$")))
+        ((has("chromeAlpha") | not) or (.chromeAlpha | test("^[01](\\.[0-9]+)?$"))) and
+        ((has("chromeBand") | not) or (.chromeBand | test("^[0-9a-f]{6}$")))
     ' "$STATE_FILE" >/dev/null 2>&1
 }
 
@@ -360,12 +474,17 @@ ensure_state() {
     fi
 }
 
+# band is optional: callers that did not measure a wallpaper (accent.sh set,
+# reset) leave the stored one alone rather than clearing it, so that changing the
+# accent by hand still lifts against the wallpaper actually on screen.
 save_state() {
-    local accent=$1 source=$2 chrome=$3 tmp status
+    local accent=$1 source=$2 chrome=$3 band=${4:-} tmp status
     ensure_state || return 1
     tmp=$(mktemp "${TMPDIR:-/tmp}/hyprveil-accent.XXXXXX") || return 1
     jq --arg accent "$accent" --arg source "$source" --arg chrome "$chrome" \
-        '.accent = $accent | .source = $source | .chromeAlpha = $chrome' \
+        --arg band "$band" \
+        '.accent = $accent | .source = $source | .chromeAlpha = $chrome
+         | if $band == "" then . else .chromeBand = $band end' \
         "$STATE_FILE" > "$tmp"
     write_json "$tmp"
     status=$?
@@ -385,6 +504,13 @@ state_chrome_alpha() {
     ensure_state || { printf '%s\n' "$DEFAULT_CHROME_ALPHA"; return 0; }
     value=$(jq -r '.chromeAlpha // empty' "$STATE_FILE")
     printf '%s\n' "${value:-$DEFAULT_CHROME_ALPHA}"
+}
+
+# Empty when no wallpaper has been measured yet. chrome_glyph_colors treats that
+# as "ship the unlifted colours", which are correct at the opaque ceiling.
+state_chrome_band() {
+    ensure_state || return 0
+    jq -r '.chromeBand // empty' "$STATE_FILE"
 }
 
 auto_enabled() {
@@ -458,7 +584,8 @@ active_border_color     $accent"
 # whatever this one substituted. So this script owns them and needs both tables.
 # theme.sh owns the token-only consumers and calls back here to keep them fresh.
 load_accent_tokens() {
-    local accent=$1 hover=$2 rgb=$3 chrome=${4:-}
+    local accent=$1 hover=$2 rgb=$3 chrome=${4:-} band=${5-$(state_chrome_band)}
+    local on_chrome dim_on_chrome
     HV_TOKENS=()
     load_design_tokens || warn "rendering without design tokens"
     # Overrides the flat $chrome-alpha the token file carries. tokens.conf holds
@@ -466,6 +593,10 @@ load_accent_tokens() {
     # unrendered checkout) still get a legible bar; the solved value only ever
     # replaces it here, where a wallpaper has actually been looked at.
     [ -n "$chrome" ] && HV_TOKENS[chrome-alpha]="$chrome"
+    # The glyph colours are lifted against the alpha that was just chosen, so
+    # they have to be derived after it lands in the table, not before.
+    read -r on_chrome dim_on_chrome <<<"$(chrome_glyph_colors "$accent" "$band" \
+        "${HV_TOKENS[chrome-alpha]:-$DEFAULT_CHROME_ALPHA}")"
     HV_TOKENS+=(
         [accent]="$accent"
         [accent-upper]="$(printf '%s' "$accent" | tr '[:lower:]' '[:upper:]')"
@@ -473,6 +604,8 @@ load_accent_tokens() {
         [accent-hover]="$hover"
         [accent-hover-bare]="${hover#\#}"
         [accent-rgb]="$rgb"
+        [accent-on-chrome]="$on_chrome"
+        [dim-on-chrome]="$dim_on_chrome"
     )
 }
 
@@ -502,17 +635,22 @@ render_templated_consumers() {
 # --------------------------------------------------------------------------
 
 apply_accent() {
-    local accent=$1 source=$2 chrome=${3:-$(state_chrome_alpha)} hover rgb
+    local accent=$1 source=$2 chrome=${3:-$(state_chrome_alpha)} band=${4-} hover rgb
     if [ "$accent" = "$DEFAULT_ACCENT" ]; then
         hover="$DEFAULT_HOVER"
     else
         hover=$(shade "$accent" 0.08)
     fi
     rgb=$(rgb_triplet "$accent")
-    load_accent_tokens "$accent" "$hover" "$rgb" "$chrome"
+    # An empty band here means "the caller measured nothing", and
+    # load_accent_tokens falls back to the stored one — `accent.sh set` changes
+    # the accent without touching the wallpaper, and the lift still has to
+    # happen against whatever is actually on screen.
+    load_accent_tokens "$accent" "$hover" "$rgb" "$chrome" "${band:-$(state_chrome_band)}"
 
     hv_lock
-    save_state "$accent" "$source" "$chrome" || { hv_unlock; die "could not save accent state"; }
+    save_state "$accent" "$source" "$chrome" "$band" \
+        || { hv_unlock; die "could not save accent state"; }
 
     render_hypr "$accent" "$hover"
     render_gtk_css "$accent" "$hover" "$rgb"
@@ -526,11 +664,11 @@ apply_accent() {
 }
 
 from_wallpaper_command() {
-    local image=${1:-} accent chrome
+    local image=${1:-} accent chrome band
     [ -n "$image" ] || die "from-wallpaper requires an image path"
     accent=$(extract_accent "$image") || return 1
-    chrome=$(extract_chrome_alpha "$image")
-    apply_accent "$accent" "$image" "$chrome"
+    read -r chrome band <<<"$(measure_chrome "$image")"
+    apply_accent "$accent" "$image" "$chrome" "$band"
 }
 
 # Re-solves ONLY the chrome alpha and rewrites the Quickshell singleton.
@@ -547,9 +685,9 @@ from_wallpaper_command() {
 # Hyprland, Waybar, SwayNC and Mako here would be churn for a file none of them
 # read.
 chrome_command() {
-    local image=${1:-} chrome accent hover rgb
+    local image=${1:-} chrome band accent hover rgb
     [ -n "$image" ] || die "chrome requires an image path"
-    chrome=$(extract_chrome_alpha "$image")
+    read -r chrome band <<<"$(measure_chrome "$image")"
 
     accent=$(state_accent)
     if [ "$accent" = "$DEFAULT_ACCENT" ]; then
@@ -558,10 +696,10 @@ chrome_command() {
         hover=$(shade "$accent" 0.08)
     fi
     rgb=$(rgb_triplet "$accent")
-    load_accent_tokens "$accent" "$hover" "$rgb" "$chrome"
+    load_accent_tokens "$accent" "$hover" "$rgb" "$chrome" "$band"
 
     hv_lock
-    save_state "$accent" "$(jq -r '.source' "$STATE_FILE")" "$chrome" \
+    save_state "$accent" "$(jq -r '.source' "$STATE_FILE")" "$chrome" "$band" \
         || { hv_unlock; die "could not save accent state"; }
     render_template "$CONFIG_HOME/quickshell/Accent.qml.in" \
         "$CONFIG_HOME/quickshell/Accent.qml"

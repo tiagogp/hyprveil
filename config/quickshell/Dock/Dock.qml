@@ -253,7 +253,10 @@ PanelWindow {
             width: 2
             height: 44
             radius: Tokens.radiusPill
-            color: Accent.accent
+            // Chrome-lifted: this 2px bar is drawn straight onto the dock, and a
+            // drop marker that cannot be seen is the one thing this control has
+            // to communicate.
+            color: Accent.accentOnChrome
             y: row.y + (row.height - height) / 2
             x: row.x + dock.pinsOriginX + boundary * dock.slot
                - row.spacing / 2 - width / 2

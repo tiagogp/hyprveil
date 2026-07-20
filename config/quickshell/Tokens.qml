@@ -103,9 +103,11 @@ Singleton {
     readonly property int blurSize:   8
     readonly property int blurPasses: 2
 
-    // The bar and dock only. Glassier than tier 0 because they carry no body
-    // text — the floor there is 3.0:1 for UI text, not 4.5:1. See tokens.conf.
-    readonly property real chromeAlpha: 0.76
+    // The bar and dock only, and the WORST CASE for them: what a pure white
+    // strip under the bar needs to hold muted text at 4.5:1. Accent.chromeAlpha
+    // is the measured value for the current wallpaper and is usually glassier;
+    // this is the fallback when nothing has been measured. See tokens.conf.
+    readonly property real chromeAlpha: 0.87
 
     // ---------------------------------------------------------------------
     // Motion — milliseconds. Hyprland's deciseconds do not cross into QML.

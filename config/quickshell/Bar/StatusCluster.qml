@@ -43,7 +43,7 @@ RowLayout {
         glyph: !adapter?.enabled ? "\u{f00b2}"
              : connected.length > 0 ? "\u{f00b1}"
              : "\u{f00af}"
-        glyphColor: connected.length > 0 ? Accent.accent : Tokens.muted
+        glyphColor: connected.length > 0 ? Accent.accentOnChrome : Tokens.muted
         tooltip: {
             if (!adapter?.enabled) return "Bluetooth off";
             if (connected.length === 0) return "Bluetooth on";

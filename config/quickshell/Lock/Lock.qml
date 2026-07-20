@@ -413,12 +413,18 @@ Scope {
                         }
 
                         // The design's `inset 0 1px 0 rgba(255,255,255,0.08)`.
-                        // hyprlock has no inset-shadow primitive; here it is one
-                        // hairline clipped by the pill's own radius.
+                        // Qt Quick clips Rectangle children to the bounding box,
+                        // not to the rounded radius, so keep the sheen away from
+                        // the curved ends instead of drawing a full-width strip.
                         Rectangle {
-                            anchors { top: parent.top; left: parent.left; right: parent.right }
-                            anchors.margins: 1
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.topMargin: 1
+                            anchors.leftMargin: parent.radius
+                            anchors.rightMargin: parent.radius
                             height: 1
+                            radius: height / 2
                             color: Qt.rgba(1, 1, 1, 0.08)
                         }
 
@@ -428,26 +434,51 @@ Scope {
                             anchors.rightMargin: Tokens.spacing4 + Tokens.spacingHair
                             spacing: Tokens.spacing2h
 
-                            Glyph {
-                                id: pillGlyph
-                                text: busy ? "\u{f0772}" : "\u{f033e}"
-                                size: Tokens.iconSm
-                                color: failure !== "" ? Tokens.error : Tokens.dim
+                            Item {
+                                Layout.preferredWidth: Tokens.iconSm
+                                Layout.preferredHeight: Tokens.iconSm
 
-                                // Only spins while PAM is actually out — an
-                                // always-running animator would keep the whole
-                                // lock surface repainting at 60fps on battery.
-                                // The reset matters: a stopped animator leaves
-                                // rotation wherever it stopped, and the padlock
-                                // that replaces the spinner would sit tilted.
-                                RotationAnimator {
-                                    target: pillGlyph
-                                    running: busy
-                                    from: 0
-                                    to: 360
-                                    duration: 900
-                                    loops: Animation.Infinite
-                                    onRunningChanged: if (!running) pillGlyph.rotation = 0
+                                Glyph {
+                                    anchors.centerIn: parent
+                                    visible: !busy
+                                    text: "\u{f033e}"
+                                    size: Tokens.iconSm
+                                    color: failure !== "" ? Tokens.error : Tokens.dim
+                                }
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    visible: busy
+                                    spacing: 3
+
+                                    Repeater {
+                                        model: 3
+
+                                        Rectangle {
+                                            width: 3
+                                            height: 3
+                                            radius: height / 2
+                                            color: Accent.accent
+                                            opacity: 0.35
+
+                                            SequentialAnimation on opacity {
+                                                running: busy
+                                                loops: Animation.Infinite
+                                                PauseAnimation { duration: index * 110 }
+                                                NumberAnimation {
+                                                    to: 1
+                                                    duration: Tokens.dur2h
+                                                    easing.type: Easing.OutCubic
+                                                }
+                                                NumberAnimation {
+                                                    to: 0.35
+                                                    duration: Tokens.dur3
+                                                    easing.type: Easing.InOutCubic
+                                                }
+                                                PauseAnimation { duration: 220 - index * 55 }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -459,7 +490,7 @@ Scope {
                                 // that eats the row pushes it to the far edge.
                                 Layout.maximumWidth: 190
                                 text: {
-                                    if (busy) return "Checking…";
+                                    if (busy) return "Unlocking";
                                     if (failure !== "") return failure;
                                     if (entry.length === 0) return "Enter password";
                                     // Dots rather than the character count, so a

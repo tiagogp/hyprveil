@@ -37,7 +37,7 @@ RowLayout {
             // spacing5 square and a Rectangle draws its border inside, so a
             // permanent 1px border costs no layout.
             border.width: 1
-            border.color: active ? Accent.accent : "transparent"
+            border.color: active ? Accent.accentOnChrome : "transparent"
 
             Text {
                 renderType: Text.NativeRendering
@@ -46,9 +46,9 @@ RowLayout {
                 font.family: Tokens.fontUi
                 font.pixelSize: Tokens.text2xs
                 font.weight: pill.active ? Tokens.weightBold : Tokens.weightSemibold
-                color: pill.active ? Accent.accent
+                color: pill.active ? Accent.accentOnChrome
                      : pill.occupied ? Tokens.muted
-                     : Tokens.dim
+                     : Accent.dimOnChrome
 
                 // The label crosses three colours (dim -> muted -> accent) as a
                 // workspace fills and focuses. Left unanimated it was the one

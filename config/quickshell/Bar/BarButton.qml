@@ -29,7 +29,7 @@ Item {
         text: root.glyph
         size: Tokens.iconSm
         color: mouse.containsMouse
-            ? (root.accentOnHover ? Accent.accent : Tokens.text)
+            ? (root.accentOnHover ? Accent.accentOnChrome : Tokens.text)
             : root.glyphColor
 
         // No hover scale here, unlike the dock: bar glyphs sit in a dense row at

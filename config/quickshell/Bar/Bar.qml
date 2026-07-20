@@ -3,17 +3,23 @@
 // One process draws this on every monitor (see shell.qml), where Waybar needed a
 // second bar definition and a separate module set.
 //
-// The bar does not sit at tier 0. Tier 0's 0.88 is pinned by the 4.5:1
-// body-text floor, and the bar has no body text — the title is the widest
-// string it ever draws — so it is bound by the 3.0:1 AA floor for UI text
-// instead, and can sit glassier than any tier allows.
-//
-// How much glassier is measured, not fixed. The mockup's 0.5 fill is illegible
+// The bar's glass is MEASURED, not fixed. The mockup's 0.5 fill is illegible
 // over a bright wallpaper and luxurious over a dark one, so accent.sh samples
 // the strip this bar covers and solves for the glassiest alpha that still holds
-// 3.0:1 — Accent.chromeAlpha. Tokens.chromeAlpha (0.76) is what a pure white
-// wallpaper demands and remains the fallback. See the contrast budget in
-// docs/TOKENS.md.
+// the title at 4.5:1 — Accent.chromeAlpha. Tokens.chromeAlpha (0.88) is what a
+// pure white wallpaper demands and remains the fallback.
+//
+// This header used to claim the bar was bound by a 3.0:1 floor "because it
+// carries no body text". That was wrong: WCAG's 3.0:1 is SC 1.4.11, for non-text
+// UI components, and the title and clock below are text at textSm (13px), which
+// SC 1.4.3 holds to 4.5:1 regardless of the surface. The bar shipped at 0.76
+// with muted landing at 3.08:1 over bright wallpapers, which is what "the top
+// bar is too transparent to read" meant.
+//
+// The accent and dim glyphs ARE non-text components and do get 3.0:1 — but via
+// Accent.accentOnChrome and Accent.dimOnChrome, which lift those two colours
+// against the solved fill. Alpha alone would have needed ~0.97 and made the bar
+// a solid slab. See the contrast budget in docs/TOKENS.md.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -69,7 +75,9 @@ PanelWindow {
                 Layout.alignment: Qt.AlignVCenter
                 spacing: Tokens.spacing4
 
-                Media { screen: bar.screen }
+                // `barWindow` so the hover card can place itself against the
+                // bar's real edges instead of a measured offset.
+                Media { screen: bar.screen; barWindow: bar }
                 StatusCluster {}
 
                 // The wallpaper picker was reachable only from inside quick
@@ -79,7 +87,7 @@ PanelWindow {
                     glyph: "\u{f0976}"
                     tooltip: "Wallpaper"
                     glyphColor: (bar.wallpapers?.open ?? false)
-                        ? Accent.accent : Tokens.muted
+                        ? Accent.accentOnChrome : Tokens.muted
                     onClicked: if (bar.wallpapers)
                         bar.wallpapers.open = !bar.wallpapers.open
                 }
@@ -99,8 +107,8 @@ PanelWindow {
                     glyph: dnd ? "\u{f009b}" : "\u{f009a}"
                     tooltip: dnd ? "Do not disturb"
                         : count > 0 ? `${count} notifications` : "Notifications"
-                    glyphColor: dnd ? Tokens.dim
-                        : count > 0 ? Accent.accent : Tokens.muted
+                    glyphColor: dnd ? Accent.dimOnChrome
+                        : count > 0 ? Accent.accentOnChrome : Tokens.muted
                     // Opens the panel on notifications alone. A click that is
                     // already showing notifications closes; one that lands on
                     // the full panel switches view rather than dismissing, so
@@ -155,7 +163,15 @@ PanelWindow {
                         implicitWidth: Math.max(
                             implicitHeight, countText.implicitWidth + Tokens.spacing1h)
                         radius: Tokens.radiusPill
-                        color: Accent.accent
+                        // The chrome-lifted accent, not the raw one, even though
+                        // this is a FILL rather than a glyph — it sits directly
+                        // beside the bell it counts for, and two different
+                        // accents touching each other reads as a bug rather than
+                        // as two surfaces. The cost is that accentFg below lands
+                        // near 4:1 instead of the accent's designed band; that is
+                        // the same tradeoff the countSize comment already makes,
+                        // and this is a mark, not text.
+                        color: Accent.accentOnChrome
                         // Opaque, unlike the bar it borrows from: the ring sits
                         // over the bell glyph, and any alpha would show the
                         // strokes it exists to clear.

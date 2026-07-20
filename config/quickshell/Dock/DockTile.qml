@@ -106,7 +106,7 @@ Item {
              : mouse.containsMouse ? "#23262e"
              : "#1c1f26"
         border.width: tile.active ? 1 : 0
-        border.color: Accent.accent
+        border.color: Accent.accentOnChrome
 
         Behavior on color {
             ColorAnimation {
@@ -140,7 +140,7 @@ Item {
             visible: tile.iconSource === ""
             text: tile.glyph
             size: Tokens.iconMd
-            color: tile.active ? Accent.accent : Tokens.muted
+            color: tile.active ? Accent.accentOnChrome : Tokens.muted
         }
     }
 
@@ -153,7 +153,7 @@ Item {
         width: Tokens.spacing1
         height: Tokens.spacing1
         radius: Tokens.radiusPill
-        color: Accent.accent
+        color: Accent.accentOnChrome
         // Shown for anything running, including on another workspace — the dot
         // means "open", and a click gets you there.
         //

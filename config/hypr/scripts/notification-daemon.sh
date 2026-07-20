@@ -21,9 +21,20 @@ backend() {
     esac
 }
 
+# Quickshell ships TWO names for the same binary — `quickshell` and the short
+# `qs` — and an instance started as one is invisible to a check for the other.
+# Matching only `quickshell` meant `restart` left a `qs` instance alive, and
+# start_daemon then launched a second shell on top of it: two bars, two docks,
+# two notification servers racing for the bus name.
+QS_NAMES=(quickshell qs)
+
 qs_running() {
-    command -v quickshell >/dev/null 2>&1 || return 1
-    pgrep -x quickshell >/dev/null 2>&1
+    local name
+    command -v quickshell >/dev/null 2>&1 || command -v qs >/dev/null 2>&1 || return 1
+    for name in "${QS_NAMES[@]}"; do
+        pgrep -x "$name" >/dev/null 2>&1 && return 0
+    done
+    return 1
 }
 
 # There is no toolchain gate here: Quickshell reads QML directly, so it has
@@ -41,7 +52,12 @@ stop_daemons() {
     # A nested validation shell has an isolated D-Bus but shares the host process
     # namespace. Never let it kill notification daemons in the parent session.
     [ "${HYPRVEIL_NESTED_SESSION:-0}" != 1 ] || return 0
-    pkill -x quickshell 2>/dev/null || true
+    local name
+    # Both names, or restart orphans the instance it failed to match. See
+    # QS_NAMES.
+    for name in "${QS_NAMES[@]}"; do
+        pkill -x "$name" 2>/dev/null || true
+    done
     pkill -x swaync 2>/dev/null || true
     pkill -x mako 2>/dev/null || true
 }

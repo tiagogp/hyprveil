@@ -182,48 +182,81 @@ If you raise the glassiness, re-check this number first.
 
 #### Chrome sits below the tiers
 
-The bar and the dock take `$chrome-alpha` (**0.76**) instead of their tier alpha,
-via `Surface.alphaOverride`. They are the one exception, and the reason is that
-the budget above prices *body* text: 4.5:1 is the WCAG AA floor for a paragraph.
-Chrome has no paragraph. The bar's widest string is the elided window title and
-the dock is icons only, so the applicable floor is the **3.0:1** AA minimum for
-UI text and large text.
+The bar and the dock take `$chrome-alpha` (**0.87**) instead of their tier alpha,
+via `Surface.alphaOverride`. They are the one exception — but a much smaller one
+than this section used to claim.
+
+> **Corrected.** Chrome sat at **0.76** on the argument that "the bar has no
+> paragraph, so the floor is the 3.0:1 AA minimum for UI text." That is wrong.
+> WCAG's 3.0:1 is SC 1.4.11, which covers non-text UI components and graphical
+> objects. The bar's window title and clock are *text*, at `$text-sm` (13px), and
+> SC 1.4.3 holds regular-weight text under 18.66px to **4.5:1** on any surface.
+> At 0.76 muted landed at 3.08:1 over a bright wallpaper, clearing a floor that
+> never applied to it — which is why the bar was hard to read.
 
 | Alpha | muted `#9a9ca5` | text `#f5f5f7` |
 |---|---|---|
 | 0.88 (tier 0) | 4.69:1 | 11.80:1 |
-| 0.76 (chrome) | 3.05:1 | 7.66:1 |
-| 0.62 | 2.00:1 | 4.53:1 |
+| 0.87 (chrome) | 4.56:1 | 11.62:1 |
+| 0.76 (old chrome) | 3.05:1 | 7.66:1 |
 
-0.76 is the floor, not a taste pick — muted crosses 3.0:1 just below it. Going
-further means recoloring the bar's title from `muted` to `text`.
+0.87 is the floor, not a taste pick — muted crosses 4.5:1 just below it. Going
+further means recoloring the bar's title from `muted` to `text`. Chrome is still
+below tier 0, but now only barely; what actually buys back the glass is
+measurement, below.
+
+#### Glyphs are held to 3.0:1, by color rather than alpha
+
+`$text-dim` and the wallpaper-derived accent are the darkest things chrome draws,
+and they *are* non-text components, so 3.0:1 is genuinely their floor. Alpha
+cannot deliver it: holding a dark accent at 3.0:1 through opacity alone needs
+**~0.97**, a solid slab on precisely the bright wallpapers most worth seeing.
+
+So `accent.sh` lifts the two colors instead. It walks each up in HSL lightness
+until it clears 3.0:1 against the fill `chromeAlpha` produces, capped at +0.30 —
+past that the lifted accent stops reading as the same hue family, and the accent
+doubles as a *fill* under `$accent-fg` on the notification badge, where lifting
+costs white-on-accent contrast. The results ship as `Accent.accentOnChrome` and
+`Accent.dimOnChrome`.
+
+**Anything drawn directly on the bar or dock must use those two, never the raw
+`Accent.accent` or `Tokens.dim`.** Chrome is the one surface whose background is
+not a known constant — it is part wallpaper — so a glyph color that is legible on
+the quick-settings panel can vanish on the bar. Over a dark wallpaper the lift is
+zero and the colors come back untouched.
 
 #### …but only against a white wallpaper
 
 Every number above assumes the worst case: pure white behind the bar. That is
 the only assumption a *fixed* alpha can make, and it is wrong most of the time.
-A dark wallpaper clears 3.0:1 at **0.00** — the whole bar could be glass and the
-title would still be legible — and paying 0.76 there buys nothing.
+A dark wallpaper clears 4.5:1 at **0.00** — the whole bar could be glass and the
+title would still be legible — and paying 0.87 there buys nothing.
 
 So chrome alpha is measured, not fixed. On every wallpaper change `accent.sh`
 crops the top 6% of the image, resizes it to 16×1 so each sample is the kind of
 wide local average the layer blur actually puts behind the bar, takes the
 **brightest** of the sixteen (the bar spans the full width, so one bright slice
 is a real place the title has to survive), and walks the WCAG formula to find
-the lowest alpha still holding muted at 3.0:1. The result is written to
-`Accent.qml` as `chromeAlpha`, which `Surface.alphaOverride` reads.
+the lowest alpha still holding muted at 4.5:1. The result is written to
+`Accent.qml` as `chromeAlpha`, which `Surface.alphaOverride` reads. The measured
+band is persisted to the state file as `chromeBand`, so `accent.sh set` can
+re-lift the glyph colors against the wallpaper actually on screen without
+re-reading the image.
 
 | Wallpaper band | Solved alpha |
 |---|---|
-| `#ffffff` — blown-out sky | 0.76 |
-| `#aeb3bf` — overcast grey | 0.64 |
+| `#ffffff` — blown-out sky | 0.87 |
+| `#aeb3bf` — overcast grey | 0.81 |
 | `#1c1c1c` — near-black | 0.38 (floor) |
 
 The range is bounded at both ends:
 
-- **`$chrome-alpha` (0.76)** is the ceiling and the fallback. An unrendered
+- **`$chrome-alpha` (0.87)** is the ceiling and the fallback. An unrendered
   checkout, a missing ImageMagick, or an unreadable image all land here, so the
-  failure mode is a legible bar rather than an invisible one.
+  failure mode is a legible bar rather than an invisible one. When even the
+  ceiling cannot hold 4.5:1, `accent.sh` now *says so* — it used to return the
+  ceiling silently, which is how a wallpaper it could not make legible shipped
+  looking like a solved one.
 - **`$chrome-alpha-min` (0.38)** is the floor, and it is a *design* limit rather
   than a contrast one. The math permits 0.00 on a dark wallpaper, but a bar with
   no fill stops reading as a surface — the workspace pills and the title lose
