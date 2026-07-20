@@ -20,6 +20,24 @@ Under Waybar this was four separate modules, each spawning `playerctl` every two
 seconds, because a Waybar module has exactly one click target. MPRIS is a property
 subscription: nothing runs until the player state changes.
 
+## Opening the panels
+
+Two buttons sit between the status cluster and the clock. The picture glyph opens
+the wallpaper picker; the bell opens quick settings, and right-clicking it toggles
+do-not-disturb without opening anything — muting is what you want at the moment a
+toast interrupts you, and going through the panel costs three clicks.
+
+The bell carries a badge counting notification *history*, not the toasts currently
+on screen: a notification that timed out unread is precisely the case the button
+exists to surface, and counting popups would read zero exactly then. The count is
+capped at `9+`, because past a few unread the exact number stops being the
+information and the badge is a fixed circle on a 24px glyph.
+
+Both panels remain reachable the way they always were — `SUPER+N` for quick
+settings, and `qs ipc call wallpapers toggle` — and both are single session-wide
+scopes rather than one per monitor, so every bar toggles the same panel and their
+button states cannot disagree.
+
 ## Managing dock pins
 
 Right-click the dock launcher to open the Rofi manager. It can show the current
@@ -56,7 +74,9 @@ rather than a constraint.
 Left-click focuses a running window or launches a closed pin through its desktop
 entry, middle-click closes a running window, and right-click toggles the pin. The
 desktop-entry route is what makes Flatpak and Electron launch commands work without
-treating a window class as an executable.
+treating a window class as an executable. Where no entry can be resolved, the click
+falls through to `gtk-launch` with the pinned desktop id, so the tile still starts
+the app instead of doing nothing.
 
 Icons come from `Quickshell.Io.DesktopEntries` resolved through the icon theme.
 Waybar could not draw an icon and a label in the same button, which is why six apps
@@ -64,5 +84,22 @@ previously had hardcoded `background-image` rules pointing at absolute Papirus
 paths, with everything else falling back to a glyph from a 29-entry lookup table.
 Both are gone.
 
-A pinned app running on another workspace stays reachable but renders dimmed, so
-the dock distinguishes "open elsewhere" from "open here".
+`DesktopEntries` does not index anything on every Quickshell build — 0.3.0 from the
+Fedora COPR returns an empty model — so the tile resolves its icon as a chain
+rather than a single lookup: the entry's declared `Icon=`, then the desktop id
+without its suffix, then the window class, then `application-x-executable`. Each
+candidate is checked against the icon theme (`Quickshell.iconPath(name, true)`,
+which returns an empty string when the theme has no such icon) instead of being
+assumed to resolve. Keying tile visibility on the desktop entry alone is what
+previously emptied the dock of every logo on those builds.
+
+## Reserved space
+
+Both surfaces reserve their strip through the layer-shell exclusive zone, so a
+maximised window sits between them rather than running underneath. The dock
+previously pinned `exclusiveZone: 0`, which put the last rows of a tiled window
+under the tiles and out of reach.
+
+Every tile renders at full strength, whichever workspace its window is on.
+Dimming off-workspace apps read as "disabled" when in fact clicking one is how
+you switch to it; the running dot carries open/closed on its own.
