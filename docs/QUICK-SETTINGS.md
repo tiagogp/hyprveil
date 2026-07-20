@@ -21,12 +21,20 @@ otherwise live in separate places or external apps:
 
 ## Opening the panel
 
-- **`SUPER+N`** toggles it. The keybind calls
+- **`SUPER+N`** toggles the full panel. The keybind calls
   `hypr/scripts/notification-daemon.sh toggle`, which dispatches per backend — it
   has never called the shell directly, which is why the binding survived the
   migration from AGS unchanged.
-- Click the Bluetooth or network glyph in the bar for the external managers
-  (`blueman-manager`, `nm-connection-editor`).
+- **The bar's bell glyph** opens the same window showing the notification
+  section alone: a bell that answers with Wi-Fi and Bluetooth is not the control
+  the glyph promised. Clicking it while the full panel is open switches the view
+  rather than closing, so the bell never needs two clicks. Right-click toggles
+  do-not-disturb without opening anything.
+- Click the Bluetooth, network, or volume glyph in the bar to open the matching
+  `gnome-control-center` page (`bluetooth`, `wifi`, `sound`). These were
+  `blueman-manager`, `nm-connection-editor`, and `pavucontrol` — three unrelated
+  GTK3 dialogs, so three adjacent bar icons opened three different-looking
+  windows.
 
 When the notification backend is SwayNC or Mako instead of Quickshell (see
 [NOTIFICATIONS.md](NOTIFICATIONS.md)), the panel is inactive and `SUPER+N` falls
@@ -48,15 +56,17 @@ plain `quickshell` with no `-c`):
 | `Panel/Button.qml` | Push button for panel footers; `primary: true` is the confirming action. |
 | `Lock/Lock.qml` | The session lock — see [RECOVERY.md](RECOVERY.md). |
 | `Bar/` / `Dock/` | Bar modules and the dock — see [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md). |
+| `Dock/PinPicker.qml` | Modal pin picker; renders `dock-manager.sh entries`, stages a list, and calls `dock-manager.sh set` on **Apply**. |
 | `Services/Pins.qml` / `BluetoothWatch.qml` | Dock pin state and Bluetooth notifications. |
+| `Services/Icons.qml` | The icon fallback chain, shared by the dock tiles and the pin picker. |
 | `Notif/Popups.qml` | The notification server and popup stack. |
 | `Notif/NotificationCard.qml` | One card, shared by popups and history. |
 | `Tokens.qml` | **Generated** from the design tokens — see [TOKENS.md](TOKENS.md). |
 | `Accent.qml` | **Generated** from the wallpaper accent — see [ACCENT.md](ACCENT.md). |
 | `qmldir`, `Services/qmldir` | Component registration. Read the note below before adding a file. |
 
-Blur is also applied to `hyprveil-wallpapers`; every shell surface needs its own
-`layerrule`.
+Blur is also applied to `hyprveil-wallpapers` and `hyprveil-dock-pins`; every
+shell surface needs its own `layerrule`.
 
 ### qmldir is not optional
 
@@ -85,6 +95,7 @@ qs ipc call notifications dnd        # toggle do-not-disturb
 qs ipc call notifications count      # tracked notification count
 qs ipc call notifications clear      # dismiss everything
 qs ipc call wallpapers toggle        # open/close the wallpaper grid
+qs ipc call dockpins toggle          # open/close the dock pin picker
 qs ipc call lock isLocked            # lock state
 ```
 

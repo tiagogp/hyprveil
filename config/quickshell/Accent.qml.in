@@ -26,4 +26,16 @@ Singleton {
     // the accent is clamped to a legibility band (S 0.45-0.85, L 0.52-0.68) that
     // is guaranteed to carry this neutral.
     readonly property color accentFg: "#f5f5f7"
+
+    // How opaque the bar and dock have to be on THIS wallpaper.
+    //
+    // Lives here, in the generated file, for the same reason the accent does: it
+    // is measured from the image, not chosen. accent.sh samples the strip the
+    // bar covers and solves for the glassiest alpha that still keeps muted text
+    // at 3.0:1, so the bar turns to glass over a dark wallpaper and thickens
+    // over a bright one instead of paying the bright wallpaper's price always.
+    //
+    // Tokens.chromeAlpha is the worst-case ceiling and stays the fallback for
+    // anything that has not been measured.
+    readonly property real chromeAlpha: @chrome-alpha@
 }

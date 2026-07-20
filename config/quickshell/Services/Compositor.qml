@@ -32,7 +32,32 @@ Singleton {
         ?? Hyprland.activeToplevel?.workspace?.id
         ?? -1
 
-    readonly property string activeTitle: Hyprland.activeToplevel?.title ?? ""
+    // Empty workspaces get the shell's name rather than a blank gap in the bar.
+    // activeToplevel is NOT cleared when the last window on a workspace closes —
+    // it keeps pointing at whatever was focused last, on whichever workspace —
+    // so an empty title is not a reliable "nothing open" signal on its own. The
+    // window count for the focused workspace is: as long as SOMETHING is open
+    // here, the bar names a window rather than falling back to the shell. The
+    // stale-activeToplevel case is exactly the one that was showing "hyprveil"
+    // over a workspace full of windows.
+    readonly property string activeTitle: {
+        const t = Hyprland.activeToplevel;
+        if (t && t.workspace?.id === root.focusedWorkspaceId && t.title !== "")
+            return root.displayTitle(t.title);
+        for (const w of Hyprland.toplevels.values) {
+            if (w.workspace?.id !== root.focusedWorkspaceId) continue;
+            if (w.title !== "") return root.displayTitle(w.title);
+            // Titleless window: name it by class before giving up on it.
+            const cls = w.lastIpcObject?.class ?? "";
+            if (cls !== "") return cls;
+        }
+        return "hyprveil";
+    }
+
+    function displayTitle(title: string): string {
+        const match = title.match(/^(.*) - hyprveil - Visual Studio Code$/);
+        return match ? `Visual Studio Code - ${match[1]}` : title;
+    }
 
     function workspace(id: int): var {
         return Hyprland.workspaces.values.find(w => w.id === id) ?? null;

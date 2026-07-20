@@ -18,6 +18,15 @@ Scope {
     id: root
 
     property bool open: false
+    // Which sections the panel shows. "all" is the full stack the SUPER+N
+    // keybind and the IPC target open; "notifications" is what the bar's bell
+    // opens, because a bell that answers with wifi and bluetooth is not the
+    // control the glyph promised. Same window either way — a second panel would
+    // be a second copy of the close button, the Escape handler, and the
+    // layershell setup, all of which already drifted once between AGS sections.
+    property string view: "all"
+    readonly property bool notificationsOnly: view === "notifications"
+
     // Supplied by shell.qml so the history list and the popup stack read the
     // same notification server — two servers would mean two histories.
     property var notifications: null
@@ -57,8 +66,9 @@ Scope {
                     Layout.bottomMargin: Tokens.spacing1
 
                     Text {
+                        renderType: Text.NativeRendering
                         Layout.fillWidth: true
-                        text: "Quick Settings"
+                        text: root.notificationsOnly ? "Notifications" : "Quick Settings"
                         font.family: Tokens.fontUi
                         font.pixelSize: Tokens.textLg
                         font.weight: Tokens.weightBold
@@ -89,22 +99,33 @@ Scope {
                     }
                 }
 
-                WifiSection { Layout.fillWidth: true }
-                BluetoothSection { Layout.fillWidth: true }
+                WifiSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
+                BluetoothSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
                 NotificationSection {
                     Layout.fillWidth: true
                     notifications: root.notifications
+                    // The panel header already reads "Notifications" in this
+                    // mode; showing both stacked the same word twice.
+                    showHeader: !root.notificationsOnly
                 }
 
                 // Opens the shell's own picker.
                 Rectangle {
                     Layout.fillWidth: true
+                    visible: !root.notificationsOnly
                     implicitHeight: Tokens.spacing8
                     radius: Tokens.radiusSm
                     color: wpMouse.containsMouse
                         ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.06)
 
                     Text {
+                        renderType: Text.NativeRendering
                         anchors.centerIn: parent
                         text: "Wallpapers…"
                         font.family: Tokens.fontUi
@@ -133,12 +154,16 @@ Scope {
     IpcHandler {
         target: "quicksettings"
 
+        // The IPC target is the full panel. A toggle that inherited whatever
+        // view the bar's bell left behind would make SUPER+N's result depend on
+        // what was clicked last.
         function toggle(): string {
             root.open = !root.open;
+            root.view = "all";
             return root.open ? "open" : "closed";
         }
 
-        function open(): string { root.open = true; return "open"; }
+        function open(): string { root.view = "all"; root.open = true; return "open"; }
         function close(): string { root.open = false; return "closed"; }
     }
 }

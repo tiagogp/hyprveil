@@ -13,7 +13,7 @@ hv_show_enabled_repos
 
 STAGE_FAIL=0
 hv_install_group required "Fedora desktop shell" - \
-    waybar rofi-wayland wlogout pavucontrol fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
+    waybar rofi-wayland wlogout gnome-control-center fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
 
 echo
 echo "== Notification + quick-settings backend =="

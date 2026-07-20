@@ -72,7 +72,16 @@ start_daemon() {
             qs_running && return 0
         fi
         if command -v quickshell >/dev/null 2>&1; then
-            exec quickshell
+            # Every accent derivation rewrites Accent.qml, and every wallpaper
+            # change derives an accent - so Quickshell's built-in reload toast
+            # fired on each wallpaper click, announcing an internal mechanism as
+            # if it were news. Suppressed for the session; `qs log` still has the
+            # reload record, including failures.
+            export QS_NO_RELOAD_POPUP=1
+            if [ "${HYPRVEIL_NESTED_SESSION:-0}" = 1 ]; then
+                exec quickshell
+            fi
+            exec quickshell --daemonize
         fi
         # Same reasoning as the AGS arm below: a session with no notifications
         # at all is the worst outcome, so demote rather than exit.

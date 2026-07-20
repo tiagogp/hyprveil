@@ -22,6 +22,11 @@ import "../Services"
 PanelWindow {
     id: dock
 
+    // The session-wide pin picker, handed down from shell.qml. One scope for
+    // every monitor's dock, for the same reason the panels are single scopes:
+    // two docks disagreeing about what is staged is not a state worth having.
+    property var pinPicker: null
+
     anchors.bottom: true
     margins.bottom: Tokens.spacing1h
     implicitHeight: 44 + Tokens.spacing5
@@ -62,12 +67,66 @@ PanelWindow {
         return out;
     }
 
+    // ---------------------------------------------------------------------
+    // Long-press reordering.
+    //
+    // Only the pinned prefix of `items` participates, and it is a contiguous
+    // run starting at 0, so the whole thing is index arithmetic: a tile that has
+    // travelled one slot's width has moved one position. That avoids mapping
+    // pointer coordinates between the tile, the row, and the window on every
+    // mouse move, and it stays correct whatever the row is centred on.
+    //
+    // The model is deliberately NOT reordered live. `items` is a plain JS array,
+    // so a Repeater rebuilds every delegate when it changes — which would
+    // destroy the tile mid-drag, taking the mouse grab with it. The indicator
+    // shows the destination instead, and the model updates once on release.
+    // ---------------------------------------------------------------------
+    property int dragFrom: -1
+    property int dragTo: -1
+    // Captured once when the drag starts rather than bound: the row does not
+    // relayout during a drag, and itemAt() is not a notifying property, so a
+    // binding on it would silently never re-evaluate anyway.
+    property real pinsOriginX: 0
+
+    readonly property int pinCount: Pins.pins.length
+    readonly property real slot: 44 + row.spacing
+
+    function beginDrag(index) {
+        dock.dragFrom = index;
+        dock.dragTo = index;
+        dock.pinsOriginX = pinTiles.itemAt(0)?.x ?? 0;
+    }
+
+    function updateDrag(dx) {
+        if (dock.dragFrom < 0)
+            return;
+        const moved = dock.dragFrom + Math.round(dx / dock.slot);
+        dock.dragTo = Math.max(0, Math.min(dock.pinCount - 1, moved));
+    }
+
+    function commitDrag(item) {
+        if (dock.dragFrom >= 0 && dock.dragTo !== dock.dragFrom)
+            // dock-manager.sh takes the position 1-based, and matches the id
+            // against both desktop_id and app_id — so a pin whose desktop entry
+            // was never resolved still moves.
+            Quickshell.execDetached([
+                Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
+                "move", item.desktopId ? item.desktopId : item.appId,
+                String(dock.dragTo + 1)]);
+        dock.cancelDrag();
+    }
+
+    function cancelDrag() {
+        dock.dragFrom = -1;
+        dock.dragTo = -1;
+    }
+
     Surface {
         anchors.centerIn: parent
         implicitWidth: row.implicitWidth + Tokens.spacing3 * 2
         implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
         elevation: 2
-        alphaOverride: Tokens.chromeAlpha
+        alphaOverride: Accent.chromeAlpha
         tint: "#14161a"
         radius: Tokens.radiusLg
 
@@ -76,11 +135,18 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: Tokens.spacing2
 
+            // The pin settings tile. Pinning used to be reachable only through
+            // Rofi, which meant the dock's own contents were the one thing on
+            // the dock you could not change from the dock.
+            //
+            // It sits where the Rofi launcher tile used to: that tile was a
+            // second way to do what tapping Super already does from anywhere, so
+            // the leading slot is better spent on the one control that exists
+            // nowhere but the dock.
             DockTile {
-                glyph: "\u{f035c}"
-                tooltip: "Applications"
-                onActivated: Quickshell.execDetached(
-                    ["sh", "-c", "pkill rofi || rofi -show drun"])
+                glyph: "\u{f0493}"
+                tooltip: "Configure dock pins"
+                onActivated: if (dock.pinPicker) dock.pinPicker.open = true
             }
 
             Rectangle {
@@ -92,10 +158,12 @@ PanelWindow {
             }
 
             Repeater {
+                id: pinTiles
                 model: dock.items
 
                 DockTile {
                     required property var modelData
+                    required property int index
 
                     entry: DesktopEntries.byId(modelData.desktopId ?? modelData.appId)
                     appId: modelData.appId
@@ -132,6 +200,69 @@ PanelWindow {
                         Quickshell.execDetached([
                             Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
                             "remove", modelData.appId])
+
+                    // A running window that is not pinned has no stored
+                    // position, so there is nothing a drop could write.
+                    draggable: modelData.pinned
+                    onDragStarted: dock.beginDrag(index)
+                    onDragMoved: dx => dock.updateDrag(dx)
+                    onDragEnded: dock.commitDrag(modelData)
+                    onDragCanceled: dock.cancelDrag()
+                }
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: Tokens.spacing6 + Tokens.spacing1
+                Layout.leftMargin: Tokens.spacingHair
+                Layout.rightMargin: Tokens.spacingHair
+                color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
+            }
+
+            // The trash tile, in the trailing slot every dock puts it in.
+            //
+            // Stateless on purpose: there is no full/empty variant of the glyph
+            // and no dot, because knowing which one to draw means watching
+            // ~/.local/share/Trash/files, and Quickshell watches files rather
+            // than directories — so the only way to keep it truthful would be
+            // the timer-and-subprocess loop the rest of this dock exists to
+            // retire. `trash:///` is the XDG-standard URI, and nautilus is
+            // launched directly rather than through xdg-open: almost nothing
+            // registers x-scheme-handler/trash, and xdg-open answers an
+            // unregistered scheme by handing the URI to the default browser.
+            DockTile {
+                glyph: "\u{f0a79}"
+                tooltip: "Trash"
+                onActivated: Quickshell.execDetached(
+                    ["nautilus", "--new-window", "trash:///"])
+            }
+        }
+
+        // The drop indicator: where the lifted tile lands if released now.
+        //
+        // Drawn as a gap marker between two slots rather than a highlight on the
+        // target tile, because "swap with this one" and "insert before this one"
+        // look identical as a highlight and only one of them is what happens.
+        Rectangle {
+            // Dragging right lands the tile AFTER the tile currently at dragTo,
+            // dragging left lands it BEFORE — same index, opposite edge.
+            readonly property int boundary:
+                dock.dragTo > dock.dragFrom ? dock.dragTo + 1 : dock.dragTo
+
+            visible: dock.dragFrom >= 0 && dock.dragTo !== dock.dragFrom
+            width: 2
+            height: 44
+            radius: Tokens.radiusPill
+            color: Accent.accent
+            y: row.y + (row.height - height) / 2
+            x: row.x + dock.pinsOriginX + boundary * dock.slot
+               - row.spacing / 2 - width / 2
+
+            Behavior on x {
+                NumberAnimation {
+                    duration: Tokens.dur2
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Tokens.easeOut
                 }
             }
         }

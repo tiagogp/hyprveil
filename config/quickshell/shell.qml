@@ -35,10 +35,19 @@ ShellRoot {
         }
     }
 
+    // Every dock shares one pin picker, for the same reason the panels are
+    // single scopes: two monitors staging different pin lists is not a state
+    // worth having, and whichever one applied last would win silently.
     Variants {
         model: Quickshell.screens
-        delegate: Dock { required property var modelData; screen: modelData }
+        delegate: Dock {
+            required property var modelData
+            screen: modelData
+            pinPicker: dockPins
+        }
     }
+
+    PinPicker { id: dockPins }
 
     // Popups are deliberately NOT per-monitor. The design stacks them top-right
     // on the focused output; drawing the same toast on every screen is noise,
@@ -60,7 +69,11 @@ ShellRoot {
 
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.
-    Lock {}
+    //
+    // Reads the same notification scope the bar and panel do, so the lock can
+    // report how many arrived while away. It shows the count only — never the
+    // contents.
+    Lock { notifications: notifs }
 
     // Bluetooth connect/disconnect and low-battery notifications. Sends through
     // notify-send so they land in the same history and honour the same DND as

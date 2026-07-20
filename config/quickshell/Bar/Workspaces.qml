@@ -40,6 +40,7 @@ RowLayout {
             border.color: active ? Accent.accent : "transparent"
 
             Text {
+                renderType: Text.NativeRendering
                 anchors.centerIn: parent
                 text: pill.wsId
                 font.family: Tokens.fontUi

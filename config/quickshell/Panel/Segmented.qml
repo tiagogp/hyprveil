@@ -43,6 +43,7 @@ Rectangle {
 
                 Text {
                     id: label
+                    renderType: Text.NativeRendering
                     anchors.centerIn: parent
                     text: root.options[parent.index] ?? ""
                     font.family: Tokens.fontUi

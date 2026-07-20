@@ -20,6 +20,19 @@ Scope {
     property alias notifications: server.trackedNotifications
     property bool dontDisturb: false
 
+    // Quickshell's Notification carries no timestamp of its own, so the server
+    // records arrival times here, keyed by notification id. Reading a `time`
+    // property off the notification returned undefined, and every card rendered
+    // that as "NaNd".
+    property var _received: ({})
+
+    // Undefined for anything that predates this scope — a config reload keeps
+    // the notifications but not the map, and a card with no timestamp reads
+    // better than a wrong one.
+    function receivedAt(notif) {
+        return notif ? _received[notif.id] : undefined;
+    }
+
     NotificationServer {
         id: server
         keepOnReload: true
@@ -32,6 +45,9 @@ Scope {
 
         onNotification: function (notif) {
             notif.tracked = true;
+            // Stamped before the do-not-disturb bail: a suppressed notification
+            // still lands in history and still needs its time.
+            root._received[notif.id] = new Date();
             if (root.dontDisturb) return;
 
             // A replacement reuses an existing id, so it must NOT restart the
@@ -52,6 +68,12 @@ Scope {
             // Drop popups whose notification the app itself resolved.
             const live = server.trackedNotifications.values;
             root.popupModel = root.popupModel.filter(n => live.includes(n));
+
+            // Arrival times outlive nothing: drop them with their notification,
+            // or the map grows for as long as the session runs.
+            const ids = new Set(live.map(n => n.id));
+            for (const id of Object.keys(root._received))
+                if (!ids.has(Number(id))) delete root._received[id];
         }
     }
 
@@ -80,6 +102,7 @@ Scope {
                 NotificationCard {
                     required property var modelData
                     notif: modelData
+                    received: root.receivedAt(modelData)
                     popup: true
                     Layout.fillWidth: true
 

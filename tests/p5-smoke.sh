@@ -40,6 +40,43 @@ for ns in hyprveil-quicksettings hyprveil-notifications hyprveil-wallpapers; do
     grep -q "layerrule = blur, $ns" "$REPO/config/hypr/window-rules.conf" \
         || fail "missing blur layerrule for $ns"
 done
+# Derived from the QML rather than listed, so a surface added later is covered
+# without anyone remembering to extend this. The glass is the compositor's: a
+# namespace Hyprland has no rule for renders as a flat fill no matter what the
+# QML asks for, and nothing about that failure points at the missing rule.
+while IFS= read -r ns; do
+    grep -q "layerrule = blur, $ns" "$REPO/config/hypr/window-rules.conf" \
+        || fail "shell surface $ns has no blur layerrule"
+    grep -Eq "layerrule = ignorealpha [0-9.]+, $ns" "$REPO/config/hypr/window-rules.conf" \
+        || fail "shell surface $ns has no ignorealpha layerrule"
+done < <(grep -rh 'WlrLayershell.namespace' "$REPO/config/quickshell" \
+    | sed 's/.*"\(.*\)".*/\1/' | sort -u)
+ok "every Quickshell layer-shell surface has its blur rules"
+
+# A pragma Singleton with no qmldir entry resolves to the uninstantiated TYPE,
+# so every property on it reads as undefined — which QML renders as 0 without
+# raising anything. The shell loads and looks plausible with the singleton
+# entirely unbound, so this cannot be left to review.
+for dir in "$REPO/config/quickshell" "$REPO/config/quickshell/Services"; do
+    while IFS= read -r file; do
+        name=$(basename "$file" .qml)
+        grep -q "^singleton $name " "$dir/qmldir" \
+            || fail "$name is a pragma Singleton with no qmldir entry in ${dir#"$REPO/"}"
+    done < <(grep -rl '^pragma Singleton' "$dir" --include='*.qml' -m1 \
+        | while IFS= read -r f; do [ "$(dirname "$f")" = "$dir" ] && printf '%s\n' "$f"; done)
+done
+ok "every shell singleton is registered in its qmldir"
+grep -q 'displayTitle(title: string)' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "Compositor does not normalize focused window titles"
+grep -q ' - hyprveil - Visual Studio Code' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "VS Code workspace segment is not stripped from the bar title"
+grep -q 'Visual Studio Code - ' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "Quickshell title does not put VS Code before the file name"
+grep -q '"^(.*) - hyprveil - Visual Studio Code$"' "$REPO/config/waybar/config.jsonc" \
+    || fail "Waybar window title does not strip the VS Code workspace segment"
+grep -q '"Visual Studio Code - \$1"' "$REPO/config/waybar/config.jsonc" \
+    || fail "Waybar title does not put VS Code before the file name"
+ok "bar title removes the hyprveil workspace segment and puts VS Code first"
 # Glass palette imports the generated accent fragment rendered from colors.conf.
 grep -q '#e14658' "$AGS/_accent.scss" || fail "accent color not mirrored in _accent.scss"
 grep -q '@use "accent" as \*' "$AGS/style.scss" || fail "style.scss does not import the generated accent fragment"
@@ -92,6 +129,10 @@ case "${1:-}" in
 esac
 exit 0
 EOF
+cat > "$TMP/bin/quickshell" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_ROOT/quickshell"
+EOF
 cat > "$TMP/bin/pkill" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$MOCK_ROOT/killed"
@@ -104,7 +145,7 @@ cat > "$TMP/bin/swaync" <<'EOF'
 #!/usr/bin/env bash
 printf 'started\n' >> "$MOCK_ROOT/swaync"
 EOF
-chmod +x "$TMP/bin/ags" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/sass" "$TMP/bin/swaync"
+chmod +x "$TMP/bin/ags" "$TMP/bin/quickshell" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/sass" "$TMP/bin/swaync"
 
 # --- Backend selection accepts ags and defaults to it ---
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend"
@@ -137,7 +178,21 @@ mv "$TMP/sass.hidden" "$TMP/bin/sass"
 ! grep -qx run "$TMP/ags" 2>/dev/null || fail "ags run was launched without dart-sass"
 ok "a missing dart-sass falls back instead of leaving the session without notifications"
 
+# --- Quickshell daemonizes in a real session and stays foregrounded in nested tests ---
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/quickshell" "$TMP/killed"
+"$REPO/config/hypr/scripts/notification-daemon.sh" start
+grep -qx -- '--daemonize' "$TMP/quickshell" || fail "quickshell backend was not daemonized for a normal session"
+grep -qx -- '-x swaync' "$TMP/killed" || fail "quickshell startup did not stop SwayNC"
+grep -qx -- '-x mako' "$TMP/killed" || fail "quickshell startup did not stop Mako"
+rm -f "$TMP/quickshell"
+HYPRVEIL_NESTED_SESSION=1 "$REPO/config/hypr/scripts/notification-daemon.sh" start
+[ -s "$TMP/quickshell" ] || fail "nested quickshell backend did not start"
+! grep -qx -- '--daemonize' "$TMP/quickshell" || fail "nested quickshell backend daemonized instead of staying attached"
+ok "quickshell backend daemonizes only for the real session"
+
 # --- Daemon toggle/dnd route to the AGS panel ---
+printf 'ags\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
 rm -f "$TMP/ags"
 MOCK_AGS_RUNNING=1 "$REPO/config/hypr/scripts/notification-daemon.sh" toggle
 MOCK_AGS_RUNNING=1 "$REPO/config/hypr/scripts/notification-daemon.sh" dnd

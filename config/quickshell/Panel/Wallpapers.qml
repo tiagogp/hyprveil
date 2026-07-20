@@ -121,7 +121,38 @@ Scope {
         Surface {
             anchors.centerIn: parent
             elevation: 3
-            radius: Tokens.radiusLg
+            radius: Tokens.radiusSm
+            border.color: Accent.accent
+
+            // The entrance lives here rather than on the layer surface, which
+            // Hyprland no longer animates (see hypr/window-rules.conf). The dialog
+            // drops in from above the centre while the scrim behind it stays
+            // put — the motion the compositor's slide was reaching for, without
+            // dragging the dim across the screen with it.
+            //
+            // Bound to root.open rather than started onCompleted: the window is
+            // only ever hidden, never rebuilt, so a one-shot entrance would
+            // play once per session instead of once per opening.
+            // A Translate rather than an anchor offset: this displaces the
+            // dialog at paint time, so the drop costs no relayout of the grid
+            // of thumbnails inside it, and `anchors.centerIn` stays the single
+            // description of where the dialog rests.
+            //
+            // Position only, deliberately no opacity of its own. The layer is
+            // already fading — a second fade here ran on a different duration
+            // and curve than the compositor's, so the dialog crossfaded against
+            // its own backdrop and the whole entrance read as muddy.
+            transform: Translate {
+                y: root.open ? 0 : -Tokens.spacing6
+
+                Behavior on y {
+                    NumberAnimation {
+                        duration: Tokens.dur3
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Tokens.easeOut
+                    }
+                }
+            }
 
             implicitWidth: 620
             implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
@@ -141,6 +172,7 @@ Scope {
                     Layout.fillWidth: true
 
                     Text {
+                        renderType: Text.NativeRendering
                         Layout.fillWidth: true
                         text: "Wallpapers"
                         font.family: Tokens.fontUi
@@ -197,6 +229,7 @@ Scope {
                 // Only the empty state; errors and progress belong to the
                 // footer status line, which is on screen either way.
                 Text {
+                    renderType: Text.NativeRendering
                     Layout.fillWidth: true
                     visible: root.images.length === 0
                     text: "No images in " + root.dir
@@ -221,17 +254,20 @@ Scope {
                         height: 132
 
                         Rectangle {
+                            id: tileFrame
+
                             anchors.fill: parent
                             anchors.margins: Tokens.spacing2
                             radius: Tokens.radiusSm
                             color: "#1c1f26"
+                            antialiasing: true
+                            property int imageInset: Tokens.spacing1
                             // The staged tile carries a heavier border than a
                             // hovered one, so the choice stays legible once the
                             // pointer has moved on to Apply.
                             border.width: parent.chosen ? 2
                                         : tileMouse.containsMouse ? 1 : 0
                             border.color: Accent.accent
-                            clip: true
 
                             // sourceSize decodes at thumbnail resolution rather
                             // than loading a 5120x2880 original and scaling it,
@@ -239,7 +275,7 @@ Scope {
                             // thread, and cache keeps it across reopenings.
                             Image {
                                 anchors.fill: parent
-                                anchors.margins: 1
+                                anchors.margins: tileFrame.imageInset
                                 source: "file://" + modelData
                                 sourceSize.width: 176
                                 sourceSize.height: 99
@@ -249,6 +285,7 @@ Scope {
                             }
 
                             Text {
+                                renderType: Text.NativeRendering
                                 anchors.bottom: parent.bottom
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -289,6 +326,7 @@ Scope {
                     // message appears and clears. Only `list` reports here now;
                     // `apply` is detached and has no result to wait for.
                     Text {
+                        renderType: Text.NativeRendering
                         Layout.fillWidth: true
                         text: root.status !== "" ? root.status
                             : root.selected !== "" ? root.selected.split("/").pop()

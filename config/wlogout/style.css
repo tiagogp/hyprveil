@@ -38,7 +38,37 @@ window {
   background-color: rgba(0, 0, 0, 0.50);
 }
 
+/* The top-to-bottom entrance. It used to come from Hyprland's global `layersIn`
+   slide, but that animates the whole layer surface — and here the surface IS
+   the 50% backdrop, so the dim slid down over the desktop along with the icons.
+   hypr/appearance.conf now disables compositor animation for this layer and
+   the directional motion is done per-button below, which is also the only way
+   to stagger it.
+
+   margin-top rather than a transform: this is GTK3, which has no CSS transform.
+   Animating the margin relayouts the grid each frame, which is affordable for
+   five buttons and a one-shot entrance. The window's own margins come from
+   power-menu.sh on the command line and are untouched by this. */
+@keyframes hyprveil-drop-in {
+  from {
+    opacity: 0;
+    /* Negative, so the button starts ABOVE its cell and travels down into it —
+       the same direction as the compositor slide this replaces, and as the
+       quickshell dialogs' Translate. A positive value here rises from below,
+       which reads as a different gesture entirely. */
+    margin-top: -20px;
+  }
+  to {
+    opacity: 1;
+    margin-top: 0;
+  }
+}
+
 button {
+  animation-name: hyprveil-drop-in;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: backwards;
   min-width: 56px;
   min-height: 56px;
   padding: 0;
@@ -63,6 +93,16 @@ button:active,
 button:hover {
   color: @accent;
 }
+
+/* A small left-to-right stagger, so the row reads as one gesture arriving
+   rather than five things appearing at once. The step is deliberately well
+   under the animation's own duration — the last button has to start before the
+   first has finished, or the row reads as a queue instead of a sweep. */
+#lock { animation-delay: 0ms; }
+#logout { animation-delay: 40ms; }
+#suspend { animation-delay: 80ms; }
+#reboot { animation-delay: 120ms; }
+#shutdown { animation-delay: 160ms; }
 
 #lock {
   background-image: image(url("assets/lock-default.svg"));

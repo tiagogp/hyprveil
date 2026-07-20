@@ -97,12 +97,22 @@ ok "an already-locked session is left alone"
 # --- static contract ---
 grep -q 'lock.sh' "$REPO/config/hypr/hypridle.conf" \
     || fail "hypridle does not route through lock.sh, so the fallback never runs"
+grep -q '^\$locker = ~/.config/hypr/scripts/lock.sh$' "$REPO/config/hypr/keybindings.conf" \
+    || fail "SUPER+L does not route through lock.sh"
+grep -q '"action":"~/.config/hypr/scripts/lock.sh"' "$REPO/config/wlogout/layout" \
+    || fail "wlogout lock action does not route through lock.sh"
+grep -q '"command": "~/.config/hypr/scripts/lock.sh"' "$REPO/config/swaync/config.json" \
+    || fail "SwayNC lock action does not route through lock.sh"
+grep -q 'before_sleep_cmd = ~/.config/hypr/scripts/lock.sh' "$REPO/config/hypr/hypridle.conf" \
+    || fail "sleep pre-lock does not route through lock.sh"
+grep -q 'on-timeout = ~/.config/hypr/scripts/lock.sh' "$REPO/config/hypr/hypridle.conf" \
+    || fail "idle timeout does not route through lock.sh"
 grep -q 'hyprlock' "$REPO/scripts/data/dependencies.tsv" \
     || fail "hyprlock is the lock fallback but is not a declared dependency"
 # The IPC is deliberately one-way: an unlock over IPC would make the lock
 # bypassable by anything that can reach the socket.
 grep -q 'function unlock' "$REPO/config/quickshell/Lock/Lock.qml" \
     && fail "Lock.qml exposes unlock over IPC, which makes the lock bypassable"
-ok "hypridle routes through the fallback and the lock IPC is one-way"
+ok "every lock trigger routes through the fallback and the lock IPC is one-way"
 
 printf 'P8 lock smoke tests passed.\n'

@@ -38,7 +38,10 @@
 
     "hyprland/window": {
       "max-length": 64,
-      "separate-outputs": true
+      "separate-outputs": true,
+      "rewrite": {
+        "^(.*) - hyprveil - Visual Studio Code$": "Visual Studio Code - $1"
+      }
     },
 
     "custom/media-previous": {

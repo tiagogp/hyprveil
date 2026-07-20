@@ -37,7 +37,7 @@ layer=overlay
 format=<b>%s</b>\n<span color="#9A9CA5">%b</span>
 
 [urgency=critical]
-border-color=#E14658
+border-color=#4170C8
 default-timeout=0
 
 # faded, lower-elevation treatment — mirrors the mockup's older/read card

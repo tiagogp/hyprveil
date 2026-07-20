@@ -124,6 +124,61 @@ cmd_move() {
     ) 200>"$DOCK_LOCK_FILE"
 }
 
+# The installed-application catalogue the in-shell pin picker renders. It ships
+# the limit alongside the entries so the picker enforces the same ceiling this
+# script does, rather than hardcoding a second copy of the number that then
+# drifts.
+cmd_entries() {
+    dock_desktop_entries | jq -R -s --argjson limit "$DOCK_LIMIT" '
+        [ split("\n")[]
+          | select(length > 0)
+          | split("\t")
+          | { desktop_id: .[0],
+              name: .[1],
+              app_id: (if .[2] == "-" then (.[0] | sub("\\.desktop$"; "")) else .[2] end
+                       | ascii_downcase) } ]
+        | { limit: $limit, entries: . }'
+}
+
+# Replace the whole pin list in one write. The picker stages its choices and
+# commits once, so add/remove/reorder arrive together; applying them as a
+# sequence of cmd_add and cmd_remove calls would take the lock N times and leave
+# the dock rendering each intermediate state.
+#
+# Every id is resolved BEFORE the lock is taken: a typo should leave the
+# existing pins alone rather than truncate them at the entry that failed.
+cmd_set() {
+    local id record desktop_id name wm _file app_id updated='[]'
+    if [ "$#" -gt "$DOCK_LIMIT" ]; then
+        dock_message "The dock holds at most $DOCK_LIMIT pins; $# were requested."
+        return 3
+    fi
+    for id in "$@"; do
+        record=$(dock_desktop_record "$id") || {
+            dock_message "No installed desktop entry matches '$id'."
+            return 1
+        }
+        IFS=$'\t' read -r desktop_id name wm _file <<<"$record"
+        [ "$wm" != - ] || wm=""
+        app_id=${wm:-${desktop_id%.desktop}}
+        app_id=${app_id,,}
+        # Two desktop entries can declare the same StartupWMClass, which would
+        # otherwise put two tiles on one window.
+        if jq -e --arg desktop "${desktop_id,,}" --arg app "$app_id" \
+            'any(.[]; (.desktop_id|ascii_downcase) == $desktop or .app_id == $app)' \
+            <<<"$updated" >/dev/null; then
+            continue
+        fi
+        updated=$(jq -nc --argjson state "$updated" --arg desktop "$desktop_id" --arg app "$app_id" \
+            '$state + [{desktop_id:$desktop, app_id:$app}]')
+    done
+    (
+        flock -x 200
+        dock_ensure_state_locked
+        dock_write_locked "$updated"
+    ) 200>"$DOCK_LOCK_FILE"
+}
+
 cmd_manage() {
     local action
     command -v rofi >/dev/null 2>&1 || { dock_message "Rofi is required for the dock manager."; return 1; }
@@ -138,9 +193,11 @@ cmd_manage() {
 
 case "${1:-manage}" in
     list) cmd_list ;;
+    entries) cmd_entries ;;
     add) cmd_add "${2:-}" ;;
     remove) cmd_remove "${2:-}" ;;
     move) cmd_move "${2:-}" "${3:-}" ;;
+    set) shift; cmd_set "$@" ;;
     manage) cmd_manage ;;
-    *) printf 'usage: %s [manage|list|add [desktop-id]|remove [desktop-id]|move [desktop-id] [up|down|first|last|position]]\n' "$0" >&2; exit 2 ;;
+    *) printf 'usage: %s [manage|list|entries|add [desktop-id]|remove [desktop-id]|move [desktop-id] [up|down|first|last|position]|set [desktop-id ...]]\n' "$0" >&2; exit 2 ;;
 esac

@@ -33,6 +33,7 @@ Section {
     }
 
     Text {
+        renderType: Text.NativeRendering
         Layout.fillWidth: true
         visible: root.adapter === null || !(root.adapter?.enabled ?? false)
         text: root.adapter === null ? "No Bluetooth adapter" : "Bluetooth is off"
@@ -69,6 +70,7 @@ Section {
                     }
 
                     Text {
+                        renderType: Text.NativeRendering
                         Layout.fillWidth: true
                         text: modelData.name
                         font.family: Tokens.fontUi
@@ -80,6 +82,7 @@ Section {
                     // Most devices never report battery; showing 0% for those
                     // would read as a flat headset rather than as no data.
                     Text {
+                        renderType: Text.NativeRendering
                         visible: (modelData.battery ?? 0) > 0
                         text: Math.round((modelData.battery ?? 0) * 100) + "%"
                         font.family: Tokens.fontUi

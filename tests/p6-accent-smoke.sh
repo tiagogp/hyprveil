@@ -51,6 +51,17 @@ case "${MOCK_IMAGE:-vivid}" in
         printf '   60000: (128,129,128) #808180 srgb(128,129,128)\n'
         printf '   20000: (240,240,241) #F0F0F1 srgb(240,240,241)\n'
         ;;
+    white)
+        # The anchor case: $chrome-alpha is documented as exactly the alpha a
+        # blown-out white strip demands, so this must solve to the ceiling.
+        printf '  120000: (255,255,255) #FFFFFF srgb(255,255,255)\n'
+        ;;
+    dark)
+        # Nothing bright anywhere: the chrome solve must reach its floor rather
+        # than the ceiling, and the accent must still come out of the blue.
+        printf '  120000: (  8,  9, 14) #08090E srgb(8,9,14)\n'
+        printf '   40000: ( 40, 60, 96) #283C60 srgb(40,60,96)\n'
+        ;;
     empty) ;;
 esac
 exit 0
@@ -235,6 +246,71 @@ grep -q "@define-color accent-hover $DEFAULT_HOVER;" "$C/waybar/accent.css" \
 jq -e --arg a "$DEFAULT_ACCENT" '.accent == $a and .source == "default"' \
     "$HYPRVEIL_STATE_HOME/accent.json" >/dev/null || fail "reset did not save default state"
 ok "wallpaper tracking opts out without disabling explicit commands, and reset restores the design"
+
+# --------------------------------------------------------------------------
+# Adaptive chrome alpha
+# --------------------------------------------------------------------------
+ceiling=$(sed -n 's/^\$chrome-alpha *= *//p' "$C/hypr/tokens.conf")
+floor=$(sed -n 's/^\$chrome-alpha-min *= *//p' "$C/hypr/tokens.conf")
+[ -n "$ceiling" ] && [ -n "$floor" ] || fail "the chrome alpha range is not in tokens.conf"
+
+# A blown-out band has to pay the full ceiling, a dark one drops to the floor.
+# These are the two ends of the whole point: one fixed alpha cannot do both.
+#
+# Pure white is the anchor $chrome-alpha is documented against, so it pins the
+# ceiling exactly — if the solver ever drifts from the number in tokens.conf,
+# the doc and the token are both wrong and this is where it shows up.
+white=$(MOCK_IMAGE=white "$ACCENT" extract-chrome "$image")
+[ "$white" = "$ceiling" ] \
+    || fail "a white wallpaper did not solve to \$chrome-alpha ($ceiling): $white"
+# Merely bright lands just under it: the ceiling is the worst case, not a
+# plateau everything light snaps to.
+bright=$(MOCK_IMAGE=vivid "$ACCENT" extract-chrome "$image")
+awk -v b="$bright" -v c="$ceiling" 'BEGIN { exit !(b < c && c - b <= 0.05) }' \
+    || fail "a near-white wallpaper did not land just under $ceiling: $bright"
+dark=$(MOCK_IMAGE=dark "$ACCENT" extract-chrome "$image")
+[ "$dark" = "$floor" ] || fail "a dark wallpaper did not reach the floor $floor: $dark"
+
+# An unmeasurable image must fail SAFE — opaque, not invisible.
+unreadable=$(MOCK_IMAGE=empty "$ACCENT" extract-chrome "$image" 2>/dev/null)
+[ "$unreadable" = "$ceiling" ] \
+    || fail "an unreadable image did not fall back to the opaque ceiling: $unreadable"
+
+# The solved value has to reach the singleton the bar actually reads, and be a
+# bare QML number rather than a quoted string.
+MOCK_IMAGE=dark "$ACCENT" chrome "$image" >/dev/null
+grep -Eq "readonly property real chromeAlpha: $floor\$" "$C/quickshell/Accent.qml" \
+    || fail "chrome did not render the solved alpha into Accent.qml"
+jq -e --arg a "$floor" '.chromeAlpha == $a' "$HYPRVEIL_STATE_HOME/accent.json" \
+    >/dev/null || fail "chrome did not persist the solved alpha"
+
+# `chrome` must not touch the accent — it is a separate concern reusing the
+# same measurement pass, and an alpha refresh that recolors the desktop would
+# make wallpaper.sh's opted-out path do exactly what the opt-out forbids.
+jq -e --arg a "$DEFAULT_ACCENT" '.accent == $a' "$HYPRVEIL_STATE_HOME/accent.json" \
+    >/dev/null || fail "chrome changed the accent"
+
+# Legibility is not opt-out-able: with tracking off, a wallpaper change must
+# still re-solve the alpha even though the accent stays put.
+"$ACCENT" auto off >/dev/null
+MOCK_IMAGE=white "$ACCENT" chrome "$image" >/dev/null
+grep -Eq "readonly property real chromeAlpha: $ceiling\$" "$C/quickshell/Accent.qml" \
+    || fail "chrome stopped tracking the wallpaper when accent tracking was off"
+grep -q 'ACCENT_HELPER" chrome' "$C/hypr/scripts/wallpaper.sh" \
+    || fail "wallpaper.sh does not refresh chrome on the opted-out path"
+"$ACCENT" auto on >/dev/null
+
+# A state file predating chromeAlpha is not corrupt — it must keep its accent
+# and pick up the default, not be reset to red.
+jq 'del(.chromeAlpha)' "$HYPRVEIL_STATE_HOME/accent.json" > "$TMP/legacy.json"
+jq --arg a '#3b82f6' '.accent = $a' "$TMP/legacy.json" > "$HYPRVEIL_STATE_HOME/accent.json"
+"$ACCENT" render >/dev/null
+jq -e '.accent == "#3b82f6"' "$HYPRVEIL_STATE_HOME/accent.json" >/dev/null \
+    || fail "a state file without chromeAlpha was treated as malformed"
+grep -Eq "readonly property real chromeAlpha: [01]\.[0-9]+\$" "$C/quickshell/Accent.qml" \
+    || fail "render did not supply a chrome alpha for a legacy state file"
+"$ACCENT" reset >/dev/null
+ok "chrome alpha tracks wallpaper brightness, fails safe, and ignores the accent opt-out"
 
 # --------------------------------------------------------------------------
 # Malformed state and invalid input

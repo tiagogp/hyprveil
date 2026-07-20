@@ -193,6 +193,43 @@ grep -q 'focuswindow address:0xabc' "$TMP/hypr-actions" || fail "running pin was
 grep -q 'closewindow address:0xabc' "$TMP/hypr-actions" || fail "running pin was not closed"
 ok "dock pins reorder, match StartupWMClass, launch desktop entries, focus, and close"
 
+entries=$("$manager" entries)
+[ "$(jq -r '.limit' <<<"$entries")" -eq 10 ] || fail "entries did not report the pin limit the picker enforces"
+jq -e '.entries | any(.desktop_id == "org.example.Electron.desktop" and .app_id == "electron-class")' \
+    <<<"$entries" >/dev/null || fail "entries did not resolve StartupWMClass into app_id"
+jq -e '.entries | all(.name != "")' <<<"$entries" >/dev/null || fail "entries emitted a nameless application"
+
+# The picker stages a whole list and commits it once, so `set` has to apply
+# add, remove, and reorder together.
+"$manager" set example.app3.desktop firefox.desktop
+state=$("$manager" list)
+[ "$(jq -r '[.[].desktop_id] | join(",")' <<<"$state")" = 'example.app3.desktop,firefox.desktop' ] \
+    || fail "set did not replace the pin list in the requested order"
+"$manager" set firefox.desktop example.app3.desktop firefox.desktop
+[ "$("$manager" list | jq -r '[.[].desktop_id] | join(",")')" = 'firefox.desktop,example.app3.desktop' ] \
+    || fail "set did not reorder and de-duplicate in one write"
+
+# A typo must leave the existing pins alone rather than truncate them at the
+# entry that failed, which is why ids are resolved before the lock is taken.
+if "$manager" set firefox.desktop no-such-app.desktop 2>"$TMP/set-error"; then
+    fail "set accepted an unknown desktop entry"
+fi
+[ "$("$manager" list | jq -r '[.[].desktop_id] | join(",")')" = 'firefox.desktop,example.app3.desktop' ] \
+    || fail "a rejected set damaged the existing pin list"
+if "$manager" set example.app3.desktop example.app4.desktop example.app5.desktop \
+    example.app6.desktop example.app7.desktop example.app8.desktop example.app9.desktop \
+    example.app10.desktop example.app11.desktop firefox.desktop org.example.Electron.desktop \
+    2>"$TMP/set-limit"; then
+    fail "set accepted more than ten pins"
+fi
+grep -q 'at most 10' "$TMP/set-limit" || fail "set limit message was unclear"
+"$manager" set
+[ "$("$manager" list | jq length)" -eq 0 ] || fail "set with no arguments did not clear the dock"
+ok "dock set replaces, reorders, de-duplicates, and rejects bad input atomically"
+
+"$manager" add firefox.desktop
+"$manager" add org.example.Electron.desktop
+"$manager" move org.example.Electron.desktop first
 for number in 3 4 5 6 7 8 9 10; do "$manager" add "example.app$number.desktop"; done
 if "$manager" add example.app11.desktop 2>"$TMP/limit-error"; then
     fail "dock accepted more than ten pins"

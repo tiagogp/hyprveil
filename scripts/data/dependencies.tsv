@@ -22,6 +22,7 @@ required|gtk3|gtk-launch|dock fallback when DesktopEntries cannot resolve a pin
 optional|socat|socat|legacy dock-watch.sh helper; the shell reads Hyprland's socket in-process
 optional|bluez|bluetoothctl|Bluetooth status
 optional|blueman|blueman-manager|Bluetooth management
+optional|gnome-control-center|gnome-control-center|settings pages the bar's Bluetooth, network, and volume glyphs open
 optional|NetworkManager|nmcli|Wi-Fi panel scan and connect
 optional|brightnessctl|brightnessctl|laptop brightness keys
 optional|playerctl|playerctl|media keybinds (the bar uses MPRIS directly)

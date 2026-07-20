@@ -329,7 +329,7 @@ hv_backup_item() {
 # repository's design wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
     local backup staged target name starship_tmp backend other
-    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell)
+    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell fontconfig)
     # quickshell is deployed unconditionally, like waybar, and is deliberately
     # NOT in all_backends even though it is selectable in
     # 07-select-notification-backend.sh. Everything in all_backends that is not

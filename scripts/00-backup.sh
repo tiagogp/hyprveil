@@ -12,7 +12,7 @@ while [ -e "$DEST" ]; do
 done
 mkdir -p "$DEST"
 
-for d in hypr waybar kitty rofi wofi swaync mako dunst hypr-lock wlogout gtk-3.0 gtk-4.0 qt5ct qt6ct; do
+for d in hypr waybar kitty rofi wofi swaync mako dunst hypr-lock wlogout gtk-3.0 gtk-4.0 qt5ct qt6ct fontconfig; do
     if [ -e "$HOME/.config/$d" ]; then
         cp -a "$HOME/.config/$d" "$DEST/$d"
         echo "backed up ~/.config/$d -> $DEST/$d"

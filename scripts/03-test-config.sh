@@ -70,6 +70,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \
          qt6ct/qt6ct.conf qt6ct/colors/hyprveil.conf \
+         fontconfig/fonts.conf \
          starship.toml zsh/.zshrc; do
     if [ -f "$CONF/$f" ]; then
         ok "config/$f"
@@ -113,7 +114,7 @@ done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print 
 # hyprlock stays required even under Quickshell: it is the lock fallback that
 # hypr/scripts/lock.sh drops to whenever the shell cannot be confirmed.
 NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio gtk-launch"
-OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
+OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager gnome-control-center hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in
     quickshell) NEEDED="$NEEDED quickshell qs" ;;

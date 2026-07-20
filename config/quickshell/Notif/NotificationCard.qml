@@ -14,6 +14,9 @@ Surface {
     id: card
 
     required property var notif
+    // Supplied by whoever owns the notification server, because the
+    // notification itself has no timestamp — see Popups.receivedAt.
+    property var received: undefined
     // Popups are transient and sit above everything; history sits inside a
     // panel that already has its own elevation.
     property bool popup: true
@@ -82,6 +85,7 @@ Surface {
                 spacing: Tokens.spacing2
 
                 Text {
+                    renderType: Text.NativeRendering
                     Layout.fillWidth: true
                     text: card.notif?.summary ?? ""
                     font.family: Tokens.fontUi
@@ -92,7 +96,8 @@ Surface {
                 }
 
                 Text {
-                    text: card.notif ? Time.ago(new Date(card.notif.time)) : ""
+                    renderType: Text.NativeRendering
+                    text: Time.ago(card.received)
                     font.family: Tokens.fontUi
                     font.pixelSize: Tokens.text2xs
                     color: Tokens.dim
@@ -103,6 +108,7 @@ Surface {
             // closest Qt equivalent — deliberately not RichText, which would
             // accept full HTML including remote <img> from any app on the bus.
             Text {
+                renderType: Text.NativeRendering
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: card.notif?.body ?? ""
@@ -136,6 +142,7 @@ Surface {
                             : Qt.rgba(Accent.accent.r, Accent.accent.g, Accent.accent.b, 0.12)
 
                         Text {
+                            renderType: Text.NativeRendering
                             anchors.centerIn: parent
                             text: modelData.text
                             font.family: Tokens.fontUi

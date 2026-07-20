@@ -205,13 +205,24 @@ save_selection() {
 # Re-render the accent family from an image. Always warn-only: neither picking a
 # wallpaper nor logging in may be blocked by a failed extraction, and `is-auto`
 # failing is the documented opt-out rather than an error.
+#
+# The chrome alpha is refreshed OUTSIDE the is-auto check. `accent.sh auto off`
+# opts out of the accent following the wallpaper, which is a taste preference;
+# the bar's opacity is a legibility constraint measured from the same image, and
+# leaving it pinned to whatever wallpaper was set before the opt-out is how you
+# get an unreadable bar on a bright background. from-wallpaper solves both in
+# one pass, so it is only the opted-out path that needs the extra call.
 derive_accent() {
     local image=$1
     [ -n "$image" ] || return 0
     [ -x "$ACCENT_HELPER" ] || return 0
-    "$ACCENT_HELPER" is-auto >/dev/null 2>&1 || return 0
-    "$ACCENT_HELPER" from-wallpaper "$image" >/dev/null \
-        || warn "the accent could not be derived from $image"
+    if "$ACCENT_HELPER" is-auto >/dev/null 2>&1; then
+        "$ACCENT_HELPER" from-wallpaper "$image" >/dev/null \
+            || warn "the accent could not be derived from $image"
+    else
+        "$ACCENT_HELPER" chrome "$image" >/dev/null \
+            || warn "the bar opacity could not be derived from $image"
+    fi
 }
 
 apply_command() {

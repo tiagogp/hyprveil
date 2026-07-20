@@ -10,6 +10,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import ".."
+import "../Services"
 
 Item {
     id: tile
@@ -23,13 +24,49 @@ Item {
     property string tooltip: ""
     property bool running: false
     property bool active: false
+    // Only pinned tiles opt in: a running window that is not pinned has no
+    // stored position, so there is nothing for a drop to write.
+    property bool draggable: false
+
+    // Set while a long press is holding this tile. The dock reads it to place
+    // the drop indicator and to know a release is a reorder, not a click.
+    property bool dragging: false
+    // Horizontal travel since the press, applied as a transform rather than to
+    // `x`: the tile is inside a RowLayout, and moving a laid-out item's x just
+    // gets overwritten on the next relayout.
+    property real dragOffset: 0
 
     signal activated()
     signal closed()
     signal unpinned()
+    signal dragStarted()
+    signal dragMoved(real dx)
+    // Separate from dragCanceled because only one of them may write state: a
+    // release is the user choosing a slot, a cancel is the grab being taken away
+    // from them, and committing a reorder nobody asked for is the worse failure.
+    signal dragEnded()
+    signal dragCanceled()
 
     implicitWidth: 44
     implicitHeight: 44
+
+    // Above its neighbours while lifted, so it passes over them rather than
+    // ducking behind the next tile as it travels.
+    z: dragging ? 1 : 0
+
+    transform: Translate { x: tile.dragOffset }
+
+    // Only the snap back is animated in practice — during the drag the offset is
+    // rewritten every mouse move, which the animation tracks closely enough to
+    // read as direct manipulation while still smoothing the jitter of a hand
+    // holding a button down.
+    Behavior on dragOffset {
+        NumberAnimation {
+            duration: Tokens.dur1
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Tokens.easeOut
+        }
+    }
 
     // The dock lift. Scale rather than position so the tile grows about its own
     // centre and its neighbours do not reflow — a dock that shuffles sideways on
@@ -39,7 +76,13 @@ Item {
     //
     // 1.08 is deliberately restrained: the tile is 44px, so this is a ~3.5px
     // gain, enough to register in peripheral vision without the icon softening.
-    scale: mouse.pressed ? 0.96 : mouse.containsMouse ? 1.08 : 1.0
+    //
+    // A lifted tile goes further than hover and, unlike a press, does not dip:
+    // the whole point of the long press is that the tile has left the row and is
+    // now attached to the pointer, so it must not read as "still being clicked".
+    scale: tile.dragging ? 1.16
+         : mouse.pressed ? 0.96
+         : mouse.containsMouse ? 1.08 : 1.0
 
     Behavior on scale {
         NumberAnimation {
@@ -49,34 +92,12 @@ Item {
         }
     }
 
-    // The desktop entry is the good source for an icon — it is the only one that
-    // knows the app's declared Icon= — but DesktopEntries comes up empty on some
-    // Quickshell builds (0.3.0 on Fedora COPR indexes nothing), and a dock of
-    // blank squares is a worse failure than a slightly wrong icon. So the entry
-    // is the first candidate, not the only one: the desktop id and the window
-    // class are both real icon names in every theme this ships against.
-    //
-    // iconPath's second argument is a NAME to fall back to in the string
-    // overload, but `true` selects the check overload, which returns "" when the
-    // theme has no such icon. That is what makes this a chain rather than a
-    // single guess — without it every candidate "resolves" to an image:// URL
-    // that renders as nothing.
-    readonly property string iconSource: {
-        const candidates = [
-            entry?.icon ?? "",
-            desktopId.replace(/\.desktop$/, ""),
-            appId,
-            // Last resort, and only for app tiles: a tile carrying its own glyph
-            // (the launcher) is meant to draw that glyph, not a generic binary.
-            glyph === "" ? "application-x-executable" : ""
-        ];
-        for (const name of candidates) {
-            if (name === "") continue;
-            const path = Quickshell.iconPath(name, true);
-            if (path !== "") return path;
-        }
-        return "";
-    }
+    // See Services/Icons.qml for why this is a chain rather than a single
+    // lookup. A tile carrying its own glyph (the launcher, the pin settings
+    // button) opts out of the generic fallback: it is meant to draw that glyph,
+    // not a mystery binary.
+    readonly property string iconSource:
+        Icons.resolve(entry?.icon, desktopId, appId, glyph === "")
 
     Rectangle {
         anchors.fill: parent
@@ -166,9 +187,70 @@ Item {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
+        cursorShape: tile.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+        // 800ms (the Qt default) is long enough that the press reads as the
+        // click not registering. 400 is past any plausible click but still
+        // arrives while the finger is deliberately resting.
+        pressAndHoldInterval: 400
+
+        // Where the press landed, so travel is measured from the grab point
+        // rather than from the tile's centre — a tile grabbed by its edge should
+        // not jump to centre itself under the cursor.
+        property real pressX: 0
+        // A completed drag swallows the release. Qt already suppresses `clicked`
+        // after a long press, but only for the press that triggered it; this is
+        // belt and braces for the case where a drag ends some other way, and it
+        // is cleared on every new press so it can never eat a later click.
+        property bool dragged: false
+
+        onPressed: function (event) {
+            pressX = event.x;
+            dragged = false;
+        }
+
+        onPressAndHold: function (event) {
+            if (!tile.draggable || event.button !== Qt.LeftButton)
+                return;
+            tile.dragOffset = 0;
+            tile.dragging = true;
+            tile.dragStarted();
+        }
+
+        // hoverEnabled makes this fire on plain mouse-over too, so the drag
+        // guard is load-bearing rather than defensive.
+        onPositionChanged: function (event) {
+            if (!tile.dragging)
+                return;
+            tile.dragOffset = event.x - pressX;
+            tile.dragMoved(tile.dragOffset);
+        }
+
+        onReleased: {
+            if (!tile.dragging)
+                return;
+            dragged = true;
+            tile.dragging = false;
+            // Back to the row immediately. The dock commits the new order to
+            // dock-pins.json, and the reloaded model is what actually moves the
+            // tile; snapping first means the two never disagree on screen.
+            tile.dragOffset = 0;
+            tile.dragEnded();
+        }
+
+        // A press that is cancelled — the compositor taking the grab, the dock
+        // being torn down mid-drag — must not leave a tile stranded off its slot.
+        onCanceled: {
+            if (!tile.dragging)
+                return;
+            tile.dragging = false;
+            tile.dragOffset = 0;
+            tile.dragCanceled();
+        }
+
         onClicked: function (event) {
+            if (dragged)
+                return;
             if (event.button === Qt.MiddleButton) tile.closed();
             else if (event.button === Qt.RightButton) tile.unpinned();
             else tile.activated();

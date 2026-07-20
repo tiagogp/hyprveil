@@ -30,8 +30,14 @@ Singleton {
     }
 
     // Relative timestamps for notification cards ("now", "4m", "2h").
-    function ago(when: date): string {
-        const mins = Math.floor((_now.getTime() - when.getTime()) / 60000);
+    //
+    // Guards the input rather than trusting it: every comparison against NaN is
+    // false, so a missing or invalid date used to fall all the way through to
+    // the last line and render "NaNd" instead of failing visibly.
+    function ago(when): string {
+        const ms = when instanceof Date ? when.getTime() : NaN;
+        if (isNaN(ms)) return "";
+        const mins = Math.floor((_now.getTime() - ms) / 60000);
         if (mins < 1) return "now";
         if (mins < 60) return mins + "m";
         const hours = Math.floor(mins / 60);

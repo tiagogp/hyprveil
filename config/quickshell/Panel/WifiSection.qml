@@ -35,6 +35,7 @@ Section {
     }
 
     Text {
+        renderType: Text.NativeRendering
         Layout.fillWidth: true
         visible: root.device === null || !Networking.wifiEnabled
         text: root.device === null ? "No Wi-Fi adapter" : "Wi-Fi is off"
@@ -80,6 +81,7 @@ Section {
                     }
 
                     Text {
+                        renderType: Text.NativeRendering
                         Layout.fillWidth: true
                         text: modelData.name
                         font.family: Tokens.fontUi
@@ -126,6 +128,7 @@ Section {
     }
 
     Text {
+        renderType: Text.NativeRendering
         Layout.fillWidth: true
         visible: root.device !== null && Networking.wifiEnabled && root.networks.length === 0
         text: "No networks found"

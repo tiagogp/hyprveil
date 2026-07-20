@@ -77,6 +77,7 @@ Section {
     }
 
     Text {
+        renderType: Text.NativeRendering
         Layout.fillWidth: true
         visible: root.items.length === 0
         text: "No notifications"
@@ -100,6 +101,7 @@ Section {
                 required property var modelData
                 Layout.fillWidth: true
                 notif: modelData
+                received: root.notifications?.receivedAt(modelData)
                 popup: false
                 onDismissed: modelData.dismiss()
             }

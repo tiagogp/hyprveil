@@ -198,6 +198,50 @@ UI text and large text.
 0.76 is the floor, not a taste pick — muted crosses 3.0:1 just below it. Going
 further means recoloring the bar's title from `muted` to `text`.
 
+#### …but only against a white wallpaper
+
+Every number above assumes the worst case: pure white behind the bar. That is
+the only assumption a *fixed* alpha can make, and it is wrong most of the time.
+A dark wallpaper clears 3.0:1 at **0.00** — the whole bar could be glass and the
+title would still be legible — and paying 0.76 there buys nothing.
+
+So chrome alpha is measured, not fixed. On every wallpaper change `accent.sh`
+crops the top 6% of the image, resizes it to 16×1 so each sample is the kind of
+wide local average the layer blur actually puts behind the bar, takes the
+**brightest** of the sixteen (the bar spans the full width, so one bright slice
+is a real place the title has to survive), and walks the WCAG formula to find
+the lowest alpha still holding muted at 3.0:1. The result is written to
+`Accent.qml` as `chromeAlpha`, which `Surface.alphaOverride` reads.
+
+| Wallpaper band | Solved alpha |
+|---|---|
+| `#ffffff` — blown-out sky | 0.76 |
+| `#aeb3bf` — overcast grey | 0.64 |
+| `#1c1c1c` — near-black | 0.38 (floor) |
+
+The range is bounded at both ends:
+
+- **`$chrome-alpha` (0.76)** is the ceiling and the fallback. An unrendered
+  checkout, a missing ImageMagick, or an unreadable image all land here, so the
+  failure mode is a legible bar rather than an invisible one.
+- **`$chrome-alpha-min` (0.38)** is the floor, and it is a *design* limit rather
+  than a contrast one. The math permits 0.00 on a dark wallpaper, but a bar with
+  no fill stops reading as a surface — the workspace pills and the title lose
+  the shape they sit on.
+
+Two consequences worth knowing:
+
+- **`accent.sh auto off` does not disable it.** The accent follows the wallpaper
+  as a matter of taste and can be opted out of; chrome alpha follows it as a
+  matter of legibility and cannot. `wallpaper.sh` calls `accent.sh chrome` on the
+  opted-out path for exactly this reason.
+- **It is global, not per-monitor.** The solve runs on the fallback wallpaper,
+  matching how the accent is derived. A per-monitor wallpaper that is much
+  brighter than the fallback will get the fallback's alpha.
+
+`accent.sh extract-chrome PATH` prints what an image would produce without
+applying it.
+
 The override is alpha **only**; border and shadow still come from the tier, so a
 surface still cannot end up with a tier-1 border and a tier-3 shadow. Anything
 that renders a paragraph — quick settings, notification bodies, the wallpaper

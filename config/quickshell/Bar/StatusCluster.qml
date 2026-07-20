@@ -13,7 +13,25 @@ import Quickshell.Services.UPower
 import ".."
 
 RowLayout {
+    id: cluster
+
     spacing: Tokens.spacing4
+
+    // The settings pages the three glyphs below open. These were
+    // blueman-manager, nm-connection-editor, and pavucontrol — three unrelated
+    // GTK3 dialogs, so three adjacent bar icons opened three different-looking
+    // windows. One GTK4 app with a panel argument makes them one window that
+    // lands on the right page.
+    //
+    // Wrapped in `env` because gnome-control-center refuses to start at all
+    // under anything it does not recognise ("only supported under GNOME and
+    // Unity, exiting"), and Hyprland sets XDG_CURRENT_DESKTOP=Hyprland. The
+    // override is scoped to this one process rather than the session, which
+    // would change how every XDG portal and desktop-entry lookup resolves.
+    function openSettings(panel: string): void {
+        Quickshell.execDetached(
+            ["env", "XDG_CURRENT_DESKTOP=GNOME", "gnome-control-center", panel]);
+    }
 
     // --- Bluetooth ---
     BarButton {
@@ -34,14 +52,16 @@ RowLayout {
                 ? `${d.name} (${Math.round(d.battery * 100)}%)`
                 : d.name).join("\n");
         }
-        onClicked: Quickshell.execDetached(["blueman-manager"])
+        onClicked: cluster.openSettings("bluetooth")
     }
 
     // --- Network ---
     BarButton {
         glyph: "\u{f05a9}"
         tooltip: "Network"
-        onClicked: Quickshell.execDetached(["nm-connection-editor"])
+        // `wifi`, not `network`: the wifi panel is the one with the network
+        // list, which is what the glyph is about. `network` opens VPN and wired.
+        onClicked: cluster.openSettings("wifi")
     }
 
     // --- Volume ---
@@ -56,7 +76,7 @@ RowLayout {
         tooltip: sink
             ? `${sink.description}: ${Math.round(vol * 100)}%`
             : "No audio sink"
-        onClicked: Quickshell.execDetached(["pavucontrol"])
+        onClicked: cluster.openSettings("sound")
         // Scrolling the glyph is the one thing the Waybar module could not do
         // without a second module.
         onMiddleClicked: if (sink?.audio) sink.audio.muted = !sink.audio.muted
@@ -86,6 +106,7 @@ RowLayout {
         }
 
         Text {
+            renderType: Text.NativeRendering
             text: Math.round((parent.bat?.percentage ?? 0) * 100) + "%"
             font.family: Tokens.fontUi
             font.pixelSize: Tokens.textXs
