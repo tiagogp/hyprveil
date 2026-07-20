@@ -32,11 +32,26 @@ Item {
             ? (root.accentOnHover ? Accent.accent : Tokens.text)
             : root.glyphColor
 
+        // No hover scale here, unlike the dock: bar glyphs sit in a dense row at
+        // icon size, and growing one of them nudges the optical rhythm of the
+        // whole row for a control that is already answering with a colour
+        // change. The press dip is the exception — it is the only feedback that
+        // a click on a bare glyph registered at all.
+        scale: mouse.pressed ? 0.88 : 1.0
+
         Behavior on color {
             ColorAnimation {
                 duration: Tokens.dur1
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Tokens.easeStandard
+            }
+        }
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: Tokens.dur1
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Tokens.easeOut
             }
         }
     }

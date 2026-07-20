@@ -31,8 +31,13 @@ RowLayout {
             implicitHeight: Tokens.spacing5
             radius: Tokens.radiusXs
             color: active ? Accent.accentSoft : "transparent"
-            border.width: active ? 1 : 0
-            border.color: Accent.accent
+            // Width stays 1 and the COLOUR carries the state, because
+            // border.width is an int that snaps and would pop the outline in
+            // while the fill was still fading. The pill is a fixed
+            // spacing5 square and a Rectangle draws its border inside, so a
+            // permanent 1px border costs no layout.
+            border.width: 1
+            border.color: active ? Accent.accent : "transparent"
 
             Text {
                 anchors.centerIn: parent
@@ -43,6 +48,17 @@ RowLayout {
                 color: pill.active ? Accent.accent
                      : pill.occupied ? Tokens.muted
                      : Tokens.dim
+
+                // The label crosses three colours (dim -> muted -> accent) as a
+                // workspace fills and focuses. Left unanimated it was the one
+                // part of the pill that snapped while the fill and border faded.
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Tokens.dur1
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Tokens.easeStandard
+                    }
+                }
             }
 
             MouseArea {
@@ -52,6 +68,14 @@ RowLayout {
             }
 
             Behavior on color {
+                ColorAnimation {
+                    duration: Tokens.dur1
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Tokens.easeStandard
+                }
+            }
+
+            Behavior on border.color {
                 ColorAnimation {
                     duration: Tokens.dur1
                     easing.type: Easing.Bezier
