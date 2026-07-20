@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Mocked, non-root checks for the wallpaper-derived accent: extraction scoring,
 # fragment rendering across every consumer, state handling, and the live-reload
-# fan-out. No Wayland session, ImageMagick, or dart-sass install is required;
-# mock `magick`/`sass`/`ags` stand in for them.
+# fan-out. No Wayland session or ImageMagick install is required; a mock
+# `magick` stands in for it.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,7 +26,7 @@ DEFAULT_HOVER="#e86a79"
 # The real config tree, so rendering writes into the same layout it does on a
 # deployed system: write_if_changed skips any target whose directory is absent,
 # and the templated consumers need their .in files present.
-for name in hypr ags waybar swaync wlogout gtk-3.0 gtk-4.0 rofi kitty mako qt5ct qt6ct quickshell; do
+for name in hypr waybar swaync wlogout gtk-3.0 gtk-4.0 rofi kitty mako qt5ct qt6ct quickshell; do
     [ -d "$REPO/config/$name" ] || fail "missing managed config tree: config/$name"
     mkdir -p "$HYPRVEIL_CONFIG_HOME/$name"
     cp -a "$REPO/config/$name/." "$HYPRVEIL_CONFIG_HOME/$name/"
@@ -67,22 +67,6 @@ esac
 exit 0
 EOF
 
-cat > "$TMP/bin/sass" <<'EOF'
-#!/usr/bin/env bash
-set -u
-printf '%s\n' "$*" >> "$MOCK_ROOT/sass.log"
-[ "${MOCK_SASS_FAIL:-0}" != 1 ] || exit 1
-printf '/* compiled */\n' > "${*: -1}"
-EOF
-
-cat > "$TMP/bin/ags" <<'EOF'
-#!/usr/bin/env bash
-set -u
-printf '%s\n' "$*" >> "$MOCK_ROOT/ags.log"
-[ "${1:-}" != list ] || printf 'hyprveil\n'
-exit 0
-EOF
-
 # Everything the reload fan-out probes for. pgrep reports each daemon as running
 # so the reload paths are actually taken rather than skipped.
 cat > "$TMP/bin/pgrep" <<'EOF'
@@ -102,8 +86,6 @@ EOF
 done
 
 chmod +x "$TMP/bin/"*
-: > "$TMP/ags.log"
-: > "$TMP/sass.log"
 : > "$TMP/reload.log"
 
 image="$TMP/wallpaper.jpg"
@@ -153,7 +135,6 @@ done
 # libadwaita role names are what recolor stock GTK widgets.
 grep -q "@define-color accent_bg_color $accent;" "$C/gtk-4.0/accent.css" \
     || fail "libadwaita accent roles not rendered"
-grep -q "\$accent: $accent;" "$C/ags/_accent.scss" || fail "AGS Sass fragment not rendered"
 # QML has no include mechanism for values, so the shell gets a generated
 # singleton. Quickshell watches its config dir, so this write is also the reload.
 grep -q "property color accent: *\"$accent\"" "$C/quickshell/Accent.qml" \
@@ -175,30 +156,18 @@ ok "set renders the accent into every include-based and templated consumer"
 # --------------------------------------------------------------------------
 # Live reload fan-out
 # --------------------------------------------------------------------------
-# The AGS shell is also the notification daemon, so the accent is pushed as a
-# recompiled stylesheet instead of a restart. This is the regression guard for
-# the request handler: `reload-css` has to exist in app.ts to receive it.
-compiled="$HYPRVEIL_STATE_HOME/ags-style.css"
-grep -Fqx "request -i hyprveil reload-css $compiled" "$TMP/ags.log" \
-    || fail "the compiled stylesheet was not pushed to the AGS shell"
-grep -q 'case "reload-css":' "$REPO/config/ags/app.ts" \
-    || fail "app.ts has no reload-css handler; the accent push is a silent no-op"
-grep -q 'apply_css' "$REPO/config/ags/app.ts" \
-    || fail "the reload-css handler does not apply the stylesheet it is handed"
-grep -Fq "$C/ags/style.scss" "$TMP/sass.log" || fail "the AGS stylesheet was not compiled"
 grep -Fqx 'hyprctl reload' "$TMP/reload.log" || fail "Hyprland was not reloaded"
 grep -Fqx 'pkill -SIGUSR2 -x waybar' "$TMP/reload.log" || fail "Waybar was not signalled"
 grep -Fqx 'swaync-client --reload-css' "$TMP/reload.log" || fail "SwayNC was not reloaded"
 grep -Fqx 'makoctl reload' "$TMP/reload.log" || fail "Mako was not reloaded"
-# A missing dart-sass must not take the rest of the fan-out down with it.
+# One consumer being absent must not take the rest of the fan-out down with it.
 : > "$TMP/reload.log"
-MOCK_SASS_FAIL=1 "$ACCENT" set '#22c55e' 2> "$TMP/sass-warning" >/dev/null
-grep -q 'could not compile' "$TMP/sass-warning" || fail "a failed Sass compile was not explained"
+"$ACCENT" set '#22c55e' >/dev/null
 grep -Fqx 'hyprctl reload' "$TMP/reload.log" \
-    || fail "a failed Sass compile aborted the rest of the reload fan-out"
+    || fail "the reload fan-out did not run to completion"
 grep -q '@define-color accent #22c55e;' "$C/waybar/accent.css" \
-    || fail "a failed Sass compile prevented the fragments from being written"
-ok "applying an accent reloads every live component and survives a broken Sass toolchain"
+    || fail "the fragments were not written during the fan-out"
+ok "applying an accent reloads every live component"
 
 # --------------------------------------------------------------------------
 # render: the repair path after a deployment overwrites the fragments
@@ -207,14 +176,13 @@ ok "applying an accent reloads every live component and survives a broken Sass t
 # hv_deploy_configs replaces each managed tree wholesale, restoring the
 # default-red copies committed to the repo. `render` is what puts the derived
 # accent back, and install.sh has to call it.
-for name in waybar ags rofi kitty hypr; do
+for name in waybar rofi kitty hypr; do
     cp -a "$REPO/config/$name/." "$HYPRVEIL_CONFIG_HOME/$name/"
 done
 grep -q "$DEFAULT_ACCENT" "$C/waybar/accent.css" || fail "the fixture did not reproduce a deployment"
 "$ACCENT" render >/dev/null
 grep -q "@define-color accent $accent;" "$C/waybar/accent.css" \
     || fail "render did not restore the saved accent after a deployment"
-grep -q "\$accent: $accent;" "$C/ags/_accent.scss" || fail "render skipped the AGS fragment"
 grep -q "accent.sh\" render\|accent.sh render" "$REPO/install.sh" \
     || fail "install.sh does not re-render the accent after replacing the config trees"
 # Every .in template must be deployed alongside its output, or that consumer
@@ -340,7 +308,7 @@ ok "malformed state recovers and invalid colors are rejected"
 # clone shows a half-themed desktop.
 for f in config/hypr/accent.conf config/waybar/accent.css config/swaync/accent.css \
          config/wlogout/accent.css config/gtk-3.0/accent.css config/gtk-4.0/accent.css \
-         config/ags/_accent.scss config/rofi/accent.rasi config/kitty/accent.conf \
+         config/rofi/accent.rasi config/kitty/accent.conf \
          config/quickshell/Accent.qml; do
     [ -f "$REPO/$f" ] || fail "missing committed accent fragment: $f"
     grep -qi "${DEFAULT_ACCENT#\#}" "$REPO/$f" \

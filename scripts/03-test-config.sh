@@ -63,9 +63,6 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          kitty/kitty.conf kitty/accent.conf \
          rofi/config.rasi rofi/hyprveil.rasi rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
          swaync/style.css.in wlogout/style.css.in quickshell/Tokens.qml.in quickshell/Tokens.qml \
-         ags/app.ts ags/style.scss ags/_accent.scss ags/tsconfig.json ags/widget/QuickSettings.tsx \
-         ags/widget/Wifi.tsx ags/widget/Bluetooth.tsx ags/widget/Notifications.tsx \
-         ags/widget/NotificationPopups.tsx \
          wlogout/layout wlogout/style.css wlogout/accent.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \
@@ -118,7 +115,6 @@ OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager gno
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in
     quickshell) NEEDED="$NEEDED quickshell qs" ;;
-    ags) NEEDED="$NEEDED ags sass" ;;
     swaync) NEEDED="$NEEDED swaync swaync-client" ;;
     mako)
         NEEDED="$NEEDED mako makoctl"
@@ -159,7 +155,7 @@ else
     warn "bundled fallback is installed during deployment; repo validation uses the design asset"
 fi
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
-    if grep -Eq '^(quickshell|ags|swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
+    if grep -Eq '^(quickshell|swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
         ok "notification backend state is valid"
     else
         bad "invalid notification backend state (run scripts/07-select-notification-backend.sh)"

@@ -12,7 +12,6 @@ accent family is stored in `$XDG_STATE_HOME/hyprveil/accent.json` and rendered b
 | Hyprland / hyprlock | `~/.config/hypr/accent.conf` |
 | SwayNC, wlogout, GTK3, GTK4, Waybar | `accent.css` next to each stylesheet |
 | Quickshell (bar, dock, panel, lock) | `~/.config/quickshell/Accent.qml` |
-| AGS | `~/.config/ags/_accent.scss` |
 | Rofi | `~/.config/rofi/accent.rasi` |
 | Kitty | `~/.config/kitty/accent.conf` |
 | Mako, Qt, wlogout SVG icons | Rendered from `.in` templates |
@@ -46,11 +45,11 @@ If ImageMagick is missing or the image has no reliable hue, wallpaper selection
 still succeeds and the designed accent (`#e14658`) is kept. Nothing on these paths
 is fatal — a failed extraction warns and never blocks a wallpaper change or a login.
 
-Applying an accent reloads Hyprland, Waybar, SwayNC, and Mako in place. The AGS
-shell is also the notification daemon, so rather than restarting it (which would
-discard the session's notification history) `accent.sh` recompiles `style.scss`
-with dart-sass and pushes the result via `ags request reload-css`. Without
-dart-sass installed the panel keeps its old accent until it next restarts.
+Applying an accent reloads Hyprland, Waybar, SwayNC, and Mako in place. The
+Quickshell shell needs no push at all: it watches its own config directory, so
+writing `Accent.qml` *is* the reload. That matters because the shell is also the
+notification daemon — restarting it to recolor it would discard the session's
+notification history.
 
 ## Editing
 

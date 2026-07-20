@@ -160,7 +160,7 @@ hv_notification_backend() {
         IFS= read -r backend < "$HV_NOTIFICATION_STATE" || true
     fi
     case "$backend" in
-        quickshell|ags|swaync|mako) printf '%s\n' "$backend" ;;
+        quickshell|swaync|mako) printf '%s\n' "$backend" ;;
         *) return 1 ;;
     esac
 }
@@ -337,8 +337,12 @@ hv_deploy_configs() {
     # shell's config on every upgrade that selected a different backend. What
     # the selection decides is whether the daemon launches, not whether its
     # config exists — the same split waybar has always had.
+    # ags is retired and can no longer be selected, so it is always "inactive"
+    # and its config is always removed. It stays in this list precisely for that:
+    # dropping it would strand ~/.config/ags on every machine that ever ran the
+    # AGS backend, with nothing left to clean it up.
     local -a all_backends=(ags swaync mako) inactive_backends=()
-    backend=$(hv_notification_backend || printf 'ags\n')
+    backend=$(hv_notification_backend || printf 'quickshell\n')
     # quickshell is already deployed unconditionally above; appending it again
     # would stage, back up, and replace the same tree twice and leave a spurious
     # entry in the backup directory.

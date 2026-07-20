@@ -99,7 +99,7 @@ done
 # The reload fan-out probes for live daemons; stub the lot so rendering is the
 # only thing under test.
 mkdir -p "$TMP/bin"
-for tool in pgrep pkill hyprctl swaync-client makoctl ags sass; do
+for tool in pgrep pkill hyprctl swaync-client makoctl; do
     printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/bin/$tool"
 done
 chmod +x "$TMP/bin/"*

@@ -227,7 +227,13 @@ checklist intentionally forbids a template tag while those results are pending.
 
 **Status:** In progress
 **Priority:** P5
-**Depends on:** P0 COPR consent + dependency detection; P2 notification-backend abstraction; AGS v2 / Astal, NetworkManager, BlueZ
+**Depends on:** P0 COPR consent + dependency detection; P2 notification-backend abstraction; Quickshell, NetworkManager, BlueZ
+
+> **Superseded implementation.** The deliverables below were written against AGS v2
+> / Astal and were delivered that way. The panel was later rebuilt as part of the
+> single Quickshell process, and AGS has since been removed from the repository
+> entirely — the acceptance rows stand as a record of what shipped, not of how it
+> is built today. See `docs/QUICK-SETTINGS.md` for the current design.
 
 ### Deliverables
 
@@ -270,12 +276,13 @@ checklist intentionally forbids a template tag while those results are pending.
 - [ ] A live session confirms Wi-Fi scan/connect/toggle, Bluetooth power/connect/
       battery, and notification popup/history/DND on both supported Fedora releases.
 
-P5 is covered by `tests/p5-smoke.sh`, which validates the AGS project structure and
-request handlers, `ags` backend selection and daemon exclusivity, the Waybar status
-bridge, the Hyprland/Waybar integration wiring, the layer blur rules, the stylesheet's
-Sass compatibility, and selected-only deployment. The wallpaper grid's helper contract
-(`list` output and AGS-versus-Rofi routing) is covered by `tests/p3-smoke.sh`
-alongside the state and IPC behavior it reuses. The
+P5 is covered by `tests/p5-smoke.sh`, which validates `quickshell` backend selection
+and daemon exclusivity, the fallback when the shell is unavailable, the singleton
+qmldir registration, the Waybar status bridge, the Hyprland/Waybar integration wiring,
+the layer blur rules, and selected-only deployment — including that a stale `ags`
+choice or config tree is migrated away rather than stranded. The wallpaper grid's
+helper contract (`list` output and Quickshell-versus-Rofi routing) is covered by
+`tests/p3-smoke.sh` alongside the state and IPC behavior it reuses. The
 milestone remains in progress until the live-session row is recorded in
 `docs/VM-TEST-MATRIX.md`.
 
@@ -283,7 +290,7 @@ milestone remains in progress until the live-session row is recorded in
 
 | Component | Interface | Persistent state |
 |---|---|---|
-| Notification backend | `--backend quickshell\|ags\|swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
+| Notification backend | `--backend quickshell\|swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
 | Quick-settings panel | `qs ipc call quicksettings toggle\|open\|close` | None (live Networking/Bluetooth/Notification state) |
 | Notifications | `qs ipc call notifications dnd\|clear\|count` | None (session-lived history) |
 | Lock screen | `qs ipc call lock lock\|isLocked`; `hypr/scripts/lock.sh` | None |
@@ -304,8 +311,9 @@ content by preserving the bad file for diagnosis and restoring safe defaults.
   renderer appends `px`/`ms` per target. `docs/TOKENS.md` documents the scales and
   the contrast budget.
 - The bar, dock, quick-settings panel, notification daemon, and lock screen are one
-  Quickshell process under `config/quickshell/`. Waybar and AGS are retired from
-  autostart; AGS, SwayNC, and Mako remain selectable notification backends.
+  Quickshell process under `config/quickshell/`. Waybar is retired from autostart
+  and AGS is removed entirely; SwayNC and Mako remain selectable notification
+  backends.
 - Bluetooth connect/disconnect and low-battery notifications, debounced and latched.
 - `hypr/scripts/lock.sh` prefers the Quickshell lock and falls back to hyprlock
   whenever it cannot be confirmed.

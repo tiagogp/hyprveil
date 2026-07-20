@@ -175,7 +175,7 @@ already-light muted text.
 At **0.82** alpha over white, muted text lands at **4.05:1** — under the WCAG AA
 floor of 4.5:1 for body text. At **0.88** it clears it. That 0.06 is the entire
 reason tier 0 is not glassier, and it is why `$elev-0-alpha` is a token rather
-than a per-file literal: the AGS stylesheet used 0.82 and was below the floor on
+than a per-file literal: the retired AGS stylesheet used 0.82 and was below the floor on
 any light wallpaper.
 
 If you raise the glassiness, re-check this number first.

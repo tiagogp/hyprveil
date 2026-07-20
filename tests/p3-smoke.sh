@@ -94,17 +94,21 @@ case "$prompt" in
     *) exit 1 ;;
 esac
 EOF
-# A real `ags` may exist on the developer's PATH and a real shell may even be
-# running; mock it so picker routing is decided by MOCK_AGS_INSTANCE alone.
-cat > "$TMP/bin/ags" <<'EOF'
+# A real `qs` may exist on the developer's PATH and a real shell may even be
+# running; mock it so picker routing is decided by MOCK_QS_RUNNING alone. The
+# mock fails the IPC call when unset, which is exactly how qs_picker detects an
+# absent shell and falls through to Rofi.
+cat > "$TMP/bin/qs" <<'EOF'
 #!/usr/bin/env bash
-case "${1:-}" in
-    list) [ -n "${MOCK_AGS_INSTANCE:-}" ] && printf '%s\n' "$MOCK_AGS_INSTANCE"; exit 0 ;;
-    request) shift; printf '%s\n' "$*" >> "$MOCK_ROOT/ags-requests"; exit 0 ;;
-esac
+if [ "${1:-}" = ipc ]; then
+    shift
+    [ -n "${MOCK_QS_RUNNING:-}" ] || exit 1
+    printf '%s\n' "$*" >> "$MOCK_ROOT/qs-requests"
+    exit 0
+fi
 exit 0
 EOF
-chmod +x "$TMP/bin/ags"
+chmod +x "$TMP/bin/qs"
 
 chmod +x "$TMP/bin/hyprctl" "$TMP/bin/rofi"
 
@@ -220,7 +224,7 @@ jq -e --arg path "$picker" '.monitors["DP-1"] == {path: $path, fit: "cover"}' \
     || fail "picker did not preserve its special-character path"
 ok "picker handles empty directories and special-character image names"
 
-# --- `list` feeds the AGS grid with the same catalog Rofi shows ---
+# --- `list` feeds the Quickshell grid with the same catalog Rofi shows ---
 
 catalog=$("$WALLPAPER" list)
 jq -e --arg path "$picker" '.images | index($path) != null' <<<"$catalog" >/dev/null \
@@ -241,23 +245,23 @@ HYPRVEIL_WALLPAPER_DIR="$TMP/absent" "$WALLPAPER" list \
     || fail "list did not degrade to an empty catalog for a missing directory"
 ok "list reports images, outputs, and saved selections as JSON"
 
-# --- pick prefers the AGS grid only when that shell is actually running ---
-rm -f "$TMP/ags-requests"
+# --- pick prefers the Quickshell grid only when that shell is actually running ---
+rm -f "$TMP/qs-requests"
 : > "$TMP/rofi-errors"
-MOCK_AGS_INSTANCE=hyprveil "$WALLPAPER" pick
-grep -q 'toggle-wallpapers' "$TMP/ags-requests" \
-    || fail "pick did not delegate to the running AGS grid"
-[ ! -s "$TMP/rofi-errors" ] || fail "pick ran the Rofi flow while the AGS grid was up"
+MOCK_QS_RUNNING=1 "$WALLPAPER" pick
+grep -q 'wallpapers open' "$TMP/qs-requests" \
+    || fail "pick did not delegate to the running Quickshell grid"
+[ ! -s "$TMP/rofi-errors" ] || fail "pick ran the Rofi flow while the Quickshell grid was up"
 
-rm -f "$TMP/ags-requests"
+rm -f "$TMP/qs-requests"
 : > "$TMP/ipc.log"
-# No AGS instance: the Rofi flow must still work unchanged.
+# No Quickshell instance: the Rofi flow must still work unchanged.
 MOCK_ROFI_TARGET=DP-1 MOCK_ROFI_FIT=contain "$WALLPAPER" pick
-[ ! -e "$TMP/ags-requests" ] || fail "pick contacted AGS when no instance was running"
+[ ! -e "$TMP/qs-requests" ] || fail "pick reached the shell when no instance was running"
 jq -e --arg path "$picker" '.monitors["DP-1"] == {path: $path, fit: "contain"}' \
     "$HYPRVEIL_STATE_HOME/wallpapers.json" >/dev/null \
     || fail "Rofi fallback did not apply its selection"
-ok "pick uses the AGS grid when present and falls back to Rofi otherwise"
+ok "pick uses the Quickshell grid when present and falls back to Rofi otherwise"
 
 : > "$TMP/ipc.log"
 HYPRLAND_INSTANCE_SIGNATURE=mock "$MOTION" reduced >/dev/null

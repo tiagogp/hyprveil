@@ -73,7 +73,6 @@ and safely recover only that state.
 To fall back to the previous shell without reinstalling:
 
 ```bash
-./scripts/07-select-notification-backend.sh --backend ags
 ~/.config/hypr/scripts/notification-daemon.sh restart
 waybar & disown
 ```
@@ -127,12 +126,12 @@ cat "${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/notification-backend"
 ```
 
 Reselect with `scripts/07-select-notification-backend.sh --backend quickshell`,
-`--backend ags`, `--backend swaync`, or `--backend mako`, then redeploy. The helper
+`--backend quickshell`, `--backend swaync`, or `--backend mako`, then redeploy. The helper
 stops the inactive daemon so two cannot compete for the D-Bus service.
 
 Selecting a backend restarts the daemon using the **deployed**
 `notification-daemon.sh`. If that copy predates Quickshell support it will not
-recognise the name and silently falls through to AGS — deploy first, then select.
+recognise the name and silently falls through to its own default — deploy first, then select.
 
 Confirm which daemon actually owns the bus:
 

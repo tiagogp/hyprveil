@@ -20,8 +20,8 @@ Usage:
   wallpaper.sh restore
 
 An omitted monitor updates the fallback and applies it to every connected monitor.
-`pick` opens the AGS grid when the shell is running and falls back to Rofi.
-`list` prints the catalog the AGS picker renders, as JSON.
+`pick` opens the Quickshell grid when the shell is running and falls back to Rofi.
+`list` prints the catalog the Quickshell picker renders, as JSON.
 Selections are saved in $XDG_STATE_HOME/hyprveil/wallpapers.json.
 EOF
 }
@@ -329,7 +329,7 @@ json_array() {
     fi
 }
 
-# The catalog the AGS grid renders: available images, connected outputs, and the
+# The catalog the Quickshell grid renders: available images, connected outputs, and
 # saved selection it highlights as active.
 list_command() {
     local -a images=() outputs=()
@@ -353,30 +353,21 @@ list_command() {
           fallback: $state[0].fallback, monitors: $state[0].monitors}'
 }
 
-# The AGS shell owns the graphical picker whenever it is running; Rofi is the
-# fallback for the SwayNC/Mako backends and for a session without the panel.
-# The Quickshell picker, when that shell is running. Same shape as ags_picker:
-# return non-zero and pick_command falls through to the Rofi flow, so a missing or
+# The Quickshell shell owns the graphical picker whenever it is running; Rofi is
+# the fallback for the SwayNC/Mako backends and for a session without the panel.
+# Return non-zero and pick_command falls through to the Rofi flow, so a missing or
 # wedged shell degrades to a working picker rather than to nothing.
 qs_picker() {
     command -v qs >/dev/null 2>&1 || return 1
     timeout 5 qs ipc call wallpapers open >/dev/null 2>&1
 }
 
-ags_picker() {
-    local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
-    command -v ags >/dev/null 2>&1 || return 1
-    ags list 2>/dev/null | grep -Fxq "$instance" || return 1
-    ags request -i "$instance" toggle-wallpapers >/dev/null 2>&1
-}
-
 pick_command() {
     local -a paths=() labels=() monitors=()
     local path choice index target fit monitor
-    # Both shells show a thumbnail grid that stays open across selections; Rofi
-    # keeps the picker usable when neither is running.
+    # The shell shows a thumbnail grid that stays open across selections; Rofi
+    # keeps the picker usable when it is not running.
     qs_picker && return 0
-    ags_picker && return 0
     if [ ! -d "$WALLPAPER_DIR" ]; then
         rofi -e "No wallpaper directory: $WALLPAPER_DIR" 2>/dev/null || true
         warn "create $WALLPAPER_DIR and add an image"

@@ -22,8 +22,6 @@ There are two front-ends over one helper.
   "Wallpapers…" row in the quick-settings panel (`SUPER+N`), or with
   `qs ipc call wallpapers toggle`.
 
-  The AGS backend has its own equivalent grid, reachable with
-  `ags request -i hyprveil toggle-wallpapers`.
 - **Rofi flow** — used with the SwayNC and Mako backends, and whenever no shell is
   running. It asks for an image, then all or one connected monitor, then `cover` or
   `contain`. It drives the same helper and writes the same state, so nothing is lost
@@ -108,8 +106,8 @@ directly — the grid renders exactly what this prints:
 ```
 
 If `SUPER+SHIFT+W` opens Rofi when you expected the grid, no shell is running —
-`wallpaper.sh pick` tries Quickshell, then AGS, then falls through. Check with
-`qs ipc call wallpapers toggle` (or `ags list` for the AGS backend); see
+`wallpaper.sh pick` tries Quickshell, then falls through to Rofi. Check with
+`qs ipc call wallpapers toggle`; see
 [QUICK-SETTINGS.md](QUICK-SETTINGS.md).
 
 If Hyprpaper is running but the background is wrong, restore the saved selection:

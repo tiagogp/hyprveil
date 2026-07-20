@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Mocked, non-root checks for P5: the AGS quick-settings panel + notifications
-# backend, its Waybar/daemon bridge, and Hyprland integration. No Wayland session
-# or real AGS install is required; a mock `ags` stands in for the running shell.
+# Mocked, non-root checks for P5: the Quickshell quick-settings panel +
+# notifications backend, its Waybar/daemon bridge, and Hyprland integration. No
+# Wayland session or real Quickshell install is required; mock `quickshell`/`qs`
+# binaries stand in for the running shell.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -19,27 +20,7 @@ export MOCK_ROOT="$TMP"
 mkdir -p "$HOME" "$HYPRVEIL_STATE_HOME" "$HYPRVEIL_CONFIG_HOME" "$TMP/bin"
 export PATH="$TMP/bin:$PATH"
 
-# --- AGS project structure ---
-AGS="$REPO/config/ags"
-for f in app.ts style.scss tsconfig.json widget/QuickSettings.tsx \
-         widget/Wifi.tsx widget/Bluetooth.tsx widget/Notifications.tsx \
-         widget/NotificationPopups.tsx widget/Wallpapers.tsx; do
-    [ -f "$AGS/$f" ] || fail "missing AGS source: config/ags/$f"
-done
-grep -q 'gi://AstalNetwork' "$AGS/widget/Wifi.tsx" || fail "Wifi widget does not use AstalNetwork"
-grep -q 'gi://AstalBluetooth' "$AGS/widget/Bluetooth.tsx" || fail "Bluetooth widget does not use AstalBluetooth"
-grep -q 'gi://AstalNotifd' "$AGS/widget/Notifications.tsx" || fail "Notifications widget does not use AstalNotifd"
-for req in toggle-quicksettings notif-status notif-dnd notif-clear toggle-wallpapers; do
-    grep -q "\"$req\"\|$req" "$AGS/app.ts" || fail "app.ts request handler missing: $req"
-done
-# The panel + popups declare the namespaces the Hyprland blur rules target.
-grep -q 'hyprveil-quicksettings' "$AGS/widget/QuickSettings.tsx" || fail "quicksettings namespace missing"
-grep -q 'hyprveil-notifications' "$AGS/widget/NotificationPopups.tsx" || fail "notifications namespace missing"
-grep -q 'hyprveil-wallpapers' "$AGS/widget/Wallpapers.tsx" || fail "wallpapers namespace missing"
-for ns in hyprveil-quicksettings hyprveil-notifications hyprveil-wallpapers; do
-    grep -q "layerrule = blur, $ns" "$REPO/config/hypr/window-rules.conf" \
-        || fail "missing blur layerrule for $ns"
-done
+# --- Shell layer-shell surfaces have their compositor glass rules ---
 # Derived from the QML rather than listed, so a surface added later is covered
 # without anyone remembering to extend this. The glass is the compositor's: a
 # namespace Hyprland has no rule for renders as a flat fill no matter what the
@@ -77,56 +58,10 @@ grep -q '"^(.*) - hyprveil - Visual Studio Code$"' "$REPO/config/waybar/config.j
 grep -q '"Visual Studio Code - \$1"' "$REPO/config/waybar/config.jsonc" \
     || fail "Waybar title does not put VS Code before the file name"
 ok "bar title removes the hyprveil workspace segment and puts VS Code first"
-# Glass palette imports the generated accent fragment rendered from colors.conf.
-grep -q '#e14658' "$AGS/_accent.scss" || fail "accent color not mirrored in _accent.scss"
-grep -q '@use "accent" as \*' "$AGS/style.scss" || fail "style.scss does not import the generated accent fragment"
-# Sass owns alpha() with one argument; the two-argument GTK form fails to compile
-# and would take the whole shell down, so keep the stylesheet on rgba().
-! grep -qE '[^-a-z]alpha\(\$[a-z-]+,' "$AGS/style.scss" \
-    || fail "style.scss uses two-argument alpha(); use rgba() so dart-sass can compile it"
-# GTK CSS has no max-height/max-width, and one unknown property discards the
-# entire stylesheet, leaving an unstyled shell.
-! grep -qE '^\s*max-(height|width):' "$AGS/style.scss" \
-    || fail "style.scss uses max-height/max-width; GTK rejects them - use heightRequest"
-# Font weights must be whole hundreds, or GTK discards the stylesheet.
-! grep -qE 'font-weight:\s*[0-9]*[1-9][0-9]\s*;' "$AGS/style.scss" \
-    || fail "style.scss uses a font-weight that is not a multiple of 100"
-# A non-ASCII byte in a preserved /* */ comment makes dart-sass emit @charset,
-# which GTK rejects as an unknown at-rule - again discarding the stylesheet.
-! grep -qP '^\s*(/\*|\s\*).*[^\x00-\x7F]' "$AGS/style.scss" \
-    || fail "style.scss has a non-ASCII preserved comment; dart-sass will emit @charset"
-
-# Nerd Font glyphs live in the Private Use Area and have been silently dropped
-# by editors before now, leaving blank buttons. Icons must use \u{...} escapes.
-if grep -n 'label=""' "$AGS"/widget/*.tsx; then
-    fail "an icon label is empty; write Nerd Font glyphs as \\u{...} escapes"
-fi
-grep -q 'label={"\\u{' "$AGS/widget/QuickSettings.tsx" \
-    || fail "QuickSettings icons are not written as \\u{...} escapes"
-ok "AGS project has Wi-Fi/Bluetooth/notification/wallpaper widgets, request handlers, and glass styling"
-
-# --- Wallpaper picker delegates to the shared helper ---
-grep -q 'wallpaper.sh' "$AGS/widget/Wallpapers.tsx" \
-    || fail "Wallpapers widget does not call the wallpaper helper"
-for cmd in '"list"' '"apply"'; do
-    grep -q "$cmd" "$AGS/widget/Wallpapers.tsx" \
-        || fail "Wallpapers widget does not use wallpaper.sh $cmd"
-done
-ok "AGS wallpaper grid reuses the wallpaper.sh state and IPC helper"
-
-# --- Mock ags standing in for the running shell ---
-cat > "$TMP/bin/ags" <<'EOF'
+# --- Mocks standing in for the running shell ---
+cat > "$TMP/bin/qs" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' "$*" >> "$MOCK_ROOT/ags"
-case "${1:-}" in
-    list) [ "${MOCK_AGS_RUNNING:-0}" = 1 ] && printf '%s\n' "${HYPRVEIL_AGS_INSTANCE:-hyprveil}" ;;
-    run) : ;;  # exec target; just records the invocation
-    request)
-        req=${!#}
-        [ "$req" = notif-status ] && \
-            printf '{"text":"2","alt":"notification","class":"notification","tooltip":"2 notifications"}\n'
-        ;;
-esac
+printf '%s\n' "$*" >> "$MOCK_ROOT/qs"
 exit 0
 EOF
 cat > "$TMP/bin/quickshell" <<'EOF'
@@ -138,45 +73,45 @@ cat > "$TMP/bin/pkill" <<'EOF'
 printf '%s\n' "$*" >> "$MOCK_ROOT/killed"
 EOF
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/bin/pgrep"
-# AGS shells out to dart-sass at startup, so the daemon requires it before it
-# commits to AGS. Mock it too, or these checks depend on the host's install.
-printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/sass"
 cat > "$TMP/bin/swaync" <<'EOF'
 #!/usr/bin/env bash
 printf 'started\n' >> "$MOCK_ROOT/swaync"
 EOF
-chmod +x "$TMP/bin/ags" "$TMP/bin/quickshell" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/sass" "$TMP/bin/swaync"
+chmod +x "$TMP/bin/qs" "$TMP/bin/quickshell" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/swaync"
 
-# --- Backend selection accepts ags and defaults to it ---
+# --- Backend selection accepts quickshell and defaults to it ---
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend"
-"$REPO/scripts/07-select-notification-backend.sh" --backend ags >/dev/null
-[ "$(cat "$HYPRVEIL_STATE_HOME/notification-backend")" = ags ] || fail "AGS backend was not saved"
+"$REPO/scripts/07-select-notification-backend.sh" --backend quickshell >/dev/null
+[ "$(cat "$HYPRVEIL_STATE_HOME/notification-backend")" = quickshell ] \
+    || fail "Quickshell backend was not saved"
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend"
-[ "$("$REPO/config/hypr/scripts/notification-daemon.sh" backend)" = ags ] \
-    || fail "daemon default backend is not ags"
-ok "backend selection accepts ags and defaults to it"
-
-# --- Daemon exclusivity: ags start stops swaync + mako and launches the shell ---
+[ "$("$REPO/config/hypr/scripts/notification-daemon.sh" backend)" = quickshell ] \
+    || fail "daemon default backend is not quickshell"
+# A state file naming the retired AGS backend must not select it, and must not
+# leave the session with no daemon either: it reads as unset and gets the default.
 printf 'ags\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
-rm -f "$TMP/killed" "$TMP/ags"
-"$REPO/config/hypr/scripts/notification-daemon.sh" start
-grep -qx -- '-x swaync' "$TMP/killed" || fail "ags startup did not stop SwayNC"
-grep -qx -- '-x mako' "$TMP/killed" || fail "ags startup did not stop Mako"
-grep -qx run "$TMP/ags" || fail "ags run was not launched"
-ok "selecting ags stops the other daemons and launches the AGS shell"
+[ "$("$REPO/config/hypr/scripts/notification-daemon.sh" backend)" = quickshell ] \
+    || fail "a stale ags state file did not fall through to the default backend"
+ok "backend selection accepts quickshell, defaults to it, and ignores a stale ags choice"
 
-# --- Missing dart-sass degrades to a fallback instead of no notifications ---
-# `ags run` compiles style.scss on every start; without sass it exits and would
-# take notifications down with it, so the daemon must hand off to swaync/mako.
-rm -f "$TMP/ags" "$TMP/swaync"
-# /usr/bin supplies env(1); sass is mocked in $TMP/bin only, so dropping it here
-# makes it genuinely absent regardless of what the host has installed.
-mv "$TMP/bin/sass" "$TMP/sass.hidden"
-PATH="$TMP/bin:/usr/bin" "$REPO/config/hypr/scripts/notification-daemon.sh" start 2>/dev/null
-mv "$TMP/sass.hidden" "$TMP/bin/sass"
-[ -s "$TMP/swaync" ] || fail "missing dart-sass did not fall back to a working daemon"
-! grep -qx run "$TMP/ags" 2>/dev/null || fail "ags run was launched without dart-sass"
-ok "a missing dart-sass falls back instead of leaving the session without notifications"
+# --- An unavailable shell degrades to a fallback instead of no notifications ---
+# Quickshell is selected but absent; the daemon must hand off to swaync/mako
+# rather than leaving the session with nothing serving notifications.
+#
+# The PATH here deliberately excludes /usr/bin: a developer running this on a
+# machine with Quickshell actually installed would otherwise find the real
+# binary and never exercise the fallback. Only bash is linked in, because
+# `#!/usr/bin/env bash` still has to resolve an interpreter.
+mkdir -p "$TMP/minimal"
+ln -sf "$(command -v bash)" "$TMP/minimal/bash"
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/swaync" "$TMP/quickshell"
+mv "$TMP/bin/quickshell" "$TMP/quickshell.hidden"
+PATH="$TMP/bin:$TMP/minimal" "$REPO/config/hypr/scripts/notification-daemon.sh" start 2>/dev/null
+mv "$TMP/quickshell.hidden" "$TMP/bin/quickshell"
+[ -s "$TMP/swaync" ] \
+    || fail "an unavailable Quickshell did not fall back to a working daemon"
+ok "an unavailable shell falls back instead of leaving the session without notifications"
 
 # --- Quickshell daemonizes in a real session and stays foregrounded in nested tests ---
 printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
@@ -191,45 +126,53 @@ HYPRVEIL_NESTED_SESSION=1 "$REPO/config/hypr/scripts/notification-daemon.sh" sta
 ! grep -qx -- '--daemonize' "$TMP/quickshell" || fail "nested quickshell backend daemonized instead of staying attached"
 ok "quickshell backend daemonizes only for the real session"
 
-# --- Daemon toggle/dnd route to the AGS panel ---
-printf 'ags\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
-rm -f "$TMP/ags"
-MOCK_AGS_RUNNING=1 "$REPO/config/hypr/scripts/notification-daemon.sh" toggle
-MOCK_AGS_RUNNING=1 "$REPO/config/hypr/scripts/notification-daemon.sh" dnd
-grep -q 'toggle-quicksettings' "$TMP/ags" || fail "SUPER+N/center toggle did not reach the AGS panel"
-grep -q 'notif-dnd' "$TMP/ags" || fail "DND did not reach the AGS panel"
-ok "daemon toggle and DND route through the AGS request bridge"
+# --- Daemon toggle/dnd route to the Quickshell panel over IPC ---
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/qs"
+"$REPO/config/hypr/scripts/notification-daemon.sh" toggle
+"$REPO/config/hypr/scripts/notification-daemon.sh" dnd
+grep -q 'quicksettings toggle' "$TMP/qs" \
+    || fail "SUPER+N/center toggle did not reach the Quickshell panel"
+grep -q 'notifications dnd' "$TMP/qs" || fail "DND did not reach the Quickshell panel"
+ok "daemon toggle and DND route through the Quickshell IPC bridge"
 
-# --- Waybar bridge renders the AGS status ---
-rm -f "$TMP/ags"
-render=$(MOCK_AGS_RUNNING=1 "$REPO/config/waybar/scripts/notification.sh" render)
-printf '%s' "$render" | grep -q '"alt":"notification"' || fail "AGS Waybar status not forwarded"
-grep -q 'notif-status' "$TMP/ags" || fail "Waybar bridge did not query notif-status"
-ok "Waybar notification module reflects the AGS status"
+# --- Waybar bridge degrades cleanly under the Quickshell backend ---
+# Waybar is the legacy bar and has no channel into the shell's own indicator, so
+# the bridge must emit well-formed JSON rather than querying a backend it cannot
+# talk to. Malformed output here blanks the whole Waybar module.
+render=$("$REPO/config/waybar/scripts/notification.sh" render)
+printf '%s' "$render" | jq -e '.text != null and .alt != null and .class != null' >/dev/null \
+    || fail "Waybar bridge did not emit a well-formed module payload"
+ok "Waybar notification bridge degrades cleanly under the Quickshell backend"
 
 # --- Hyprland + Waybar integration wiring ---
-grep -q 'toggle-quicksettings' "$REPO/config/waybar/config.jsonc" \
-    || fail "Waybar does not toggle the AGS panel"
+grep -q 'notification-daemon.sh toggle' "$REPO/config/waybar/config.jsonc" \
+    || fail "Waybar does not toggle the panel through the backend-aware helper"
 for ns in hyprveil-quicksettings hyprveil-notifications; do
     grep -q "blur, $ns" "$REPO/config/hypr/window-rules.conf" \
         || fail "missing blur layer rule for $ns"
 done
 grep -q 'notification-daemon.sh start' "$REPO/config/hypr/autostart.conf" \
     || fail "autostart does not launch the backend-aware daemon"
-ok "Waybar toggle, layer blur rules, and autostart are wired for AGS"
+ok "Waybar toggle, layer blur rules, and autostart are wired for the shell"
 
-# --- Deployment installs only the ags backend tree ---
+# --- Deployment installs only the selected backend tree ---
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
-printf 'ags\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
-mkdir -p "$HYPRVEIL_CONFIG_HOME/swaync" "$HYPRVEIL_CONFIG_HOME/mako"
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+mkdir -p "$HYPRVEIL_CONFIG_HOME/swaync" "$HYPRVEIL_CONFIG_HOME/mako" "$HYPRVEIL_CONFIG_HOME/ags"
 printf 'stale\n' > "$HYPRVEIL_CONFIG_HOME/swaync/config.json"
 printf 'stale\n' > "$HYPRVEIL_CONFIG_HOME/mako/config"
+printf 'stale\n' > "$HYPRVEIL_CONFIG_HOME/ags/app.ts"
 hv_deploy_configs >/dev/null
-[ -f "$HYPRVEIL_CONFIG_HOME/ags/app.ts" ] || fail "AGS config was not deployed"
-[ ! -e "$HYPRVEIL_CONFIG_HOME/swaync" ] || fail "inactive SwayNC tree survived AGS deployment"
-[ ! -e "$HYPRVEIL_CONFIG_HOME/mako" ] || fail "inactive Mako tree survived AGS deployment"
-ok "deployment installs only the AGS backend and backs up the inactive trees"
+[ -f "$HYPRVEIL_CONFIG_HOME/quickshell/shell.qml" ] \
+    || fail "Quickshell config was not deployed"
+[ ! -e "$HYPRVEIL_CONFIG_HOME/swaync" ] || fail "inactive SwayNC tree survived deployment"
+[ ! -e "$HYPRVEIL_CONFIG_HOME/mako" ] || fail "inactive Mako tree survived deployment"
+# A machine that once ran the retired AGS backend must get its stale tree cleaned
+# up, or ~/.config/ags is stranded forever with nothing left that would remove it.
+[ ! -e "$HYPRVEIL_CONFIG_HOME/ags" ] || fail "a stale AGS tree survived deployment"
+ok "deployment installs only the selected backend and clears the inactive trees"
 
 # --- A misresolved HV_REPO must not destroy the installed configuration ---
 # Each target tree is removed immediately before its replacement is moved in, so

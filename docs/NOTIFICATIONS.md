@@ -11,9 +11,9 @@ session's notification history**. That constraint shapes the design: the accent 
 token singletons are watched files rather than a push, so a wallpaper change
 recolours the shell without restarting it.
 
-**AGS** remains selectable, **SwayNC** is a fallback for a dedicated control
-center, and **Mako** a minimal fallback. Only one daemon ever runs. The rest of this
-document covers all four backends.
+**SwayNC** is a fallback for a dedicated control center, and **Mako** a minimal
+fallback. Only one daemon ever runs. The rest of this document covers all three
+backends.
 
 ## Bluetooth notifications
 
@@ -43,9 +43,8 @@ through `notification-daemon.sh` like every other backend.
 
 ### The fallback backends have no bar
 
-Only Quickshell draws a bar and dock. AGS, SwayNC, and Mako are notification
-daemons, so selecting one leaves the session without a bar unless you start one
-yourself:
+Only Quickshell draws a bar and dock. SwayNC and Mako are notification daemons,
+so selecting one leaves the session without a bar unless you start one yourself:
 
 ```bash
 waybar & disown
@@ -76,9 +75,7 @@ actions and the per-card close button provide the same operations.
 ## Backend selection
 
 The installer probes Fedora repositories first, then offers Quickshell from the
-`errornointernet/quickshell` COPR, or AGS (Aylur's GTK Shell v2 / Astal) from
-`solopasha/hyprland` — the same COPR Hyprveil already uses for
-hyprlock/hypridle/hyprpaper. Declining the COPR does not change repository
+`errornointernet/quickshell` COPR. Declining the COPR does not change repository
 configuration; the installer then offers SwayNC (`erikreider/SwayNotificationCenter`
 COPR) and, if that is also declined, selects Mako from Fedora's official
 repositories. Mako retains styled popup notifications and a session-persistent DND
@@ -90,15 +87,14 @@ The choice is stored in
 
 ```bash
 ./scripts/07-select-notification-backend.sh --backend quickshell
-./scripts/07-select-notification-backend.sh --backend ags
 ./scripts/07-select-notification-backend.sh --backend swaync
 ./scripts/07-select-notification-backend.sh --backend mako
 ```
 
 > **Upgrading in a live session.** Selecting a backend restarts the running daemon
 > using the *deployed* `notification-daemon.sh`. If that copy predates Quickshell
-> support it will not recognise the name and will silently fall through to AGS.
-> Deploy first, then select. A fresh install is unaffected.
+> support it will not recognise the name and will silently fall through to its own
+> default. Deploy first, then select. A fresh install is unaffected.
 
 Then run the full installer to install the selected package and safely redeploy its
 config. On the next login, `notification-daemon.sh` stops the inactive daemon before
@@ -126,7 +122,7 @@ command exists, stop every daemon, and start the helper:
 
 ```bash
 cat "${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/notification-backend"
-qs kill 2>/dev/null; ags quit -i hyprveil 2>/dev/null; pkill swaync; pkill mako
+qs kill 2>/dev/null; pkill swaync; pkill mako
 ~/.config/hypr/scripts/notification-daemon.sh start
 ```
 

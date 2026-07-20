@@ -3,12 +3,10 @@ required|hyprland|Hyprland|Hyprland session
 required|kitty|kitty|terminal
 required|polkit-gnome|polkit-gnome-authentication-agent-1|authentication agent
 required|xdg-desktop-portal-hyprland|xdg-desktop-portal-hyprland|desktop portal
-optional|waybar|waybar|legacy bar; the shell draws its own (kept for the AGS backend)
+optional|waybar|waybar|legacy bar; the shell draws its own
 required|rofi-wayland|rofi|application launcher
 required|libnotify|notify-send|desktop notifications from scripts and the Bluetooth watcher
 backend|quickshell|quickshell|Quickshell shell (bar, dock, notifications)
-backend|aylurs-gtk-shell2|ags|AGS quick-settings panel (Wi-Fi/Bluetooth) + notifications
-backend|dart-sass|sass|AGS stylesheet compilation (see docs/QUICK-SETTINGS.md)
 backend|SwayNotificationCenter|swaync|SwayNC notification-center fallback
 backend|mako|mako|Mako notification fallback
 required|hyprlock|hyprlock|screen lock

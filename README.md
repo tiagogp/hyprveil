@@ -13,7 +13,7 @@ See [ROADMAP.md](ROADMAP.md) for milestone status, [docs/INSTALL.md](docs/INSTAL
 for repository and rerun behavior, [docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
 [docs/TOP-BAR-DOCK.md](docs/TOP-BAR-DOCK.md) for Bluetooth, media, and pin management,
 [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the Wi-Fi/Bluetooth/notification panel,
-[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the Quickshell default plus AGS, SwayNC, and Mako fallbacks,
+[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the Quickshell default plus SwayNC and Mako fallbacks,
 [docs/TOKENS.md](docs/TOKENS.md) for the design token scale,
 [docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor
 wallpapers and reduced motion,
@@ -41,13 +41,14 @@ dependencies, keybindings, and state locations,
   drawn on every monitor. Pins launch installed desktop entries, including Flatpaks
   and Electron apps; right-click the launcher to add, remove, or reorder them.
   Replaced Waybar and AGS, which between them needed ten hand-duplicated dock
-  modules, a `socat` event-watcher helper, and a dart-sass runtime.
+  modules, a `socat` event-watcher helper, and a dart-sass runtime. Both are now
+  retired; Waybar remains installable as a legacy bar.
 - **Kitty** (`kitty/`) — translucent terminal, Fira Code, full palette mapping
 - **Rofi** (`rofi/`) — 480px centered glass launcher with icon rows and accent selection
   (requires `rofi-wayland`)
 - **Notifications** — served by the shell itself, with glass cards, history,
-  clear-all, DND, and Bluetooth connect/disconnect and low-battery alerts. AGS,
-  SwayNC (`swaync/`), and Mako remain installer-selected fallbacks.
+  clear-all, DND, and Bluetooth connect/disconnect and low-battery alerts.
+  SwayNC (`swaync/`) and Mako remain installer-selected fallbacks.
 - **Lock screen** (`quickshell/Lock/`) — oversized thin clock, accent avatar ring,
   pill password field (design "Lock" screen). **hyprlock**
   (`hypr/hyprlock.conf`) stays installed as the fallback: `hypr/scripts/lock.sh`

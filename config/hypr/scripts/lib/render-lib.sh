@@ -208,25 +208,6 @@ reload_mako() {
     makoctl reload >/dev/null 2>&1 || warn "could not reload Mako"
 }
 
-# AGS compiles style.scss at startup, so a changed fragment only lands after the
-# sheet is recompiled and pushed back in. Restarting the shell would work too,
-# but it is also the notification daemon — dropping it would discard the
-# session's notification history.
-reload_ags() {
-    local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}" compiled
-    command -v ags >/dev/null 2>&1 || return 0
-    ags list 2>/dev/null | grep -Fxq "$instance" || return 0
-    command -v sass >/dev/null 2>&1 || { warn "dart-sass is missing; the panel keeps its old accent"; return 0; }
-    compiled="$STATE_HOME/ags-style.css"
-    mkdir -p "$STATE_HOME"
-    if ! sass --no-source-map "$CONFIG_HOME/ags/style.scss" "$compiled" 2>/dev/null; then
-        warn "could not compile the AGS stylesheet"
-        return 0
-    fi
-    ags request -i "$instance" "reload-css $compiled" >/dev/null 2>&1 \
-        || warn "could not push the stylesheet to the AGS shell"
-}
-
 # Quickshell's Quickshell.watchFiles defaults to true, so writing Accent.qml or
 # Tokens.qml already IS the reload — verified by watching the instance's load
 # count increment on an accent change. There is deliberately nothing to send.
@@ -257,6 +238,5 @@ reload_all() {
     reload_waybar
     reload_swaync
     reload_mako
-    reload_ags
     reload_quickshell
 }

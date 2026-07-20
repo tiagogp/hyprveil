@@ -24,7 +24,7 @@ otherwise live in separate places or external apps:
 - **`SUPER+N`** toggles the full panel. The keybind calls
   `hypr/scripts/notification-daemon.sh toggle`, which dispatches per backend — it
   has never called the shell directly, which is why the binding survived the
-  migration from AGS unchanged.
+  migration from the retired AGS panel unchanged.
 - **The bar's bell glyph** opens the same window showing the notification
   section alone: a bell that answers with Wi-Fi and Bluetooth is not the control
   the glyph promised. Clicking it while the full panel is open switches the view
