@@ -119,7 +119,12 @@ Scope {
     }
 
     function clearAll() {
-        for (const n of server.trackedNotifications.values) n.dismiss();
+        // Snapshot first. dismiss() removes the notification from
+        // trackedNotifications synchronously, so iterating the live list shifts
+        // it underneath the loop and every second entry gets skipped — clearing
+        // six left three.
+        const all = server.trackedNotifications.values.slice();
+        for (const n of all) n.dismiss();
         popupModel = [];
     }
 
