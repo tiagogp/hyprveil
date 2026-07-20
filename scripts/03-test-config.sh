@@ -261,7 +261,11 @@ if hv_confirm "Looked right? Back up and replace the managed configs now?"; then
         "$REPO/scripts/07-select-notification-backend.sh"
     fi
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
-    echo "Installed to $HV_CONFIG_HOME. Reload with: hyprctl reload && pkill waybar; waybar & disown"
+    echo "Installed to $HV_CONFIG_HOME. Reload with:"
+    echo "  hyprctl reload"
+    echo "  qs kill; ~/.config/hypr/scripts/notification-daemon.sh start & disown"
+    echo "(the shell must be restarted after a deploy: its file watcher tracks the"
+    echo " paths it started with, and deployment replaces the tree wholesale)"
 else
     echo "Skipped. Re-run this script or install.sh when ready."
 fi

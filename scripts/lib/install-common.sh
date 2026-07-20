@@ -160,7 +160,7 @@ hv_notification_backend() {
         IFS= read -r backend < "$HV_NOTIFICATION_STATE" || true
     fi
     case "$backend" in
-        ags|swaync|mako) printf '%s\n' "$backend" ;;
+        quickshell|ags|swaync|mako) printf '%s\n' "$backend" ;;
         *) return 1 ;;
     esac
 }
@@ -339,7 +339,14 @@ hv_deploy_configs() {
     # config exists — the same split waybar has always had.
     local -a all_backends=(ags swaync mako) inactive_backends=()
     backend=$(hv_notification_backend || printf 'ags\n')
-    names+=("$backend")
+    # quickshell is already deployed unconditionally above; appending it again
+    # would stage, back up, and replace the same tree twice and leave a spurious
+    # entry in the backup directory.
+    local already=0 existing
+    for existing in "${names[@]}"; do
+        [ "$existing" = "$backend" ] && already=1
+    done
+    [ "$already" -eq 1 ] || names+=("$backend")
     for other in "${all_backends[@]}"; do
         [ "$other" = "$backend" ] || inactive_backends+=("$other")
     done
