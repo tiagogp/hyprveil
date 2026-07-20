@@ -13,6 +13,7 @@ import Quickshell
 import "Bar"
 import "Dock"
 import "Notif"
+import "Panel"
 
 ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
@@ -31,5 +32,9 @@ ShellRoot {
     // Popups are deliberately NOT per-monitor. The design stacks them top-right
     // on the focused output; drawing the same toast on every screen is noise,
     // and AGS had the multi-monitor path written but never instantiated it.
-    Popups {}
+    Popups { id: notifs }
+
+    // The panel reads the popup scope's server rather than owning one, so the
+    // history it lists and the toasts that appeared are the same objects.
+    QuickSettings { notifications: notifs }
 }

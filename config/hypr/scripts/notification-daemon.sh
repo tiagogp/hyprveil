@@ -136,7 +136,7 @@ case "${1:-start}" in
         ;;
     toggle)
         case "$(backend)" in
-            quickshell) qs_ipc notifications clear ;;
+            quickshell) qs_ipc quicksettings toggle ;;
             ags) ags_request toggle-quicksettings ;;
             swaync) swaync-client -t -sw ;;
             *)
