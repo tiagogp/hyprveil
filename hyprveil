@@ -1,0 +1,317 @@
+#!/usr/bin/env bash
+# Hyprveil maintenance command.
+set -uo pipefail
+
+REPO="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+. "$REPO/scripts/lib/install-common.sh"
+
+FAIL=0
+WARN=0
+
+usage() {
+    cat <<'EOF'
+Usage: ./hyprveil doctor
+
+Commands:
+  doctor    Read-only health report for Fedora support, dependencies, config,
+            shell wiring, and Hyprveil state.
+EOF
+}
+
+redact() {
+    local value=$1
+    if [ -n "${HOME:-}" ]; then
+        value=${value//$HOME/\~}
+    fi
+    printf '%s\n' "$value"
+}
+
+status_ok() {
+    printf '  OK   %s\n' "$*"
+}
+
+status_warn() {
+    WARN=$((WARN + 1))
+    printf '  WARN %s\n' "$*"
+}
+
+status_fail() {
+    FAIL=$((FAIL + 1))
+    printf '  FAIL %s\n' "$*"
+}
+
+section() {
+    printf '\n== %s ==\n' "$*"
+}
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+installed_package_or_command() {
+    local package=$1 command=$2
+    have "$command" && return 0
+    have rpm && rpm -q "$package" >/dev/null 2>&1
+}
+
+json_valid() {
+    local file=$1 filter=$2
+    have jq || return 2
+    jq -e "$filter" "$file" >/dev/null 2>&1
+}
+
+check_fedora() {
+    local supported release found=0 repos repo official=0 third_party=0
+    section "Fedora And Repositories"
+    if hv_load_fedora; then
+        supported=$(hv_supported_releases)
+        for release in $supported; do
+            [ "$HV_FEDORA_VERSION" = "$release" ] && found=1
+        done
+        if [ "$found" -eq 1 ]; then
+            status_ok "$HV_OS_NAME is supported ($supported)"
+        else
+            status_warn "$HV_OS_NAME is outside the release-tested pair ($supported)"
+        fi
+    else
+        status_fail "Fedora release could not be identified; package guidance may be wrong"
+    fi
+
+    if ! have "${HYPRVEIL_DNF:-dnf}"; then
+        status_warn "dnf is unavailable; enabled package sources cannot be reported"
+        return
+    fi
+    repos=$(hv_enabled_repo_ids || true)
+    if [ -z "$repos" ]; then
+        status_warn "dnf reported no enabled repositories"
+        return
+    fi
+    while IFS= read -r repo; do
+        [ -n "$repo" ] || continue
+        if hv_is_official_repo "$repo"; then
+            official=$((official + 1))
+        else
+            third_party=$((third_party + 1))
+        fi
+    done <<<"$repos"
+    status_ok "enabled repositories: $official official, $third_party third-party"
+    if [ "$third_party" -gt 0 ]; then
+        printf '       Third-party repositories are enabled; package installs still prefer official Fedora sources first.\n'
+    fi
+}
+
+check_dependencies() {
+    local importance package command feature notification_backend required_missing=0 optional_missing=0 checked=0
+    section "Dependencies"
+    notification_backend=$(hv_notification_backend || true)
+    while IFS='|' read -r importance package command feature; do
+        [ -n "$importance" ] || continue
+        [[ "$importance" = \#* ]] && continue
+        if [ "$importance" = backend ]; then
+            case "$notification_backend:$package" in
+                swaync:SwayNotificationCenter|mako:mako|quickshell:quickshell) importance=required ;;
+                *) continue ;;
+            esac
+        fi
+        checked=$((checked + 1))
+        if installed_package_or_command "$package" "$command"; then
+            continue
+        fi
+        if [ "$importance" = required ]; then
+            required_missing=$((required_missing + 1))
+            status_fail "missing required package or command for $feature: $package ($command)"
+        else
+            optional_missing=$((optional_missing + 1))
+        fi
+    done < "$REPO/scripts/data/dependencies.tsv"
+
+    if [ "$required_missing" -eq 0 ]; then
+        status_ok "$checked relevant dependencies checked; no required dependency is missing"
+    fi
+    if [ "$optional_missing" -gt 0 ]; then
+        status_warn "$optional_missing optional dependencies are missing; optional controls may hide or degrade"
+    fi
+    if [ -s "$HV_SOURCE_LOG" ]; then
+        status_ok "package source log exists at $(redact "$HV_SOURCE_LOG")"
+    else
+        status_warn "no package source log yet; run ./install.sh or ./scripts/09-dependency-report.sh"
+    fi
+}
+
+check_config() {
+    local config="$HV_CONFIG_HOME/hypr/hyprland.conf"
+    section "Hyprland And Shell"
+    if [ -f "$config" ]; then
+        status_ok "Hyprland config found at $(redact "$config")"
+    else
+        status_fail "Hyprland config is missing at $(redact "$config")"
+        printf '       Recovery: ./install.sh, then select deployment when prompted.\n'
+        return
+    fi
+
+    if have Hyprland; then
+        if Hyprland --verify-config -c "$config" >/dev/null 2>&1; then
+            status_ok "Hyprland --verify-config accepts the deployed config"
+        else
+            status_fail "Hyprland --verify-config rejected the deployed config"
+            printf '       Recovery: ./scripts/03-test-config.sh, then inspect hyprctl configerrors in-session.\n'
+        fi
+    else
+        status_warn "Hyprland is not installed, so config parse health could not be checked"
+    fi
+
+    if [ -f "$HV_CONFIG_HOME/quickshell/shell.qml" ]; then
+        status_ok "Quickshell config is deployed"
+    else
+        status_fail "Quickshell config is missing at $(redact "$HV_CONFIG_HOME/quickshell/shell.qml")"
+    fi
+
+    if have quickshell; then
+        if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+            if pgrep -u "${USER:-$(id -un)}" -x quickshell >/dev/null 2>&1; then
+                status_ok "Quickshell process is running in this Hyprland session"
+            else
+                status_warn "Hyprland is running but no quickshell process was found"
+                printf '       Recovery: quickshell\n'
+            fi
+        else
+            status_ok "quickshell command is installed; live process check skipped outside Hyprland"
+        fi
+    else
+        status_fail "quickshell command is missing"
+    fi
+}
+
+check_state_file() {
+    local label=$1 file=$2 filter=$3 recovery=$4
+    if [ ! -e "$file" ]; then
+        status_warn "$label state is not selected yet"
+        printf '       Recovery: %s\n' "$recovery"
+        return
+    fi
+    if [ ! -r "$file" ]; then
+        status_fail "$label state is not readable at $(redact "$file")"
+        return
+    fi
+    case "$(json_valid "$file" "$filter"; printf '%s' "$?")" in
+        0) status_ok "$label state is valid" ;;
+        2) status_warn "jq is unavailable; $label JSON state could not be schema-checked" ;;
+        *) status_fail "$label state is malformed at $(redact "$file")"; printf '       Recovery: %s\n' "$recovery" ;;
+    esac
+}
+
+check_state() {
+    local backend motion profile accent_file wallpaper_file pins_file hardware_file
+    section "Hyprveil State"
+
+    backend=$(hv_notification_backend || true)
+    case "$backend" in
+        quickshell|swaync|mako) status_ok "notification backend: $backend" ;;
+        *) status_fail "notification backend is missing or invalid"; printf '       Recovery: ./scripts/07-select-notification-backend.sh --backend quickshell\n' ;;
+    esac
+
+    hardware_file="$HV_STATE_HOME/hardware-profile.conf"
+    if [ -r "$hardware_file" ]; then
+        profile=$(awk -F= '
+            $1 == "form_factor" {form=$2}
+            $1 == "gpu" {gpu=$2}
+            END {
+                if ((form == "desktop" || form == "laptop" || form == "generic") &&
+                    (gpu == "intel" || gpu == "amd" || gpu == "nvidia" || gpu == "generic")) {
+                    print form " / " gpu
+                }
+            }' "$hardware_file")
+        if [ -n "$profile" ]; then
+            status_ok "hardware profile: $profile"
+        else
+            status_fail "hardware profile is malformed at $(redact "$hardware_file")"
+            printf '       Recovery: ./scripts/06-select-profile.sh\n'
+        fi
+    else
+        status_warn "hardware profile is not selected"
+        printf '       Recovery: ./scripts/06-select-profile.sh\n'
+    fi
+
+    motion="$HV_STATE_HOME/motion-profile"
+    if [ -r "$motion" ]; then
+        IFS= read -r profile < "$motion" || true
+        case "$profile" in
+            standard|reduced) status_ok "motion profile: $profile" ;;
+            *) status_fail "motion profile is invalid"; printf '       Recovery: ~/.config/hypr/scripts/motion-profile.sh --ensure\n' ;;
+        esac
+    else
+        status_warn "motion profile is not selected"
+        printf '       Recovery: ~/.config/hypr/scripts/motion-profile.sh --ensure\n'
+    fi
+
+    pins_file="$HV_STATE_HOME/dock-pins.json"
+    check_state_file "dock pins" "$pins_file" \
+        'type == "array" and length <= 10 and all(.[]; type == "object" and (.desktop_id | type == "string") and (.app_id | type == "string"))' \
+        '~/.config/hypr/scripts/dock-manager.sh list'
+
+    wallpaper_file="$HV_STATE_HOME/wallpapers.json"
+    check_state_file "wallpaper" "$wallpaper_file" \
+        'type == "object" and .version == 1 and (.fallback | type == "object") and (.fallback.path | type == "string") and (.fallback.fit == "cover" or .fallback.fit == "contain") and (.monitors | type == "object") and all(.monitors[]; type == "object" and (.path | type == "string") and (.fit == "cover" or .fit == "contain"))' \
+        '~/.config/hypr/scripts/wallpaper.sh restore'
+
+    accent_file="$HV_STATE_HOME/accent.json"
+    check_state_file "accent" "$accent_file" \
+        'type == "object" and .version == 1 and (.accent | type == "string") and (.accent | test("^#[0-9a-fA-F]{6}$")) and (.source | type == "string") and (.auto | type == "boolean") and ((has("chromeAlpha") | not) or (.chromeAlpha | test("^[01](\\.[0-9]+)?$"))) and ((has("chromeBand") | not) or (.chromeBand | test("^[0-9a-f]{6}$")))' \
+        '~/.config/hypr/scripts/accent.sh render'
+}
+
+check_managed_trees() {
+    local name path missing=0 backend
+    section "Managed Trees"
+    for name in hypr quickshell waybar kitty rofi wlogout gtk-3.0 gtk-4.0 fontconfig; do
+        path="$HV_CONFIG_HOME/$name"
+        if [ -e "$path" ]; then
+            status_ok "$name deployed"
+        else
+            missing=$((missing + 1))
+            status_warn "$name is not deployed at $(redact "$path")"
+        fi
+    done
+    if [ "$missing" -gt 0 ]; then
+        printf '       Recovery: ./install.sh, then select deployment when prompted.\n'
+    fi
+
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    for name in ags swaync mako; do
+        [ "$name" = "$backend" ] && continue
+        path="$HV_CONFIG_HOME/$name"
+        if [ -e "$path" ]; then
+            status_warn "stale inactive backend tree remains at $(redact "$path")"
+            printf '       Recovery: rerun ./install.sh and deploy configs to back it up and remove it.\n'
+        fi
+    done
+}
+
+doctor() {
+    printf 'Hyprveil doctor is read-only; it does not repair or rewrite state.\n'
+    printf 'Config home: %s\n' "$(redact "$HV_CONFIG_HOME")"
+    printf 'State home:  %s\n' "$(redact "$HV_STATE_HOME")"
+    check_fedora
+    check_dependencies
+    check_config
+    check_state
+    check_managed_trees
+
+    printf '\n== Summary ==\n'
+    if [ "$FAIL" -gt 0 ]; then
+        printf 'Doctor found %s failure(s) and %s warning(s).\n' "$FAIL" "$WARN"
+        return 1
+    fi
+    if [ "$WARN" -gt 0 ]; then
+        printf 'Doctor found no failures and %s warning(s).\n' "$WARN"
+        return 0
+    fi
+    printf 'Doctor found no failures or warnings.\n'
+}
+
+case "${1:-}" in
+    doctor) shift; [ "$#" -eq 0 ] || { usage >&2; exit 2; }; doctor ;;
+    -h|--help|'') usage ;;
+    *) usage >&2; exit 2 ;;
+esac

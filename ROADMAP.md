@@ -22,8 +22,8 @@ management, and discoverability.
 
 ## P0 — Fedora template foundation
 
-**Status:** In progress  
-**Priority:** P0  
+**Status:** In progress
+**Priority:** P0
 **Depends on:** Current installer and validation scripts
 
 ### Deliverables
@@ -63,8 +63,8 @@ milestone remains in progress until clean VM installs are recorded for Fedora 44
 
 ## P1 — Top bar and dock
 
-**Status:** Complete  
-**Priority:** P1  
+**Status:** Complete
+**Priority:** P1
 **Depends on:** P0 dependency detection; Waybar, BlueZ/Blueman, Playerctl, Rofi, Jq
 
 ### Deliverables
@@ -107,8 +107,8 @@ clients, desktop-entry launching, the pin limit, and malformed-state recovery.
 
 ## P2 — Notification center
 
-**Status:** Complete  
-**Priority:** P2  
+**Status:** Complete
+**Priority:** P2
 **Depends on:** P0 repository prompts; SwayNotificationCenter COPR
 
 ### Deliverables
@@ -143,8 +143,8 @@ daemon startup, selected-only deployment, and the Mako DND fallback.
 
 ## P3 — Wallpaper customization and motion
 
-**Status:** Complete  
-**Priority:** P3  
+**Status:** Complete
+**Priority:** P3
 **Depends on:** Hyprpaper, Hyprctl, Rofi, Jq; P0 state and validation conventions
 
 ### Deliverables
@@ -186,8 +186,8 @@ picker entries, persistent motion selection, and reload rollback.
 
 ## P4 — Quality and template release
 
-**Status:** In progress  
-**Priority:** P4  
+**Status:** In progress
+**Priority:** P4
 **Depends on:** P0–P3
 
 ### Deliverables

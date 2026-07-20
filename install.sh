@@ -81,16 +81,8 @@ if [ "$INSTALL_OK" -ne 1 ]; then
 elif ! cmp -s "$REPO/config/hypr/hyprland.conf" "$HV_CONFIG_HOME/hypr/hyprland.conf"; then
     echo "FAIL: installed hyprland.conf does not match the managed template."
     INSTALL_OK=0
-elif command -v hyprctl >/dev/null && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-    hyprctl reload
-    pkill waybar 2>/dev/null || true
-    (waybar & disown) 2>/dev/null || true
-    "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" restart || true
-    "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" restore || true
-    [ -x "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" ] && "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh"
-    echo "Reloaded Hyprland and Waybar."
 else
-    echo "Configs verified. Log into Hyprland, or reload the existing session manually."
+    hv_reload_live_session
 fi
 
 echo

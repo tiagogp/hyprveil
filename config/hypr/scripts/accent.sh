@@ -11,7 +11,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HV_LOG_PREFIX=Accent
-# shellcheck source=lib/render-lib.sh
+# shellcheck source=config/hypr/scripts/lib/render-lib.sh
 . "$SCRIPT_DIR/lib/render-lib.sh"
 
 STATE_FILE="$STATE_HOME/accent.json"

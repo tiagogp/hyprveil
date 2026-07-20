@@ -6,8 +6,9 @@ release complete from mocked checks alone.
 ## Automated gate
 
 - [ ] `./tests/run.sh --require-shellcheck` passes from a clean checkout.
-- [ ] CI passes ShellCheck, Bash syntax, JSON/JSONC parsing, executable checks, and
-      all P0–P4 non-session smoke tests.
+- [ ] CI passes ShellCheck, Bash syntax, JSON/JSONC parsing, executable checks,
+      offline Markdown checks, generated-file checks, and all P0-P8 non-session
+      smoke tests.
 - [ ] `./scripts/03-test-config.sh` passes static validation on supported Fedora.
 - [ ] A nested session launches from each selected notification backend without
       modifying real config or state.
@@ -25,7 +26,8 @@ release complete from mocked checks alone.
       motion selection, notification backend, and hardware profile.
 - [ ] COPR refusal and Mako fallback paths are exercised without unintended repo
       changes.
-- [ ] Recovery is exercised for Hyprland, Waybar, Hyprpaper, and notifications.
+- [ ] Recovery is exercised for Hyprland, Quickshell, Hyprpaper, the selected
+      notification backend, and the legacy Waybar fallback.
 
 ## Documentation and tag gate
 

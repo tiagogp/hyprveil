@@ -2,7 +2,7 @@
 # Test the hyprveil configs BEFORE installing anything into ~/.config.
 #
 # Two phases:
-#   1. Static checks — always run: config files present, waybar JSON valid,
+#   1. Static checks — always run: config files present, legacy Waybar JSON valid,
 #      required commands installed, fonts available, Hyprland parse check
 #      (--verify-config, if your Hyprland build supports it).
 #   2. Nested test — only when run from inside a Wayland session: boots
@@ -241,7 +241,7 @@ echo "Your real home and XDG directories stay untouched. Exit with SUPER+SHIFT+Q
 read -r -p "Launch nested session now? [y/N] " ans
 [[ "$ans" == "y" || "$ans" == "Y" ]] || exit 0
 
-"$REPO/scripts/08-test-nested-session.sh" --backend "${notification_backend:-swaync}" --keep-stage
+"$REPO/scripts/08-test-nested-session.sh" --backend "${notification_backend:-quickshell}" --keep-stage
 echo "Nested session ended. The isolated stage path is shown above for inspection."
 
 echo
@@ -260,7 +260,9 @@ if hv_confirm "Looked right? Back up and replace the managed configs now?"; then
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
     echo "Installed to $HV_CONFIG_HOME. Reload with:"
     echo "  hyprctl reload"
-    echo "  qs kill; ~/.config/hypr/scripts/notification-daemon.sh start & disown"
+    echo "  ~/.config/hypr/scripts/notification-daemon.sh restart"
+    echo "  ~/.config/hypr/scripts/wallpaper.sh restore"
+    echo "  ~/.config/hypr/scripts/apply-theme.sh"
     echo "(the shell must be restarted after a deploy: its file watcher tracks the"
     echo " paths it started with, and deployment replaces the tree wholesale)"
 else

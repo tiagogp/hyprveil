@@ -48,7 +48,22 @@ export HYPRVEIL_STATE_HOME="$TMP/state"
 export HYPRVEIL_CONFIG_HOME="$TMP/config"
 export HYPRVEIL_NO_SUDO=1
 export MOCK_DNF_ROOT="$TMP"
-mkdir -p "$HOME" "$HYPRVEIL_CONFIG_HOME"
+export PATH="$TMP/bin:$PATH"
+mkdir -p "$HOME" "$HYPRVEIL_CONFIG_HOME" "$TMP/bin"
+
+cat > "$TMP/bin/Hyprland" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = --verify-config ]; then
+    exit 0
+fi
+exit 0
+EOF
+chmod +x "$TMP/bin/Hyprland"
+for command in kitty polkit-mate-authentication-agent-1 xdg-desktop-portal-hyprland \
+               rofi notify-send quickshell hyprlock hypridle hyprpaper wlogout \
+               gio gtk-launch; do
+    ln -s Hyprland "$TMP/bin/$command"
+done
 
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
@@ -115,6 +130,32 @@ report=$("$REPO/scripts/09-dependency-report.sh")
 printf '%s' "$report" | grep -q 'Fedora: Fedora Linux 44 (Mock)' || fail "dependency report omitted Fedora version"
 printf '%s' "$report" | grep -q 'Chosen package sources:' || fail "dependency report omitted package sources"
 ok "dependency report includes Fedora version and package sources"
+
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+printf 'standard\n' > "$HYPRVEIL_STATE_HOME/motion-profile"
+printf '[]\n' > "$HYPRVEIL_STATE_HOME/dock-pins.json"
+cat > "$HYPRVEIL_STATE_HOME/wallpapers.json" <<EOF
+{"version":1,"fallback":{"path":"$HYPRVEIL_CONFIG_HOME/hypr/wallpaper-default.jpg","fit":"cover"},"monitors":{}}
+EOF
+cat > "$HYPRVEIL_STATE_HOME/accent.json" <<'EOF'
+{"version":1,"accent":"#e14658","source":"default","auto":true,"chromeAlpha":"0.87"}
+EOF
+doctor=$("$REPO/hyprveil" doctor)
+printf '%s' "$doctor" | grep -q 'Fedora Linux 44 (Mock) is supported' || fail "doctor omitted Fedora support"
+printf '%s' "$doctor" | grep -q 'notification backend: quickshell' || fail "doctor omitted notification backend"
+printf '%s' "$doctor" | grep -q 'Doctor found no failures' || fail "doctor did not complete a clean mocked report"
+ok "doctor reports Fedora, dependencies, shell, and state in a mocked install"
+
+printf '{broken json\n' > "$HYPRVEIL_STATE_HOME/wallpapers.json"
+wallpaper_before=$(sha256sum "$HYPRVEIL_STATE_HOME/wallpapers.json")
+doctor_status=0
+doctor_bad=$("$REPO/hyprveil" doctor 2>&1) || doctor_status=$?
+[ "$doctor_status" -ne 0 ] || fail "doctor succeeded with malformed wallpaper state"
+printf '%s' "$doctor_bad" | grep -q 'wallpaper state is malformed' || fail "doctor did not explain malformed wallpaper state"
+printf '%s' "$doctor_bad" | grep -q 'wallpaper.sh restore' || fail "doctor did not print wallpaper recovery command"
+wallpaper_after=$(sha256sum "$HYPRVEIL_STATE_HOME/wallpapers.json")
+[ "$wallpaper_before" = "$wallpaper_after" ] || fail "doctor modified malformed wallpaper state"
+ok "doctor detects malformed state without modifying it"
 
 printf 'not-a-profile\n' > "$HYPRVEIL_STATE_HOME/hardware-profile.conf"
 "$REPO/scripts/06-select-profile.sh" --form-factor desktop --gpu intel >/dev/null 2>&1

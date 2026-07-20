@@ -163,7 +163,7 @@ deploy does — leaves a running instance watching paths that no longer exist. A
 an upgrade, restart it:
 
 ```bash
-qs kill && ~/.config/hypr/scripts/notification-daemon.sh start & disown
+~/.config/hypr/scripts/notification-daemon.sh restart
 ```
 
 Note that restarting discards the session's notification history, since the shell

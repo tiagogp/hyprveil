@@ -100,8 +100,9 @@ vivid=$(MOCK_IMAGE=vivid "$ACCENT" extract "$image")
 # The blue region must win over the dark majority, and the result must land in
 # the legibility band the scorer clamps to (S 0.45-0.85, L 0.52-0.68).
 read -r r g b <<< "$(printf '%d %d %d\n' "0x${vivid:1:2}" "0x${vivid:3:2}" "0x${vivid:5:2}")"
-[ "$b" -gt "$r" ] && [ "$b" -gt "$g" ] \
-    || fail "extract did not pick the vivid blue region: $vivid"
+if [ "$b" -le "$r" ] || [ "$b" -le "$g" ]; then
+    fail "extract did not pick the vivid blue region: $vivid"
+fi
 [ "$((r + g + b))" -gt 200 ] || fail "extracted accent is too dark to read on #0f1115: $vivid"
 
 grey=$(MOCK_IMAGE=grey "$ACCENT" extract "$image" 2> "$TMP/grey-warning")
@@ -218,9 +219,13 @@ ok "wallpaper tracking opts out without disabling explicit commands, and reset r
 # --------------------------------------------------------------------------
 # Adaptive chrome alpha
 # --------------------------------------------------------------------------
+# shellcheck disable=SC2016
 ceiling=$(sed -n 's/^\$chrome-alpha *= *//p' "$C/hypr/tokens.conf")
+# shellcheck disable=SC2016
 floor=$(sed -n 's/^\$chrome-alpha-min *= *//p' "$C/hypr/tokens.conf")
-[ -n "$ceiling" ] && [ -n "$floor" ] || fail "the chrome alpha range is not in tokens.conf"
+if [ -z "$ceiling" ] || [ -z "$floor" ]; then
+    fail "the chrome alpha range is not in tokens.conf"
+fi
 
 # A blown-out band has to pay the full ceiling, a dark one drops to the floor.
 # These are the two ends of the whole point: one fixed alpha cannot do both.

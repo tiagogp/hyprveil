@@ -1,124 +1,87 @@
-# Hyprveil — a reusable Fedora Hyprland template
+# Hyprveil
 
-Hyprveil is a dark glass-styled Hyprland desktop for the current and previous stable
-Fedora releases. Its installer detects Fedora and enabled repositories, prefers
-official packages, preserves persistent state, and backs up managed configuration
-before clean replacement.
+Hyprveil is a reusable Fedora Hyprland desktop template with a dark glass visual
+system, a Quickshell-based shell, wallpaper-aware accents, persistent hardware
+profiles, and a cautious installer that backs up managed configuration before
+replacing it.
 
-The visual target is `design/Hyprland Desktop Design.dc.html` (from the Claude Design
-project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
-14–16px radii, Geist for UI text, Fira Code for the terminal.
+The default desktop is Quickshell QML: it draws the floating top bar, bottom dock,
+Quick Settings, notification popups/history, wallpaper picker, keybind cheatsheet,
+and lock screen. Waybar remains in the repository as a legacy/fallback bar, while
+SwayNC and Mako are notification-only fallbacks for systems that do not run the
+Quickshell notification backend.
 
-See [ROADMAP.md](ROADMAP.md) for milestone status, [docs/INSTALL.md](docs/INSTALL.md)
-for repository and rerun behavior, [docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
+## Requirements
+
+- Fedora 44 or Fedora 43. Other Fedora versions may work, but they are outside
+  the release-tested support window in `support/fedora-releases.conf`.
+- A Wayland-capable system that can run Hyprland.
+- `dnf`, Bash, and a user account allowed to install packages with `sudo`.
+- Network access during package installation, unless all required packages are
+  already installed from enabled repositories.
+
+## Install
+
+```bash
+chmod +x scripts/*.sh
+./install.sh
+```
+
+The installer probes enabled Fedora repositories first, offers COPR fallbacks only
+when needed, records package-source choices, preserves state under
+`$XDG_STATE_HOME/hyprveil`, and creates timestamped backups before replacing
+Hyprveil-managed config trees. It is safe to rerun.
+
+Important warnings:
+
+- Review `~/.config/hypr/monitors.conf` before relying on a first real session;
+  the current template still ships a monitor stub.
+- The optional SDDM installer changes system login configuration and is always
+  separately confirmed.
+- Hyprveil replaces only its managed configuration trees, but you should still
+  read [docs/INSTALL.md](docs/INSTALL.md) and [docs/RECOVERY.md](docs/RECOVERY.md)
+  before installing on a daily-driver machine.
+
+## Features
+
+- Hyprland configuration split into focused files for monitors, appearance,
+  animations, window rules, keybindings, autostart, idle, lock, and hardware
+  profiles.
+- Quickshell shell with a glass top bar, workspace controls, focused-window title,
+  MPRIS media controls, status cluster, dock, Quick Settings, notifications,
+  wallpaper picker, cheatsheet, and lock screen.
+- Backend-aware notification launcher with Quickshell as the default and SwayNC or
+  Mako as selected fallbacks.
+- Wallpaper state and per-monitor fit restored through Hyprpaper IPC.
+- Standard/reduced motion profiles and a global animation toggle.
+- Wallpaper-derived accent rendering for Hyprland, Quickshell, Kitty, Rofi,
+  wlogout, GTK, Qt, SwayNC, and Mako templates.
+- GTK 3/4, Qt 5/6, Kitty, Rofi, wlogout, Papirus, Bibata, Geist, Fira Code, and
+  Starship theming.
+- Optional SDDM greeter theme with a rendered backdrop derived from the current
+  wallpaper.
+- Mocked non-session smoke tests for installer safety, shell wiring, accents,
+  tokens, lock fallback behavior, and nested-session setup.
+
+## Documentation
+
+See [docs/INSTALL.md](docs/INSTALL.md) for repository and rerun behavior,
+[docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
 [docs/TOP-BAR-DOCK.md](docs/TOP-BAR-DOCK.md) for Bluetooth, media, and pin management,
 [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the Wi-Fi/Bluetooth/notification panel,
 [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the Quickshell default plus SwayNC and Mako fallbacks,
 [docs/TOKENS.md](docs/TOKENS.md) for the design token scale,
-[docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor
-wallpapers and reduced motion,
+[docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor wallpapers and reduced motion,
 [docs/ACCENT.md](docs/ACCENT.md) for wallpaper-derived accent colors,
-[docs/CONFIGURATION.md](docs/CONFIGURATION.md) for managed files, optional
-dependencies, keybindings, and state locations,
-[docs/RECOVERY.md](docs/RECOVERY.md) for component recovery and rollback, and
-[docs/SUPPORT.md](docs/SUPPORT.md) for the rolling Fedora policy.
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md) for managed files, optional dependencies, keybindings, and state locations,
+[docs/MAINTENANCE.md](docs/MAINTENANCE.md) for the read-only doctor command,
+[docs/RECOVERY.md](docs/RECOVERY.md) for component recovery and rollback,
+[docs/SUPPORT.md](docs/SUPPORT.md) for the rolling Fedora policy, and
+[ROADMAP.md](ROADMAP.md) for milestone history.
 
-## How this is being delivered (step-by-step, per your preference)
-
-**Stage 1: Hyprland core** ✅
-- Centralized color palette (`hypr/colors.conf`)
-- Tunable spacing/radius/animation-speed variables (`hypr/variables.conf`)
-- Monitor config stub for your multi-monitor + hybrid-GPU desktop (`hypr/monitors.conf`)
-- Core `hyprland.conf`, `appearance.conf`, `animations.conf`, `window-rules.conf`,
-  `keybindings.conf`, `autostart.conf`
-- Fedora-aware package installation plus persistent desktop/laptop and GPU profiles
-
-**Stage 2: the desktop shell — implements the design mockup** ✅
-- **Quickshell** (`quickshell/`) — the session shell in QML: the floating glass top
-  bar (workspaces 1–5 left, window title center, MPRIS controls plus
-  Bluetooth/network/volume/battery/clock right), an end-4-style bottom dock, the
-  quick-settings panel, the notification daemon, and the lock screen — one process,
-  drawn on every monitor. Pins launch installed desktop entries, including Flatpaks
-  and Electron apps; right-click the launcher to add, remove, or reorder them.
-  Replaced Waybar and AGS, which between them needed ten hand-duplicated dock
-  modules, a `socat` event-watcher helper, and a dart-sass runtime. Both are now
-  retired; Waybar remains installable as a legacy bar.
-- **Kitty** (`kitty/`) — translucent terminal, Fira Code, full palette mapping
-- **Rofi** (`rofi/`) — 480px centered glass launcher with icon rows and accent selection
-  (requires `rofi-wayland`)
-- **Notifications** — served by the shell itself, with glass cards, history,
-  clear-all, DND, and Bluetooth connect/disconnect and low-battery alerts.
-  SwayNC (`swaync/`) and Mako remain installer-selected fallbacks.
-- **Lock screen** (`quickshell/Lock/`) — oversized thin clock, accent avatar ring,
-  pill password field (design "Lock" screen). **hyprlock**
-  (`hypr/hyprlock.conf`) stays installed as the fallback: `hypr/scripts/lock.sh`
-  drops to it whenever the shell cannot confirm it locked, because a lock screen
-  that fails to appear is an unlocked machine.
-- **wlogout** (`wlogout/`) — Lock/Logout/Suspend/Restart/Shutdown row, Shutdown in
-  accent (design "Power" screen)
-- **hyprpaper** (`hypr/hyprpaper.conf`) + **hypridle** (`hypr/hypridle.conf`),
-  with a bundled offline-safe fallback wallpaper
-- Keybind scheme ported from end-4/dots-hyprland (see cheatsheet below)
-- `scripts/02-install-fedora-shell.sh` — packages, Geist + Nerd-symbol fonts, wallpaper
-
-**Stage 3 (this delivery): app theming + shell environment** ✅
-(screenshot + clipboard tooling originally slated here already landed in Stage 2)
-- **GTK** (`gtk-3.0/`, `gtk-4.0/`) — adw-gtk3-dark for GTK3, libadwaita named-color
-  overrides in `gtk.css` for both, so every GTK app gets the dark neutrals + red accent
-- **Qt** (`qt5ct/`, `qt6ct/`) — Fusion style with a full hyprveil palette
-  (`colors/hyprveil.conf`), Geist/Fira Code fonts, Papirus-Dark icons; Hyprland sets
-  `QT_QPA_PLATFORMTHEME=qt6ct`
-- **Cursor** — Bibata Modern Classic (XCURSOR + HYPRCURSOR env vars in
-  `hypr/variables.conf`, installed to `~/.local/share/icons` by script 04)
-- **Icons** — Papirus-Dark with folders switched to red via `papirus-folders`
-- **`hypr/scripts/apply-theme.sh`** — runs at login (autostart) to push
-  theme/cursor/fonts into gsettings, which is the only channel libadwaita apps read
-- **zsh** (`zsh/.zshrc`) — shared history, menu completion, autosuggestions +
-  syntax highlighting (Fedora packages), history search on arrow keys
-- **Starship** (`starship.toml`) — minimal two-line prompt, accent-red directory
-  and `❯`, git branch/status in muted gray
-- `scripts/04-install-fedora-theming.sh` — packages, Bibata, papirus-folders,
-  Qt config install (expands `__HOME__` placeholders), `~/.zshrc` + `chsh`
-
-That completes the original roadmap.
-
-**Stage 4 (extra): SDDM login-screen theming** ✅
-- **SDDM** (`sddm/hyprveil/`) — QML greeter theme matching hyprlock's idiom:
-  oversized thin clock, accent avatar ring + username (`userModel`-bound),
-  pill password field, and a Suspend/Restart/Shutdown row styled after the
-  design mockup's Power screen (reuses wlogout's installed icons so the two
-  match pixel-for-pixel). Bundles its own Geist fonts since the greeter runs
-  as the `sddm` system user, which can't see `~/.local/share/fonts`.
-- **Greeter backdrop** — `hypr/scripts/sddm-backdrop.sh render` bakes a blurred,
-  dimmed copy of the current wallpaper into the theme, so the greeter reads as
-  the same surface as the lock screen instead of flat black. It's a *copy* for
-  the same reason the fonts are bundled: `$HOME` is `0700`, so the `sddm` user
-  cannot read `~/Pictures/Wallpapers` at any path. Re-run it after changing
-  wallpaper; `clear` reverts to flat dark, `status` shows what's installed.
-  With no backdrop rendered the greeter falls back to the flat background, so
-  skipping this never breaks the login screen.
-- Uses SDDM's own Wayland (Weston-backed) greeter by default — Fedora's real
-  compiled-in default, not the "experimental" X11 fallback older docs
-  describe — with an X11-greeter opt-out for the NVIDIA hybrid-GPU case (see
-  the saved NVIDIA hardware profile; see `docs/HARDWARE.md`).
-- `scripts/05-install-fedora-sddm.sh` — the one piece of hyprveil that changes
-  a *system* file (`/etc/sddm.conf.d/`) and replaces the machine's display
-  manager for every login, so every step inside it is separately confirmed.
-  `install.sh` offers to run it as a final, separately-gated
-  step; it's also runnable standalone. Test the theme with zero system
-  changes first: `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil`.
-
-**P3 customization** ✅
-- `SUPER+SHIFT+W` opens the wallpaper picker: a thumbnail grid when a shell
-  is running, otherwise a Rofi flow. Both choose image, connected monitor, and
-  cover/contain fit; fallback and per-monitor choices restore after login.
-- The helper detects current and legacy Hyprpaper IPC and recovers safely from
-  missing images or malformed JSON state.
-- Standard and reduced motion profiles persist outside the managed config tree,
-  reload safely, and share a separate global animation toggle.
-
-Remaining possible extras if you want them later: per-app GTK tweaks, kitty
-tab/session tooling.
+Project process lives in [CONTRIBUTING.md](CONTRIBUTING.md), release notes in
+[CHANGELOG.md](CHANGELOG.md), security reporting in [SECURITY.md](SECURITY.md),
+and licensing in [LICENSE](LICENSE).
 
 ## Fedora packages and hardware
 
@@ -141,40 +104,41 @@ config/
 ├── hypr/
 │   ├── hyprland.conf        # entrypoint, sources everything else
 │   ├── colors.conf          # single source of truth for the palette
-│   ├── variables.conf       # gaps, border width, radius, animation speed — tweak here
-│   ├── monitors.conf        # your monitor layout — EDIT before first launch
+│   ├── tokens.conf          # shared size, radius, alpha, font, and timing tokens
+│   ├── variables.conf       # gaps, border width, radius, animation speed - tweak here
+│   ├── monitors.conf        # monitor layout - edit before first launch
 │   ├── appearance.conf      # general/decoration/blur/shadow, reads colors+variables
 │   ├── animations.conf      # global animation toggle + selected motion source
 │   ├── window-rules.conf    # floating rules for dialogs/pickers/PiP
 │   ├── keybindings.conf     # all binds
 │   ├── autostart.conf       # exec-once entries
-│   ├── hyprlock.conf        # lock screen (Stage 2)
-│   ├── hypridle.conf        # idle -> lock -> dpms -> suspend (Stage 2)
+│   ├── hyprlock.conf        # lock fallback
+│   ├── hypridle.conf        # idle -> lock -> dpms -> suspend
 │   ├── hyprpaper.conf       # mapping-free daemon config; state restores over IPC
 │   ├── motion/              # standard/reduced profiles + generated active source
 │   ├── profiles/            # persistent desktop/laptop + GPU selection targets
 │   └── scripts/             # theme, zoom, and hardware-aware actions
 ├── quickshell/              # the session shell: bar, dock, panel, lock (QML)
-├── waybar/                  # retired bar; still holds the Rofi dock pin manager
-├── kitty/                   # kitty.conf (Stage 2)
-├── rofi/                    # config.rasi + hyprveil.rasi theme (Stage 2)
-├── swaync/                  # default notification center config + CSS
-├── mako/                    # fallback notification config
-├── wlogout/                 # layout + style.css (Stage 2)
-├── gtk-3.0/                 # settings.ini + accent gtk.css (Stage 3)
-├── gtk-4.0/                 # settings.ini + libadwaita accent gtk.css (Stage 3)
-├── qt5ct/                   # qt5ct.conf + colors/hyprveil.conf (Stage 3)
-├── qt6ct/                   # qt6ct.conf + colors/hyprveil.conf (Stage 3)
-├── zsh/                     # .zshrc — script 04 copies it to ~/.zshrc (Stage 3)
-├── starship.toml            # prompt theme (Stage 3)
-└── sddm/hyprveil/           # SDDM QML greeter theme (Stage 4, extra) — a
+├── waybar/                  # legacy bar and helper scripts
+├── kitty/                   # terminal theme
+├── rofi/                    # launcher and accent selector theme
+├── swaync/                  # notification fallback config and CSS
+├── mako/                    # minimal notification fallback config
+├── wlogout/                 # power menu layout, CSS, and icons
+├── gtk-3.0/                 # GTK3 settings and accent CSS
+├── gtk-4.0/                 # GTK4/libadwaita accent CSS
+├── qt5ct/                   # Qt5 palette
+├── qt6ct/                   # Qt6 palette
+├── fontconfig/              # font fallback rules
+├── starship.toml            # prompt theme
+└── sddm/hyprveil/           # optional SDDM QML greeter theme
     ├── metadata.desktop     #   *system* install (/usr/share/sddm/themes/),
     ├── theme.conf           #   not copied via ~/.config like everything else
     ├── Main.qml
     └── Components/          # Palette.qml, Clock.qml, UserAvatar.qml,
                               # PasswordField.qml, SessionPicker.qml, PowerRow.qml
 design/
-└── Hyprland Desktop Design.dc.html   # the mockup all of this implements
+└── Custom Hyprland Desktop Environment/   # source design export and assets
 scripts/
 ├── 00-backup.sh
 ├── 01-install-fedora-core.sh
@@ -187,9 +151,10 @@ scripts/
 ├── 08-test-nested-session.sh   # fully isolated nested Hyprland launch
 └── 09-dependency-report.sh
 tests/
-├── p0-smoke.sh … p4-nested-smoke.sh
-└── run.sh                      # non-session P0-P4 quality gate
-install.sh                      # recommended P0 entrypoint, runs the stages above
+├── p0-smoke.sh ... p8-lock-smoke.sh
+└── run.sh                      # non-session P0-P8 quality gate
+install.sh                      # recommended entrypoint
+hyprveil                        # read-only maintenance command
 ```
 
 ## Install
@@ -225,7 +190,7 @@ point sddm at it, and — as a separately confirmed last step — actually enabl
 
 First run the deterministic non-session gate. It checks Bash syntax, uses ShellCheck
 when installed, parses JSON/JSONC, checks executable bits, and runs every mocked
-P0–P4 suite:
+P0-P8 suite:
 
 ```bash
 ./tests/run.sh
@@ -235,7 +200,7 @@ Release validation uses `./tests/run.sh --require-shellcheck`, which fails inste
 of warning when ShellCheck is unavailable. Then run `scripts/03-test-config.sh`
 from the repo root. Phases 1 and 2 never touch real user config or state:
 
-1. **Static checks** (run anywhere): all config files present, waybar/wlogout JSON
+1. **Static checks** (run anywhere): all config files present, legacy Waybar/wlogout JSON
    valid, every command the binds call is installed, fonts installed, and — if your
    Hyprland build supports it — a full `Hyprland --verify-config` parse check.
 2. **Nested live test** (when run from inside any Wayland session): boots Hyprveil
@@ -246,15 +211,28 @@ from the repo root. Phases 1 and 2 never touch real user config or state:
    timestamped-backup and whole-tree deployment used by the full installer. Say no
    to leave `~/.config` untouched.
 
-The standalone nested launcher accepts `--backend swaync|mako` and `--keep-stage`:
+The standalone nested launcher accepts `--backend quickshell|swaync|mako` and `--keep-stage`:
 
 ```bash
-./scripts/08-test-nested-session.sh --backend swaync
+./scripts/08-test-nested-session.sh --backend quickshell
 ```
 
 Manual release evidence is recorded in
 [docs/VM-TEST-MATRIX.md](docs/VM-TEST-MATRIX.md); the tag gate is
 [docs/RELEASE.md](docs/RELEASE.md).
+
+### Maintenance doctor
+
+Run a read-only support report without changing configuration or state:
+
+```bash
+./hyprveil doctor
+```
+
+The doctor reports Fedora support, repository source shape, dependency presence,
+Hyprland and Quickshell health, selected backend/profile state, wallpaper/accent
+state, dock pins, and managed-tree deployment. See
+[docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 **Before launching Hyprland:** open `~/.config/hypr/monitors.conf` and replace the
 placeholder monitor names/resolutions with your real ones (get them via
@@ -263,21 +241,24 @@ placeholder monitor names/resolutions with your real ones (get them via
 ## Reload / restart
 
 ```bash
-hyprctl reload                 # re-read all Hyprland configs live
-qs kill; ~/.config/hypr/scripts/notification-daemon.sh start & disown  # restart the shell
-swaync-client -R               # reload SwayNC config
-swaync-client -rs              # reload SwayNC CSS
+hyprctl reload
+~/.config/hypr/scripts/notification-daemon.sh restart
+~/.config/hypr/scripts/wallpaper.sh restore
+~/.config/hypr/scripts/apply-theme.sh
 ```
+
+The notification helper restarts the selected backend only: Quickshell by default,
+or SwayNC/Mako when one of those fallbacks is selected.
 
 ## Validation checklist
 
-Stage 1:
+Hyprland core:
 - [x] `hyprctl reload` returns no errors
 - [x] `hyprctl monitors` shows all displays at correct resolution/position/scale
 - [x] Window open/close animation is snappy (~180ms), not sluggish
 - [x] Gaps/border radius match `variables.conf` values
 
-Stage 2 (compare against the mockup's five screens):
+Shell and desktop surfaces:
 - [x] **Desktop**: the bar floats with rounded corners and blur; active workspace pill
       is accent-tinted; active window border is the accent, inactive `#2A2D35`
 - [x] **Dock**: centered pill at the bottom; pinned icons launch apps; running apps
@@ -290,7 +271,7 @@ Stage 2 (compare against the mockup's five screens):
 - [x] **Lock**: `SUPER+L` shows big thin clock, avatar ring, pill password field
 - [x] **Power**: `SUPER+Escape` shows the five-button row with Shutdown in red
 
-Stage 3 (after script 04 + config copy + logout/login):
+Application theming:
 - [x] Cursor is Bibata (black, rounded) everywhere, including over app windows
 - [x] GTK app (e.g. nautilus): dark surfaces, **red** selection/accent instead of
       blue, red folder icons, Geist as UI font
@@ -301,7 +282,7 @@ Stage 3 (after script 04 + config copy + logout/login):
 - [x] Typing shows gray ghost autosuggestions; invalid commands render red
       (syntax highlighting)
 
-Stage 4 (extra, after `scripts/05-install-fedora-sddm.sh`):
+Optional SDDM greeter:
 - [x] `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil` shows the
       clock/avatar/password-pill matching hyprlock's look — check this
       *before* enabling sddm as the display manager
@@ -356,9 +337,9 @@ including any you add — see [Cheatsheet](docs/QUICK-SETTINGS.md#keybind-cheats
 - **Colors** → edit `hypr/colors.conf` for Hyprland; Quickshell/Kitty/Rofi/SwayNC/
   wlogout each carry a palette mirror block at the top of their file (these tools
   can't read Hyprland variables — grep for the old hex when changing a color).
-  Stage 3 mirrors: `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css`,
+  Application theme mirrors: `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css`,
   `qt5ct/colors/hyprveil.conf`, `qt6ct/colors/hyprveil.conf`, `starship.toml`.
-  Stage 4 mirror: `sddm/hyprveil/Components/Palette.qml` (also hardcoded, same
+  SDDM mirror: `sddm/hyprveil/Components/Palette.qml` (also hardcoded, same
   "can't read Hyprland variables — keep in sync manually" caveat as hyprlock);
   re-run step 2 of `scripts/05-install-fedora-sddm.sh` after editing it to
   copy the change into `/usr/share/sddm/themes/hyprveil`.
@@ -378,5 +359,4 @@ including any you add — see [Cheatsheet](docs/QUICK-SETTINGS.md#keybind-cheats
 - **GTK/Qt/icon/font choices** → `hypr/scripts/apply-theme.sh` (gsettings, wins for
   libadwaita apps) plus the matching `gtk-*/settings.ini` / `qt6ct.conf`.
 - **Folder accent color** → `sudo papirus-folders -C <color> --theme Papirus-Dark`.
-- **Prompt** → `starship.toml` (`starship explain` helps); zsh behavior → `~/.zshrc`
-  (repo copy: `config/zsh/.zshrc` — re-run the script 04 zsh step after editing).
+- **Prompt** → `starship.toml` (`starship explain` helps).

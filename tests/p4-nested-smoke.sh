@@ -55,7 +55,7 @@ exec "$@"
 EOF
 chmod +x "$TMP/bin/Hyprland" "$TMP/bin/dbus-run-session"
 
-for backend in swaync mako; do
+for backend in quickshell swaync mako; do
     EXPECTED_BACKEND=$backend MOCK_LOG="$TMP/launches" \
         HOME="$TMP/real-home" XDG_STATE_HOME="$TMP/real-state" \
         WAYLAND_DISPLAY=wayland-mock PATH="$TMP/bin:/usr/bin:/bin" \
@@ -66,12 +66,12 @@ done
     || fail "nested check modified real config"
 [ "$(cat "$TMP/real-state/hyprveil/keep")" = 'real state marker' ] \
     || fail "nested check modified real state"
-[ "$(wc -l < "$TMP/launches")" -eq 2 ] || fail "both backend paths were not launched"
+[ "$(wc -l < "$TMP/launches")" -eq 3 ] || fail "all backend paths were not launched"
 while IFS= read -r stage; do
     [ ! -e "$stage" ] || fail "temporary nested stage was not cleaned up"
 done < "$TMP/launches"
 
-ok "nested SwayNC and Mako sessions isolate config, state, cache, data, home, and runtime"
+ok "nested Quickshell, SwayNC, and Mako sessions isolate config, state, cache, data, home, and runtime"
 ok "nested preflight generates both motion profiles and valid dock/wallpaper state"
 
 # Nested notification startup must not kill a same-named process in the parent

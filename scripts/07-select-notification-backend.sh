@@ -79,15 +79,16 @@ elif [ "$BACKEND" = swaync ]; then
     printf 'SwayNC fallback selected: full notification center, but the Quickshell quick-settings panel is inactive.\n'
 fi
 
-# An explicit live switch should not require logout. The Waybar bridge observes
-# this state file, and the installed launcher safely replaces the running daemon.
+# An explicit live switch should not require logout. The installed launcher safely
+# replaces the selected backend; the legacy Waybar bridge observes the same state
+# file if the user starts it manually.
 if [ "$saved" != "$BACKEND" ] \
     && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}${WAYLAND_DISPLAY:-}" ] \
     && [ -x "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" ]; then
     if command -v "$BACKEND" >/dev/null 2>&1; then
         HYPRVEIL_STATE_HOME="$HV_STATE_HOME" \
             "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" restart
-        printf 'Restarted the live notification backend; Waybar will follow the new state.\n'
+        printf 'Restarted the live notification backend: %s.\n' "$BACKEND"
     else
         printf 'Backend saved; install %s before switching the live session.\n' "$BACKEND" >&2
     fi

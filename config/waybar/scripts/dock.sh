@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 ICONS_FILE="$SCRIPT_DIR/dock-icons.json"
-# shellcheck disable=SC1091
+# shellcheck source=config/hypr/scripts/dock-lib.sh
 # dock-lib.sh moved to hypr/scripts/ when Waybar was retired as the bar: the pin
 # state it owns is still live, and it no longer belongs in a directory named
 # after a shell that does not run.

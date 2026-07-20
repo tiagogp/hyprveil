@@ -55,6 +55,7 @@ grep -q 'Visual Studio Code - ' "$REPO/config/quickshell/Services/Compositor.qml
     || fail "Quickshell title does not put VS Code before the file name"
 grep -q '"^(.*) - hyprveil - Visual Studio Code$"' "$REPO/config/waybar/config.jsonc" \
     || fail "Waybar window title does not strip the VS Code workspace segment"
+# shellcheck disable=SC2016
 grep -q '"Visual Studio Code - \$1"' "$REPO/config/waybar/config.jsonc" \
     || fail "Waybar title does not put VS Code before the file name"
 ok "bar title removes the hyprveil workspace segment and puts VS Code first"
@@ -77,7 +78,15 @@ cat > "$TMP/bin/swaync" <<'EOF'
 #!/usr/bin/env bash
 printf 'started\n' >> "$MOCK_ROOT/swaync"
 EOF
-chmod +x "$TMP/bin/qs" "$TMP/bin/quickshell" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/swaync"
+cat > "$TMP/bin/mako" <<'EOF'
+#!/usr/bin/env bash
+printf 'started\n' >> "$MOCK_ROOT/mako"
+EOF
+cat > "$TMP/bin/hyprctl" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_ROOT/hyprctl"
+EOF
+chmod +x "$TMP/bin/qs" "$TMP/bin/quickshell" "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/swaync" "$TMP/bin/mako" "$TMP/bin/hyprctl"
 
 # --- Backend selection accepts quickshell and defaults to it ---
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend"
@@ -173,6 +182,42 @@ hv_deploy_configs >/dev/null
 # up, or ~/.config/ags is stranded forever with nothing left that would remove it.
 [ ! -e "$HYPRVEIL_CONFIG_HOME/ags" ] || fail "a stale AGS tree survived deployment"
 ok "deployment installs only the selected backend and clears the inactive trees"
+
+# --- Live reload follows the selected shell/backend, not the retired bar ---
+cat > "$HYPRVEIL_CONFIG_HOME/hypr/scripts/wallpaper.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_ROOT/wallpaper"
+EOF
+cat > "$HYPRVEIL_CONFIG_HOME/hypr/scripts/apply-theme.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'applied\n' >> "$MOCK_ROOT/theme"
+EOF
+chmod +x "$HYPRVEIL_CONFIG_HOME/hypr/scripts/wallpaper.sh" "$HYPRVEIL_CONFIG_HOME/hypr/scripts/apply-theme.sh"
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/hyprctl" "$TMP/killed" "$TMP/quickshell"
+HYPRLAND_INSTANCE_SIGNATURE=mock hv_reload_live_session >/dev/null
+grep -qx 'reload' "$TMP/hyprctl" || fail "live reload did not reload Hyprland"
+grep -qx -- '-x quickshell' "$TMP/killed" || fail "live reload did not restart Quickshell"
+grep -qx -- '-x qs' "$TMP/killed" || fail "live reload did not stop qs aliases"
+! grep -qx -- '-x waybar' "$TMP/killed" || fail "live reload restarted the legacy Waybar bar"
+for _ in 1 2 3 4 5; do
+    [ -s "$TMP/quickshell" ] && break
+    sleep 0.1
+done
+grep -qx -- '--daemonize' "$TMP/quickshell" || fail "live reload did not restart the selected Quickshell backend"
+ok "live reload restarts Quickshell without bouncing legacy Waybar"
+
+printf 'mako\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/killed" "$TMP/quickshell" "$TMP/mako"
+HYPRLAND_INSTANCE_SIGNATURE=mock hv_reload_live_session >/dev/null
+grep -qx -- '-x mako' "$TMP/killed" || fail "live reload did not restart the selected Mako backend"
+[ ! -e "$TMP/quickshell" ] || fail "Mako reload started Quickshell unexpectedly"
+for _ in 1 2 3 4 5; do
+    [ -s "$TMP/mako" ] && break
+    sleep 0.1
+done
+[ -s "$TMP/mako" ] || fail "live reload did not start Mako"
+ok "live reload restarts only the selected notification backend"
 
 # --- A misresolved HV_REPO must not destroy the installed configuration ---
 # Each target tree is removed immediately before its replacement is moved in, so

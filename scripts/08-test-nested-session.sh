@@ -3,12 +3,12 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-BACKEND=swaync
+BACKEND=quickshell
 KEEP=0
 
 usage() {
     cat <<'EOF'
-Usage: 08-test-nested-session.sh [--backend swaync|mako] [--keep-stage]
+Usage: 08-test-nested-session.sh [--backend quickshell|swaync|mako] [--keep-stage]
 
 Launches Hyprland with a staged copy of this repository. HOME, XDG_CONFIG_HOME,
 XDG_STATE_HOME, XDG_CACHE_HOME, XDG_DATA_HOME, and XDG_RUNTIME_DIR all point into
@@ -30,8 +30,8 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$BACKEND" in
-    swaync|mako) ;;
-    *) printf 'Backend must be swaync or mako.\n' >&2; exit 2 ;;
+    quickshell|swaync|mako) ;;
+    *) printf 'Backend must be quickshell, swaync, or mako.\n' >&2; exit 2 ;;
 esac
 
 for command in Hyprland dbus-run-session jq; do

@@ -116,14 +116,13 @@ swaync-client --reload-css
 
 For the Mako fallback, use `makoctl reload`. Quickshell hot-reloads on file change,
 so editing under `~/.config/quickshell` is usually enough; after an upgrade
-replaces the directory wholesale the watcher needs a restart (`qs kill`, then start
-the daemon helper). If notifications stop, check the saved backend, confirm its
-command exists, stop every daemon, and start the helper:
+replaces the directory wholesale the watcher needs the backend-aware restart
+helper. If notifications stop, check the saved backend, confirm its command
+exists, and restart the helper:
 
 ```bash
 cat "${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/notification-backend"
-qs kill 2>/dev/null; pkill swaync; pkill mako
-~/.config/hypr/scripts/notification-daemon.sh start
+~/.config/hypr/scripts/notification-daemon.sh restart
 ```
 
 Check which notifications the shell currently holds without opening the panel:

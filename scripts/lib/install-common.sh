@@ -430,3 +430,51 @@ hv_deploy_configs() {
     fi
     printf 'Hyprveil-managed configuration installed without merging stale files.\n'
 }
+
+hv_reload_live_session() {
+    local backend joined reloaded=() skipped=()
+
+    if ! command -v hyprctl >/dev/null 2>&1 || [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        printf 'Configs verified. Log into Hyprland, or reload the existing session manually.\n'
+        return 0
+    fi
+
+    if hyprctl reload; then
+        reloaded+=("Hyprland")
+    else
+        skipped+=("Hyprland")
+        hv_warn "could not reload Hyprland"
+    fi
+
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" restart || true
+        case "$backend" in
+            quickshell) reloaded+=("Quickshell") ;;
+            swaync) reloaded+=("SwayNC") ;;
+            mako) reloaded+=("Mako") ;;
+        esac
+    else
+        skipped+=("notification backend")
+        hv_warn "notification daemon helper is unavailable"
+    fi
+
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" restore || true
+        reloaded+=("wallpaper")
+    fi
+
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" || true
+        reloaded+=("GTK/Qt theme")
+    fi
+
+    if [ "${#reloaded[@]}" -gt 0 ]; then
+        joined=$(printf '%s, ' "${reloaded[@]}")
+        printf 'Reloaded %s.\n' "${joined%, }"
+    fi
+    if [ "${#skipped[@]}" -gt 0 ]; then
+        joined=$(printf '%s, ' "${skipped[@]}")
+        printf 'Skipped live reload for %s; see warnings above.\n' "${joined%, }" >&2
+    fi
+}

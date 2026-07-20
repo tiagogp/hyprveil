@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq shellcheck
+      - name: Run release quality gate
+        run: ./tests/run.sh --require-shellcheck
+      - name: Verify changelog mentions tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          grep -Fq "## ${tag}" CHANGELOG.md || grep -Fq "## [${tag}]" CHANGELOG.md
+      - name: Verify release checklist is present
+        run: test -s docs/RELEASE.md
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          notes="$(mktemp)"
+          awk -v tag="$tag" '
+            $0 == "## " tag || $0 == "## [" tag "]" { capture=1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md > "$notes"
+          test -s "$notes"
+          gh release create "$tag" --draft --verify-tag --title "$tag" --notes-file "$notes"

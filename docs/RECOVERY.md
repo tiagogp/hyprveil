@@ -6,6 +6,7 @@ do not modify the real user configuration:
 ```bash
 ./tests/run.sh
 ./scripts/03-test-config.sh
+./hyprveil doctor
 hyprctl configerrors
 ```
 
@@ -74,6 +75,12 @@ To fall back to the previous shell without reinstalling:
 
 ```bash
 ~/.config/hypr/scripts/notification-daemon.sh restart
+```
+
+If you deliberately selected SwayNC or Mako because Quickshell will not run, start
+the legacy Waybar bar manually after the notification backend is healthy:
+
+```bash
 waybar & disown
 ```
 
@@ -126,8 +133,8 @@ cat "${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/notification-backend"
 ```
 
 Reselect with `scripts/07-select-notification-backend.sh --backend quickshell`,
-`--backend quickshell`, `--backend swaync`, or `--backend mako`, then redeploy. The helper
-stops the inactive daemon so two cannot compete for the D-Bus service.
+`--backend swaync`, or `--backend mako`, then redeploy. The helper stops the
+inactive daemon so two cannot compete for the D-Bus service.
 
 Selecting a backend restarts the daemon using the **deployed**
 `notification-daemon.sh`. If that copy predates Quickshell support it will not

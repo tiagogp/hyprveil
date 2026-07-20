@@ -12,15 +12,17 @@ Normally, `$XDG_STATE_HOME` is `~/.local/state`.
 | Hyprland | `~/.config/hypr/*.conf` | `hyprctl reload` |
 | Hardware | `~/.config/hypr/profiles/active.conf` | `hyprctl reload` |
 | Motion | `~/.config/hypr/motion/active.conf` | selector reloads automatically |
-| Waybar | `~/.config/waybar/config.jsonc`, `style.css` | restart Waybar |
-| Notifications | `~/.config/swaync` or `~/.config/mako` | backend-specific reload |
+| Quickshell | `~/.config/quickshell` | watches files; restart with `notification-daemon.sh restart` after whole-tree deploys |
+| Legacy Waybar | `~/.config/waybar/config.jsonc`, `style.css` | restart Waybar only when using it manually |
+| Notification fallbacks | `~/.config/swaync` or `~/.config/mako` | `notification-daemon.sh restart` |
 | Wallpaper | `~/.config/hypr/hyprpaper.conf` | restart Hyprpaper, then restore |
 | Launcher and terminal | `~/.config/rofi`, `~/.config/kitty` | reopen the application |
 | GTK and Qt | `~/.config/gtk-*`, `~/.config/qt*ct` | reopen applications |
 
 Edit the repository copy when a customization should survive a future deployment.
 The main customization points are `colors.conf`, `variables.conf`, `monitors.conf`,
-`animations.conf`, `keybindings.conf`, `autostart.conf`, and the Waybar/SwayNC CSS.
+`animations.conf`, `keybindings.conf`, `autostart.conf`, Quickshell QML, and the
+fallback Waybar/SwayNC/Mako styles.
 Color values are mirrored because the applications cannot import Hyprland variables.
 
 ## State inventory
@@ -55,8 +57,8 @@ The template remains usable when optional commands are absent:
 | Firefox, Code, Nautilus | corresponding application shortcut |
 
 Run `./scripts/09-dependency-report.sh` for installed and repository availability.
-The SwayNC/Mako choice is a backend selection, not an optional missing daemon:
-exactly one selected backend is required.
+The Quickshell/SwayNC/Mako choice is a backend selection, not an optional missing
+daemon: exactly one selected backend is required, with Quickshell as the default.
 
 ## Keybindings
 
@@ -65,7 +67,7 @@ the README under “Keybind cheatsheet.” Important management bindings are:
 
 - `SUPER+slash`: the on-screen cheatsheet, rendered from `keybindings.conf`
   itself — a bind you add shows up there without editing anything else
-- `SUPER+N`: notification center or Mako fallback action
+- `SUPER+N`: Quickshell or SwayNC notification center; Mako shows a fallback notice
 - `SUPER+SHIFT+W`: wallpaper picker
 - `SUPER+L`: lock; `SUPER+SHIFT+L`: suspend through the hardware wrapper
 - `SUPER+Escape`: power menu

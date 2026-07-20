@@ -63,6 +63,7 @@ while IFS= read -r line; do
         || fail "\$${BASH_REMATCH[1]} = ${BASH_REMATCH[2]} is not in the closed spacing set"
 done < "$TOKENS"
 
+# shellcheck disable=SC2016
 count=$(grep -cE '^\$space-[a-z0-9]+[[:space:]]*=' "$TOKENS")
 expected=$(printf '%s' "$SPACING_SCALE" | wc -w)
 [ "$count" -eq "$expected" ] \

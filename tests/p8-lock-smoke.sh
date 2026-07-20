@@ -97,6 +97,7 @@ ok "an already-locked session is left alone"
 # --- static contract ---
 grep -q 'lock.sh' "$REPO/config/hypr/hypridle.conf" \
     || fail "hypridle does not route through lock.sh, so the fallback never runs"
+# shellcheck disable=SC2016
 grep -q '^\$locker = ~/.config/hypr/scripts/lock.sh$' "$REPO/config/hypr/keybindings.conf" \
     || fail "SUPER+L does not route through lock.sh"
 grep -q '"action":"~/.config/hypr/scripts/lock.sh"' "$REPO/config/wlogout/layout" \

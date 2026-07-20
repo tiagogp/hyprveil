@@ -45,11 +45,11 @@ If ImageMagick is missing or the image has no reliable hue, wallpaper selection
 still succeeds and the designed accent (`#e14658`) is kept. Nothing on these paths
 is fatal — a failed extraction warns and never blocks a wallpaper change or a login.
 
-Applying an accent reloads Hyprland, Waybar, SwayNC, and Mako in place. The
-Quickshell shell needs no push at all: it watches its own config directory, so
-writing `Accent.qml` *is* the reload. That matters because the shell is also the
-notification daemon — restarting it to recolor it would discard the session's
-notification history.
+Applying an accent reloads Hyprland and any running legacy fallback components
+that consume generated files. The Quickshell shell needs no push at all: it
+watches its own config directory, so writing `Accent.qml` *is* the reload. That
+matters because the shell is also the notification daemon - restarting it to
+recolor it would discard the session's notification history.
 
 ## Editing
 
