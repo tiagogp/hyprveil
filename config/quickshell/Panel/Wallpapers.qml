@@ -27,6 +27,10 @@ Scope {
     property string target: ""
     property string fit: "cover"
     property string status: ""
+    // The staged choice. Picking a tile only stages it; nothing reaches
+    // Hyprpaper until Apply is pressed, so a misclick costs a second click
+    // rather than a wallpaper change and an accent re-derivation.
+    property string selected: ""
 
     Process {
         id: lister
@@ -51,46 +55,81 @@ Scope {
         }
     }
 
-    Process {
-        id: applier
-        stdout: StdioCollector {}
-        onExited: function (code) {
-            root.status = code === 0 ? "" : "Could not apply that wallpaper";
-            // The accent is derived from the new wallpaper, so re-read state.
+    // Detached, not a Process: applying a wallpaper re-derives the accent, which
+    // rewrites Accent.qml, which is a full config reload. That reload destroys
+    // this Scope, and a Process child dies with the object that owns it — so the
+    // helper would be killed partway through the very work the click asked for.
+    // Handing it to the session instead lets it outlive the reload it causes.
+    //
+    // The exit code goes with it, but there was never much in it: apply_command
+    // reports a wedged Hyprpaper by warning to stderr and returning 0, so a
+    // non-zero code only ever meant a bad argument or a file that vanished
+    // between listing and clicking. The modal closes on Apply either way.
+    function apply() {
+        if (root.selected === "")
+            return;
+        Quickshell.execDetached([
+            Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh",
+            "apply", root.selected, root.target, root.fit
+        ]);
+        root.open = false;
+    }
+
+    onOpenChanged: {
+        if (open) {
+            // Each opening starts with nothing staged, so Apply is never armed
+            // with a choice the user made in some earlier session.
+            root.selected = "";
             lister.running = true;
         }
     }
 
-    function apply(path: string) {
-        root.status = "Applying…";
-        applier.command = [
-            Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh",
-            "apply", path, root.target, root.fit
-        ];
-        applier.running = true;
-    }
-
-    onOpenChanged: if (open) lister.running = true
-
+    // A modal, not a panel: it spans the output, dims what is behind it, and
+    // holds the keyboard. Picking a wallpaper is a committed choice with a
+    // confirm step, so the surrounding desktop should read as unavailable
+    // rather than as something you could keep working in.
     PanelWindow {
         visible: root.open
-        anchors.top: true
-        margins.top: Tokens.spacing8 + Tokens.spacing4
+        anchors { top: true; bottom: true; left: true; right: true }
+        // Covering the screen must not push the bar and dock out of their own
+        // space — the modal is transient, the reserved layout is not.
+        exclusionMode: ExclusionMode.Ignore
 
-        implicitWidth: 620
-        implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2, 720)
         color: "transparent"
         WlrLayershell.namespace: "hyprveil-wallpapers"
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        WlrLayershell.layer: WlrLayer.Overlay
+        // Exclusive, unlike the panels: a modal owning Escape only when it
+        // happens to have been clicked is not a modal.
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
-        Surface {
+        Rectangle {
+            id: scrim
             anchors.fill: parent
-            elevation: 0
-            radius: Tokens.radiusLg
+            color: Qt.rgba(0, 0, 0, 0.5)
 
             focus: true
             Keys.onEscapePressed: root.open = false
+
+            // Click-outside-to-dismiss. Sits under the dialog, so the dialog's
+            // own MouseArea below swallows clicks that land on it.
+            MouseArea {
+                anchors.fill: parent
+                onClicked: root.open = false
+            }
+        }
+
+        Surface {
+            anchors.centerIn: parent
+            elevation: 3
+            radius: Tokens.radiusLg
+
+            implicitWidth: 620
+            implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
+                                     parent.height - Tokens.spacing8 * 2)
+
+            // Stops a click inside the dialog from reaching the scrim and
+            // dismissing the thing the user is aiming at.
+            MouseArea { anchors.fill: parent }
 
             ColumnLayout {
                 id: column
@@ -155,11 +194,12 @@ Scope {
                     }
                 }
 
+                // Only the empty state; errors and progress belong to the
+                // footer status line, which is on screen either way.
                 Text {
                     Layout.fillWidth: true
                     visible: root.images.length === 0
-                    text: root.status !== "" ? root.status
-                        : "No images in " + root.dir
+                    text: "No images in " + root.dir
                     font.family: Tokens.fontUi
                     font.pixelSize: Tokens.textXs
                     color: Tokens.dim
@@ -176,6 +216,7 @@ Scope {
 
                     delegate: Item {
                         required property string modelData
+                        readonly property bool chosen: root.selected === modelData
                         width: 192
                         height: 132
 
@@ -184,7 +225,11 @@ Scope {
                             anchors.margins: Tokens.spacing2
                             radius: Tokens.radiusSm
                             color: "#1c1f26"
-                            border.width: tileMouse.containsMouse ? 1 : 0
+                            // The staged tile carries a heavier border than a
+                            // hovered one, so the choice stays legible once the
+                            // pointer has moved on to Apply.
+                            border.width: parent.chosen ? 2
+                                        : tileMouse.containsMouse ? 1 : 0
                             border.color: Accent.accent
                             clip: true
 
@@ -223,19 +268,48 @@ Scope {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.apply(modelData)
+                                onClicked: root.selected = modelData
+                                // Double-click is the shortcut for people who
+                                // already know which one they want.
+                                onDoubleClicked: {
+                                    root.selected = modelData;
+                                    root.apply();
+                                }
                             }
                         }
                     }
                 }
 
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
-                    visible: root.status !== "" && root.images.length > 0
-                    text: root.status
-                    font.family: Tokens.fontUi
-                    font.pixelSize: Tokens.textXs
-                    color: Tokens.dim
+                    spacing: Tokens.spacing2
+
+                    // The status line shares the footer rather than owning a
+                    // row of its own, so the dialog does not change height as a
+                    // message appears and clears. Only `list` reports here now;
+                    // `apply` is detached and has no result to wait for.
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.status !== "" ? root.status
+                            : root.selected !== "" ? root.selected.split("/").pop()
+                            : "Pick a wallpaper"
+                        font.family: Tokens.fontUi
+                        font.pixelSize: Tokens.textXs
+                        color: Tokens.dim
+                        elide: Text.ElideMiddle
+                    }
+
+                    Button {
+                        text: "Cancel"
+                        onClicked: root.open = false
+                    }
+
+                    Button {
+                        text: "Apply"
+                        primary: true
+                        enabled: root.selected !== ""
+                        onClicked: root.apply()
+                    }
                 }
             }
         }

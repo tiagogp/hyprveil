@@ -10,13 +10,17 @@ Put JPG, JPEG, PNG, WebP, JXL, or BMP files anywhere below
 
 There are two front-ends over one helper.
 
-- **Thumbnail grid** (default; the shell's own picker) — a glass window
-  showing every wallpaper as a thumbnail. Pick the target (**All monitors** or a
-  named output) and the fit (**Cover**/**Contain**) at the top, then click an image
-  to apply it immediately. The tile Hyprveil would restore for the current target is
-  outlined in the accent color. The window stays open so you can try several, and
-  `Escape` closes it. It is also reachable from the "Wallpapers…" row in the
-  quick-settings panel (`SUPER+N`), or with `qs ipc call wallpapers toggle`.
+- **Thumbnail grid** (default; the shell's own picker) — a modal dialog centred
+  over a dimmed desktop, showing every wallpaper as a thumbnail. Pick the target
+  (**All monitors** or a named output) and the fit (**Cover**/**Contain**) at the
+  top, then click an image to stage it — the staged tile is outlined in the accent
+  color and its name appears in the footer. Nothing is applied until you press
+  **Apply**, so a misclick costs a click rather than a wallpaper change;
+  double-clicking a tile stages and applies it in one go. **Cancel**, `Escape`, or
+  a click on the dimmed area outside the dialog closes it without changing
+  anything, and pressing **Apply** closes it too. It is also reachable from the
+  "Wallpapers…" row in the quick-settings panel (`SUPER+N`), or with
+  `qs ipc call wallpapers toggle`.
 
   The AGS backend has its own equivalent grid, reachable with
   `ags request -i hyprveil toggle-wallpapers`.

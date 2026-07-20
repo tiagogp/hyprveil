@@ -44,7 +44,8 @@ plain `quickshell` with no `-c`):
 | `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
 | `Panel/WifiSection.qml` / `BluetoothSection.qml` / `NotificationSection.qml` | The sections. |
 | `Panel/Section.qml` / `Toggle.qml` / `Segmented.qml` | Shared section chrome, the switch, and the segmented control. |
-| `Panel/Wallpapers.qml` | Thumbnail grid; renders `wallpaper.sh list` and calls `wallpaper.sh apply`. |
+| `Panel/Wallpapers.qml` | Modal thumbnail grid; renders `wallpaper.sh list`, stages a choice, and calls `wallpaper.sh apply` on **Apply**. |
+| `Panel/Button.qml` | Push button for panel footers; `primary: true` is the confirming action. |
 | `Lock/Lock.qml` | The session lock — see [RECOVERY.md](RECOVERY.md). |
 | `Bar/` / `Dock/` | Bar modules and the dock — see [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md). |
 | `Services/Pins.qml` / `BluetoothWatch.qml` | Dock pin state and Bluetooth notifications. |

@@ -231,20 +231,29 @@ apply_command() {
     save_selection "$path" "$monitor" "$fit" || die "could not save wallpaper state"
     flock -u 9
 
-    derive_accent "$path"
-
-    runtime=$(runtime_path "$path") || return 0
-    if [ -n "$monitor" ]; then
-        if monitor_connected "$monitor"; then
-            apply_ipc "$monitor" "$runtime" "$fit" \
-                || warn "selection was saved but Hyprpaper is not ready"
+    # Hyprpaper first, the accent last. Deriving the accent rewrites Accent.qml,
+    # which IS a full Quickshell config reload (see render-lib's
+    # reload_quickshell) - a system-wide side effect, and the last thing this
+    # command should set off. It once ran first, and any caller that waited on
+    # this script as a child was killed by that reload before reaching apply_ipc:
+    # the click recolored the desktop and left the wallpaper untouched. The
+    # Quickshell picker no longer waits, but the ordering is what makes that
+    # safe for every other caller, so keep the visible effect ahead of it.
+    if runtime=$(runtime_path "$path"); then
+        if [ -n "$monitor" ]; then
+            if monitor_connected "$monitor"; then
+                apply_ipc "$monitor" "$runtime" "$fit" \
+                    || warn "selection was saved but Hyprpaper is not ready"
+            else
+                warn "$monitor is disconnected; selection was retained for reconnection"
+            fi
         else
-            warn "$monitor is disconnected; selection was retained for reconnection"
+            apply_all_connected "$runtime" "$fit" \
+                || warn "selection was saved but Hyprpaper is not ready"
         fi
-    else
-        apply_all_connected "$runtime" "$fit" \
-            || warn "selection was saved but Hyprpaper is not ready"
     fi
+
+    derive_accent "$path"
 }
 
 restore_command() {
