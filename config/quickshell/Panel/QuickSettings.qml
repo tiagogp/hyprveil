@@ -21,6 +21,8 @@ Scope {
     // Supplied by shell.qml so the history list and the popup stack read the
     // same notification server — two servers would mean two histories.
     property var notifications: null
+    // The Wallpapers scope, passed down from shell.qml.
+    property var wallpapers: null
 
     PanelWindow {
         visible: root.open
@@ -94,8 +96,7 @@ Scope {
                     notifications: root.notifications
                 }
 
-                // The wallpaper picker still lives in AGS. Handing off keeps the
-                // entry point in one place while that port is outstanding.
+                // Opens the shell's own picker.
                 Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: Tokens.spacing8
@@ -118,9 +119,7 @@ Scope {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.open = false;
-                            Quickshell.execDetached([
-                                Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh",
-                                "pick"]);
+                            wallpapers.open = true;
                         }
                     }
                 }

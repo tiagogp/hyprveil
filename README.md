@@ -100,7 +100,7 @@ That completes the original roadmap.
   changes first: `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil`.
 
 **P3 customization** ✅
-- `SUPER+SHIFT+W` opens the wallpaper picker: an AGS thumbnail grid when that shell
+- `SUPER+SHIFT+W` opens the wallpaper picker: a thumbnail grid when a shell
   is running, otherwise a Rofi flow. Both choose image, connected monitor, and
   cover/contain fit; fallback and per-monitor choices restore after login.
 - The helper detects current and legacy Hyprpaper IPC and recovers safely from
@@ -321,7 +321,7 @@ Quickshell too, but has not adopted those particular surfaces.)
 | `SUPER+SHIFT+S` | region snip → clipboard |
 | `SUPER+SHIFT+X` | region OCR → clipboard (needs tesseract) |
 | `SUPER+SHIFT+C` | color picker |
-| `SUPER+SHIFT+W` | wallpaper picker — Rofi list (the thumbnail grid is not yet ported to QML) |
+| `SUPER+SHIFT+W` | wallpaper picker — thumbnail grid, or Rofi when no shell is running |
 | `SUPER+minus` / `equal` | screen zoom out / in |
 | `SUPER+SHIFT+P` / `N` / `B` / `M` | media play-pause / next / prev / mute |
 | `SUPER+Q` | close window (`+SHIFT+ALT` force-kill) |

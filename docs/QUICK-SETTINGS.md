@@ -43,12 +43,19 @@ plain `quickshell` with no `-c`):
 | `shell.qml` | Entry point; instantiates the bar and dock per monitor, plus the notification server, panel, lock, and Bluetooth watcher. |
 | `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
 | `Panel/WifiSection.qml` / `BluetoothSection.qml` / `NotificationSection.qml` | The sections. |
-| `Panel/Section.qml` / `Toggle.qml` | Shared section chrome and the switch control. |
+| `Panel/Section.qml` / `Toggle.qml` / `Segmented.qml` | Shared section chrome, the switch, and the segmented control. |
+| `Panel/Wallpapers.qml` | Thumbnail grid; renders `wallpaper.sh list` and calls `wallpaper.sh apply`. |
+| `Lock/Lock.qml` | The session lock — see [RECOVERY.md](RECOVERY.md). |
+| `Bar/` / `Dock/` | Bar modules and the dock — see [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md). |
+| `Services/Pins.qml` / `BluetoothWatch.qml` | Dock pin state and Bluetooth notifications. |
 | `Notif/Popups.qml` | The notification server and popup stack. |
 | `Notif/NotificationCard.qml` | One card, shared by popups and history. |
 | `Tokens.qml` | **Generated** from the design tokens — see [TOKENS.md](TOKENS.md). |
 | `Accent.qml` | **Generated** from the wallpaper accent — see [ACCENT.md](ACCENT.md). |
 | `qmldir`, `Services/qmldir` | Component registration. Read the note below before adding a file. |
+
+Blur is also applied to `hyprveil-wallpapers`; every shell surface needs its own
+`layerrule`.
 
 ### qmldir is not optional
 
@@ -76,6 +83,7 @@ qs ipc call quicksettings toggle     # open/close the panel
 qs ipc call notifications dnd        # toggle do-not-disturb
 qs ipc call notifications count      # tracked notification count
 qs ipc call notifications clear      # dismiss everything
+qs ipc call wallpapers toggle        # open/close the wallpaper grid
 qs ipc call lock isLocked            # lock state
 ```
 

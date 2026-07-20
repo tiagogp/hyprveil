@@ -325,7 +325,6 @@ content by preserving the bad file for diagnosis and restoring safe defaults.
       `tests/manual/bluetooth-watch-probe.qml` against a synthetic device)
 
 **Outstanding**
-- Port the wallpaper thumbnail grid from AGS to QML
 - Bluetooth pairing prompts (needs an `org.bluez.Agent1`; either/or with
   `blueman-applet`)
 

@@ -335,6 +335,14 @@ list_command() {
 
 # The AGS shell owns the graphical picker whenever it is running; Rofi is the
 # fallback for the SwayNC/Mako backends and for a session without the panel.
+# The Quickshell picker, when that shell is running. Same shape as ags_picker:
+# return non-zero and pick_command falls through to the Rofi flow, so a missing or
+# wedged shell degrades to a working picker rather than to nothing.
+qs_picker() {
+    command -v qs >/dev/null 2>&1 || return 1
+    timeout 5 qs ipc call wallpapers open >/dev/null 2>&1
+}
+
 ags_picker() {
     local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
     command -v ags >/dev/null 2>&1 || return 1
@@ -345,8 +353,9 @@ ags_picker() {
 pick_command() {
     local -a paths=() labels=() monitors=()
     local path choice index target fit monitor
-    # The AGS grid shows thumbnails and stays open across selections; Rofi keeps
-    # the picker usable without the panel.
+    # Both shells show a thumbnail grid that stays open across selections; Rofi
+    # keeps the picker usable when neither is running.
+    qs_picker && return 0
     ags_picker && return 0
     if [ ! -d "$WALLPAPER_DIR" ]; then
         rofi -e "No wallpaper directory: $WALLPAPER_DIR" 2>/dev/null || true

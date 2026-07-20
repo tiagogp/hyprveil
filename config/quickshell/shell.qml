@@ -38,7 +38,11 @@ ShellRoot {
 
     // The panel reads the popup scope's server rather than owning one, so the
     // history it lists and the toasts that appeared are the same objects.
-    QuickSettings { notifications: notifs }
+    QuickSettings { notifications: notifs; wallpapers: wallpapers }
+
+    // The wallpaper picker. wallpaper.sh owns the state and the Hyprpaper IPC;
+    // this only renders `list` and calls `apply`.
+    Wallpapers { id: wallpapers }
 
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.
