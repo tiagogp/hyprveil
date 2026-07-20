@@ -1,5 +1,5 @@
 /* Power menu from the design mockup: dimmed backdrop, compact circular glass
-   icon buttons with a label below each, Shutdown in accent. Palette mirrors
+   icon buttons with a label below each, accent on hover. Palette mirrors
    hypr/colors.conf; keep in sync manually.
 
    Each button's ring + icon glyph are baked into ONE svg per button per state
@@ -54,8 +54,11 @@ button {
   outline-style: none;
 }
 
-#shutdown,
-button:focus,
+/* Accent is a *pointer* state only. wlogout gives the first button (lock)
+   keyboard focus the instant the menu opens, so styling :focus made the menu
+   come up with Lock already lit — indistinguishable from a hover the user
+   never made. Shutdown had the same problem baked in permanently. Both now
+   start neutral like every other button. */
 button:active,
 button:hover {
   color: @accent;
@@ -74,20 +77,23 @@ button:hover {
   background-image: image(url("assets/reboot-default.svg"));
 }
 #shutdown {
-  background-image: image(url("assets/shutdown-accent.svg"));
+  background-image: image(url("assets/shutdown-default.svg"));
 }
 
-#lock:focus, #lock:active, #lock:hover {
+#lock:active, #lock:hover {
   background-image: image(url("assets/lock-accent.svg"));
 }
-#logout:focus, #logout:active, #logout:hover {
+#logout:active, #logout:hover {
   background-image: image(url("assets/logout-accent.svg"));
 }
-#suspend:focus, #suspend:active, #suspend:hover {
+#suspend:active, #suspend:hover {
   background-image: image(url("assets/suspend-accent.svg"));
 }
-#reboot:focus, #reboot:active, #reboot:hover {
+#reboot:active, #reboot:hover {
   background-image: image(url("assets/reboot-accent.svg"));
+}
+#shutdown:active, #shutdown:hover {
+  background-image: image(url("assets/shutdown-accent.svg"));
 }
 
 /* wlogout 1.2.2 ignores the layout file's height/width fields (verified by
