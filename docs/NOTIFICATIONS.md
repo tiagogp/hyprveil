@@ -41,10 +41,25 @@ and keyboard dismissal, a clear-all button, and a do-not-disturb switch whose va
 SwayNC restores after a restart. `SUPER+N` toggles the control center, routed
 through `notification-daemon.sh` like every other backend.
 
-Note that SwayNC ships no bar of its own. Selecting it gives you notifications
-without the Quickshell bar, dock, or quick-settings panel, so it is a fallback for
-when the shell will not run rather than a like-for-like alternative — the same was
-true of Mako before the migration, and is now true of SwayNC too.
+### The fallback backends have no bar
+
+Only Quickshell draws a bar and dock. AGS, SwayNC, and Mako are notification
+daemons, so selecting one leaves the session without a bar unless you start one
+yourself:
+
+```bash
+waybar & disown
+```
+
+`config/waybar/` is still deployed for exactly that: its config and dock scripts
+work, they are simply no longer started for you. `autostart.conf` cannot make this
+conditional — it has no way to read the selected backend — and starting Waybar from
+`notification-daemon.sh` instead was tried and reverted, because a racing start
+guard produced several stacked instances on a live session. Starting it by hand is
+the honest behaviour rather than a clever one that fails badly.
+
+Treat these as fallbacks for when the shell will not run, not as like-for-like
+alternatives.
 
 The control center is more than a notification list: above the history it shows the
 active MPRIS media player (when one exists), a row of quick-action buttons (lock,
