@@ -283,8 +283,11 @@ milestone remains in progress until the live-session row is recorded in
 
 | Component | Interface | Persistent state |
 |---|---|---|
-| Notification backend | `--backend ags\|swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
-| Quick-settings panel | `ags request toggle-quicksettings\|notif-status\|notif-dnd\|notif-clear\|toggle-wallpapers` | None (live AstalNetwork/Bluetooth/Notifd state) |
+| Notification backend | `--backend quickshell\|ags\|swaync\|mako`, `--ensure` | `$XDG_STATE_HOME/hyprveil/notification-backend` |
+| Quick-settings panel | `qs ipc call quicksettings toggle\|open\|close` | None (live Networking/Bluetooth/Notification state) |
+| Notifications | `qs ipc call notifications dnd\|clear\|count` | None (session-lived history) |
+| Lock screen | `qs ipc call lock lock\|isLocked`; `hypr/scripts/lock.sh` | None |
+| Design tokens | `theme.sh render\|list\|check` | None (rendered outputs are committed) |
 | Dock manager | `list`, `add`, `remove`, `move` | `$XDG_STATE_HOME/hyprveil/dock-pins.json` |
 | Media helper | `render`, `previous`, `toggle`, `next` | None |
 | Wallpaper helper | `pick`, `apply`, `list`, `restore` | `$XDG_STATE_HOME/hyprveil/wallpapers.json` |
@@ -292,6 +295,40 @@ milestone remains in progress until the live-session row is recorded in
 
 State files must be schema-checked, written atomically, and recover from malformed
 content by preserving the bad file for diagnosis and restoring safe defaults.
+
+## P7 — design tokens and the Quickshell migration ✅
+
+**Deliverables**
+- `hypr/tokens.conf` reaches every consumer through `hypr/scripts/theme.sh`, which
+  renders `.in` templates the way `accent.sh` does. Values are stored unitless; the
+  renderer appends `px`/`ms` per target. `docs/TOKENS.md` documents the scales and
+  the contrast budget.
+- The bar, dock, quick-settings panel, notification daemon, and lock screen are one
+  Quickshell process under `config/quickshell/`. Waybar and AGS are retired from
+  autostart; AGS, SwayNC, and Mako remain selectable notification backends.
+- Bluetooth connect/disconnect and low-battery notifications, debounced and latched.
+- `hypr/scripts/lock.sh` prefers the Quickshell lock and falls back to hyprlock
+  whenever it cannot be confirmed.
+
+**Acceptance**
+- [x] `theme.sh render` leaves no `@placeholder@` in any output; `p7` enforces the
+      closed spacing set, unitless storage, whole-hundred weights, and that the
+      committed outputs match their templates
+- [x] `p8` covers every lock fallback branch, including a hung shell, and asserts
+      the lock IPC exposes no unlock
+- [x] The shell draws bar and dock per monitor; the dock is a `Repeater`, so the
+      ten-slot pool and its `DOCK_LIMIT` coupling are gone
+- [x] Accent changes reach the shell by file watch, with no restart — restarting
+      would discard the session's notification history
+- [ ] Wi-Fi and Bluetooth panel sections verified on real hardware (the development
+      machine has neither adapter; the notification logic is covered by
+      `tests/manual/bluetooth-watch-probe.qml` against a synthetic device)
+
+**Outstanding**
+- Move `dock-manager.sh` / `dock-lib.sh` out of the retired `config/waybar/` tree
+- Port the wallpaper thumbnail grid from AGS to QML
+- Bluetooth pairing prompts (needs an `org.bluez.Agent1`; either/or with
+  `blueman-applet`)
 
 ## References
 
@@ -301,3 +338,5 @@ content by preserving the bad file for diagnosis and restoring safe defaults.
 - [Hyprpaper](https://wiki.hypr.land/Hypr-Ecosystem/hyprpaper/)
 - [AGS (Aylur's GTK Shell)](https://aylur.github.io/ags/) and [Astal](https://aylur.github.io/astal/)
 - [`solopasha/hyprland` COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)
+- [Quickshell](https://quickshell.outfoxxed.me/) and the
+  [`errornointernet/quickshell` COPR](https://copr.fedorainfracloud.org/coprs/errornointernet/quickshell/)

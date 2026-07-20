@@ -12,8 +12,9 @@ project): dark neutrals, one red accent (#E14658), heavy glass/blur surfaces,
 See [ROADMAP.md](ROADMAP.md) for milestone status, [docs/INSTALL.md](docs/INSTALL.md)
 for repository and rerun behavior, [docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
 [docs/TOP-BAR-DOCK.md](docs/TOP-BAR-DOCK.md) for Bluetooth, media, and pin management,
-[docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the AGS Wi-Fi/Bluetooth/notification panel,
-[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the AGS default plus SwayNC and Mako fallbacks,
+[docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the Wi-Fi/Bluetooth/notification panel,
+[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the Quickshell default plus AGS, SwayNC, and Mako fallbacks,
+[docs/TOKENS.md](docs/TOKENS.md) for the design token scale,
 [docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor
 wallpapers and reduced motion,
 [docs/ACCENT.md](docs/ACCENT.md) for wallpaper-derived accent colors,
@@ -33,18 +34,25 @@ dependencies, keybindings, and state locations,
 - Fedora-aware package installation plus persistent desktop/laptop and GPU profiles
 
 **Stage 2: the desktop shell — implements the design mockup** ✅
-- **Waybar** (`waybar/`) — two bars from one process: the floating glass top bar
-  (workspaces 1–5 left, window title center, any-player MPRIS controls plus
-  Bluetooth/wifi/volume/battery/notifications/clock right) and an end-4-style bottom
-  dock. Pins launch installed desktop entries, including Flatpaks and Electron apps;
-  right-click the launcher to add, remove, or reorder up to ten pins.
+- **Quickshell** (`quickshell/`) — the session shell in QML: the floating glass top
+  bar (workspaces 1–5 left, window title center, MPRIS controls plus
+  Bluetooth/network/volume/battery/clock right), an end-4-style bottom dock, the
+  quick-settings panel, the notification daemon, and the lock screen — one process,
+  drawn on every monitor. Pins launch installed desktop entries, including Flatpaks
+  and Electron apps; right-click the launcher to add, remove, or reorder them.
+  Replaced Waybar and AGS, which between them needed ten hand-duplicated dock
+  modules, a `socat` event-watcher helper, and a dart-sass runtime.
 - **Kitty** (`kitty/`) — translucent terminal, Fira Code, full palette mapping
 - **Rofi** (`rofi/`) — 480px centered glass launcher with icon rows and accent selection
   (requires `rofi-wayland`)
-- **SwayNC** (`swaync/`) — glass notification cards plus history, clear-all, DND,
-  and a stateful Waybar icon; Mako remains an installer-selected fallback
-- **hyprlock** (`hypr/hyprlock.conf`) — oversized thin clock, accent avatar ring,
-  pill password field (design "Lock" screen)
+- **Notifications** — served by the shell itself, with glass cards, history,
+  clear-all, DND, and Bluetooth connect/disconnect and low-battery alerts. AGS,
+  SwayNC (`swaync/`), and Mako remain installer-selected fallbacks.
+- **Lock screen** (`quickshell/Lock/`) — oversized thin clock, accent avatar ring,
+  pill password field (design "Lock" screen). **hyprlock**
+  (`hypr/hyprlock.conf`) stays installed as the fallback: `hypr/scripts/lock.sh`
+  drops to it whenever the shell cannot confirm it locked, because a lock screen
+  that fails to appear is an unlocked machine.
 - **wlogout** (`wlogout/`) — Lock/Logout/Suspend/Restart/Shutdown row, Shutdown in
   accent (design "Power" screen)
 - **hyprpaper** (`hypr/hyprpaper.conf`) + **hypridle** (`hypr/hypridle.conf`),
@@ -92,7 +100,7 @@ That completes the original roadmap.
   changes first: `sddm-greeter-qt6 --test-mode --theme config/sddm/hyprveil`.
 
 **P3 customization** ✅
-- `SUPER+SHIFT+W` opens the wallpaper picker: an AGS thumbnail grid when the shell
+- `SUPER+SHIFT+W` opens the wallpaper picker: an AGS thumbnail grid when that shell
   is running, otherwise a Rofi flow. Both choose image, connected monitor, and
   cover/contain fit; fallback and per-monitor choices restore after login.
 - The helper detects current and legacy Hyprpaper IPC and recovers safely from
@@ -137,7 +145,8 @@ config/
 │   ├── motion/              # standard/reduced profiles + generated active source
 │   ├── profiles/            # persistent desktop/laptop + GPU selection targets
 │   └── scripts/             # theme, zoom, and hardware-aware actions
-├── waybar/                  # config.jsonc + style.css (Stage 2)
+├── quickshell/              # the session shell: bar, dock, panel, lock (QML)
+├── waybar/                  # retired bar; still holds the Rofi dock pin manager
 ├── kitty/                   # kitty.conf (Stage 2)
 ├── rofi/                    # config.rasi + hyprveil.rasi theme (Stage 2)
 ├── swaync/                  # default notification center config + CSS
@@ -246,7 +255,7 @@ placeholder monitor names/resolutions with your real ones (get them via
 
 ```bash
 hyprctl reload                 # re-read all Hyprland configs live
-pkill waybar; waybar & disown  # restart the bar after editing waybar configs
+qs kill; ~/.config/hypr/scripts/notification-daemon.sh start & disown  # restart the shell
 swaync-client -R               # reload SwayNC config
 swaync-client -rs              # reload SwayNC CSS
 ```
@@ -260,8 +269,8 @@ Stage 1:
 - [x] Gaps/border radius match `variables.conf` values
 
 Stage 2 (compare against the mockup's five screens):
-- [x] **Desktop**: Waybar floats with rounded corners and blur; active workspace pill
-      is red-tinted; active window border is `#E14658`, inactive `#2A2D35`
+- [x] **Desktop**: the bar floats with rounded corners and blur; active workspace pill
+      is accent-tinted; active window border is the accent, inactive `#2A2D35`
 - [x] **Dock**: centered pill at the bottom; pinned icons launch apps; running apps
       appear right of the divider with a red-tinted ring on the focused one
 - [x] `SUPER+Return` opens a translucent blurred Kitty with Fira Code
@@ -294,9 +303,10 @@ Stage 4 (extra, after `scripts/05-install-fedora-sddm.sh`):
 
 ## Keybind cheatsheet (end-4 style)
 
-Ported from end-4/dots-hyprland, minus the Quickshell-only widgets (overview,
-sidebars, on-screen cheatsheet). `SUPER+Tab` maps to rofi's window switcher
-instead of the Quickshell overview.
+Ported from end-4/dots-hyprland, minus its overview, sidebars, and on-screen
+cheatsheet — those are not built here. `SUPER+Tab` maps to rofi's window switcher
+instead of an overview widget. (This note predates the migration: Hyprveil now uses
+Quickshell too, but has not adopted those particular surfaces.)
 
 | Bind | Action |
 |---|---|
@@ -311,7 +321,7 @@ instead of the Quickshell overview.
 | `SUPER+SHIFT+S` | region snip → clipboard |
 | `SUPER+SHIFT+X` | region OCR → clipboard (needs tesseract) |
 | `SUPER+SHIFT+C` | color picker |
-| `SUPER+SHIFT+W` | wallpaper picker — AGS thumbnail grid, or Rofi when the shell is down |
+| `SUPER+SHIFT+W` | wallpaper picker — Rofi list (the thumbnail grid is not yet ported to QML) |
 | `SUPER+minus` / `equal` | screen zoom out / in |
 | `SUPER+SHIFT+P` / `N` / `B` / `M` | media play-pause / next / prev / mute |
 | `SUPER+Q` | close window (`+SHIFT+ALT` force-kill) |
@@ -328,7 +338,9 @@ instead of the Quickshell overview.
 
 ## Customization quick guide
 
-- **Colors** → edit `hypr/colors.conf` for Hyprland; Waybar/Kitty/Rofi/SwayNC/hyprlock/
+- **Sizes, spacing, type, motion** → edit `hypr/tokens.conf`, then run
+  `~/.config/hypr/scripts/theme.sh render`. See [docs/TOKENS.md](docs/TOKENS.md).
+- **Colors** → edit `hypr/colors.conf` for Hyprland; Quickshell/Kitty/Rofi/SwayNC/
   wlogout each carry a palette mirror block at the top of their file (these tools
   can't read Hyprland variables — grep for the old hex when changing a color).
   Stage 3 mirrors: `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css`,

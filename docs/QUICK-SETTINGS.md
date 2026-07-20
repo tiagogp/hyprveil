@@ -1,83 +1,113 @@
 # Quick-settings panel (Wi-Fi, Bluetooth, notifications)
 
-Hyprveil's default shell adds a glass **quick-settings panel** built with
-[AGS v2 / Astal](https://aylur.github.io/ags/) (TypeScript + GTK layer-shell). It
-unifies three controls that previously lived in separate places or external apps:
+Hyprveil's shell includes a glass **quick-settings panel** built with
+[Quickshell](https://quickshell.outfoxxed.me/) (QML). It unifies three controls that
+otherwise live in separate places or external apps:
 
-- **Wi-Fi** — enable/disable, rescan, and a signal-sorted network list you can click
-  to connect, driven by `AstalNetwork`. Secured joins use the running NetworkManager
-  secret agent (via `nmcli`). An "Advanced settings…" row still opens
-  `nm-connection-editor`.
-- **Bluetooth** — adapter power toggle plus a device list with connect/disconnect and
-  battery percentage, driven by `AstalBluetooth`. "Open Blueman…" remains available.
+- **Wi-Fi** — enable/disable and a signal-sorted network list you can click to
+  connect, driven by `Quickshell.Networking`. A known or open network connects
+  in-process; an unknown secured one hands off to `nmcli`, which triggers
+  NetworkManager's own secret agent rather than asking the shell to handle your
+  passphrase.
+- **Bluetooth** — adapter power toggle plus a device list with connect/disconnect
+  and battery percentage where the device reports one, driven by
+  `Quickshell.Bluetooth`. Connect and disconnect also raise notifications — see
+  [NOTIFICATIONS.md](NOTIFICATIONS.md#bluetooth-notifications).
 - **Notifications** — history cards, clear-all, and a do-not-disturb toggle, with
-  transient top-right popups. AGS is the notification daemon (`AstalNotifd`), so this
-  is the same system that shows your popups — see
-  [NOTIFICATIONS.md](NOTIFICATIONS.md).
-- **Wallpapers** — a "Wallpapers…" row opens a thumbnail grid for picking a
-  background per monitor. See
+  transient top-right popups. The shell *is* the notification daemon, so the
+  history you read here holds the same objects that appeared as toasts.
+- **Wallpapers** — a "Wallpapers…" row opens the picker. See
   [WALLPAPERS-MOTION.md](WALLPAPERS-MOTION.md#wallpaper-picker).
 
 ## Opening the panel
 
-- **`SUPER+N`** toggles it (backend-aware: it opens the AGS panel when AGS is the
-  selected notification backend).
-- **Left-click** the Waybar Wi-Fi, Bluetooth, or notification icon.
-- Right-click the Wi-Fi/Bluetooth icons for the classic external managers, and
-  right-click the notification icon for DND.
+- **`SUPER+N`** toggles it. The keybind calls
+  `hypr/scripts/notification-daemon.sh toggle`, which dispatches per backend — it
+  has never called the shell directly, which is why the binding survived the
+  migration from AGS unchanged.
+- Click the Bluetooth or network glyph in the bar for the external managers
+  (`blueman-manager`, `nm-connection-editor`).
 
-When the notification backend is SwayNC or Mako instead of AGS (see
-[NOTIFICATIONS.md](NOTIFICATIONS.md)), the panel is inactive and those Waybar icons
-fall back to `nm-connection-editor` / `blueman-manager`.
+When the notification backend is SwayNC or Mako instead of Quickshell (see
+[NOTIFICATIONS.md](NOTIFICATIONS.md)), the panel is inactive and `SUPER+N` falls
+back to that backend's own control centre.
 
 ## Where it lives
 
-The project is a normal AGS v2 config under `config/ags/` (deployed to
-`~/.config/ags`):
+A normal Quickshell config under `config/quickshell/` (deployed to
+`~/.config/quickshell`, which is Quickshell's default config path — so it runs as
+plain `quickshell` with no `-c`):
 
 | File | Role |
 |---|---|
-| `app.ts` | Entry point; registers the popup, panel, and wallpaper windows plus the `ags request` handlers (`toggle-quicksettings`, `notif-status`, `notif-dnd`, `notif-clear`, `toggle-wallpapers`) that Waybar and the keybinds call. |
-| `widget/QuickSettings.tsx` | Panel container assembling the three sections. |
-| `widget/Wifi.tsx` / `Bluetooth.tsx` / `Notifications.tsx` | The sections. |
-| `widget/NotificationPopups.tsx` | Transient popups. |
-| `widget/Wallpapers.tsx` | Thumbnail wallpaper grid; renders `wallpaper.sh list` and calls `wallpaper.sh apply`. |
-| `style.scss` | Glass theme; mirrors `config/hypr/colors.conf` (accent `#e14658`). |
+| `shell.qml` | Entry point; instantiates the bar and dock per monitor, plus the notification server, panel, lock, and Bluetooth watcher. |
+| `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
+| `Panel/WifiSection.qml` / `BluetoothSection.qml` / `NotificationSection.qml` | The sections. |
+| `Panel/Section.qml` / `Toggle.qml` | Shared section chrome and the switch control. |
+| `Notif/Popups.qml` | The notification server and popup stack. |
+| `Notif/NotificationCard.qml` | One card, shared by popups and history. |
+| `Tokens.qml` | **Generated** from the design tokens — see [TOKENS.md](TOKENS.md). |
+| `Accent.qml` | **Generated** from the wallpaper accent — see [ACCENT.md](ACCENT.md). |
+| `qmldir`, `Services/qmldir` | Component registration. Read the note below before adding a file. |
 
-Hyprland gives the panel, popups, and wallpaper grid blur via `layerrule = blur` on
-the `hyprveil-quicksettings`, `hyprveil-notifications`, and `hyprveil-wallpapers`
-namespaces (`config/hypr/window-rules.conf`).
+### qmldir is not optional
+
+A `pragma Singleton` file with no `qmldir` entry resolves to the uninstantiated
+*type* rather than its instance. `Tokens.radiusMd` then reads as `undefined`, and
+QML renders an undefined radius as `0` **without raising anything** — the shell
+loads and looks plausible with the entire token scale unbound.
+
+Adding a `qmldir` also *replaces* implicit same-directory resolution rather than
+extending it, so every component in that directory has to be listed, not just the
+singletons. Both halves are written into the files themselves.
+
+Hyprland gives the panel, bar, dock, and popups their blur via `layerrule = blur`
+on the `hyprveil-quicksettings`, `hyprveil-bar`, `hyprveil-dock`, and
+`hyprveil-notifications` namespaces (`config/hypr/window-rules.conf`). The glass is
+the compositor's, not the toolkit's: a surface with no blur rule renders flat no
+matter what the QML asks for.
+
+## Talking to the shell
+
+Quickshell exposes typed IPC. `qs ipc show` lists every target:
+
+```bash
+qs ipc call quicksettings toggle     # open/close the panel
+qs ipc call notifications dnd        # toggle do-not-disturb
+qs ipc call notifications count      # tracked notification count
+qs ipc call notifications clear      # dismiss everything
+qs ipc call lock isLocked            # lock state
+```
+
+There is deliberately **no unlock over IPC**. Anything that can reach the socket
+could otherwise bypass the lock screen; `tests/p8-lock-smoke.sh` asserts no such
+function appears.
 
 ## Dependencies
 
-AGS v2 (`aylurs-gtk-shell2`) and the Astal libraries (`astal-io`, `astal-notifd`,
-`astal-bluetooth`, `astal-network`, `astal-wireplumber`) come from the
-`solopasha/hyprland` COPR, installed behind the installer's COPR-consent prompt.
-Wi-Fi connect uses `nmcli` (NetworkManager), Bluetooth uses BlueZ. If the COPR is
-declined the shell falls back to SwayNC/Mako for notifications and the external
-managers for Wi-Fi/Bluetooth.
+Quickshell comes from the `errornointernet/quickshell` COPR, installed behind the
+installer's COPR-consent prompt. Wi-Fi uses NetworkManager, Bluetooth uses BlueZ,
+and notifications from scripts use `notify-send` (`libnotify`).
 
-### Sass
-
-AGS compiles `style.scss` on every start and needs a **`sass` executable on `PATH`**.
-Without it the shell fails to start, taking the panel, notifications, and wallpaper
-grid with it. Fedora ships no `dart-sass` package, so install it separately:
-
-```bash
-npm install -g sass          # dart-sass; the compiler AGS expects
-```
-
-Fedora's `sassc` package also compiles this stylesheet, but AGS invokes the binary
-by the name `sass`, so `sassc` alone does not satisfy it.
-
-Note that Sass owns `alpha()` as a one-argument function, while GTK CSS uses a
-two-argument form. Keep the stylesheet on `rgba($color, $a)`; `alpha($color, $a)`
-does not compile and `tests/p5-smoke.sh` fails the build if it reappears.
+There is **no Sass step**. AGS compiled a stylesheet on every start and needed a
+`sass` binary on `PATH` or the whole shell failed to launch, taking notifications
+with it. QML has real properties, so the accent and token singletons are plain
+generated files.
 
 ## Editing and reloading
 
-Edit files under `~/.config/ags` and AGS hot-reloads, or restart it explicitly:
+Edit files under `~/.config/quickshell` and Quickshell hot-reloads —
+`Quickshell.watchFiles` defaults to true, which is also why writing `Accent.qml`
+*is* the accent reload with nothing to push.
+
+One caveat: the watcher tracks the paths it started with. Replacing
+`~/.config/quickshell` wholesale — which is exactly what the installer's staged
+deploy does — leaves a running instance watching paths that no longer exist. After
+an upgrade, restart it:
 
 ```bash
-ags quit -i hyprveil && ags run & disown
+qs kill && ~/.config/hypr/scripts/notification-daemon.sh start & disown
 ```
+
+Note that restarting discards the session's notification history, since the shell
+is the notification server.

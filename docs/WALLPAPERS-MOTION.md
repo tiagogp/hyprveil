@@ -8,9 +8,15 @@ tree, so installer reruns and upgrades do not reset them.
 Put JPG, JPEG, PNG, WebP, JXL, or BMP files anywhere below
 `~/Pictures/Wallpapers`, then press `SUPER+SHIFT+W`.
 
-There are two front-ends over one helper:
+There are two front-ends over one helper.
 
-- **AGS thumbnail grid** (default when the AGS shell is running) — a glass window
+> **Current state.** With the default Quickshell shell you get the **Rofi flow**.
+> The thumbnail grid was an AGS widget and has not been ported to QML yet, so it
+> appears only if you select the AGS backend. Porting it is outstanding work — in
+> QML most of it collapses into `Image` with `sourceSize` and `asynchronous`, which
+> replaces the hand-rolled SHA256 thumbnail cache the AGS version needed.
+
+- **AGS thumbnail grid** (only with the AGS backend) — a glass window
   showing every wallpaper as a thumbnail. Pick the target (**All monitors** or a
   named output) and the fit (**Cover**/**Contain**) at the top, then click an image
   to apply it immediately. The tile Hyprveil would restore for the current target is
@@ -18,9 +24,10 @@ There are two front-ends over one helper:
   `Escape` closes it. It is also reachable from the "Wallpapers…" row in the
   quick-settings panel (`SUPER+N`), or with `ags request -i hyprveil
   toggle-wallpapers`.
-- **Rofi flow** (fallback) — used whenever the AGS shell is not running, for example
-  with the SwayNC or Mako notification backend. It asks for an image, then all or one
-  connected monitor, then `cover` or `contain`.
+- **Rofi flow** — used with the Quickshell, SwayNC, and Mako backends, and whenever
+  the AGS shell is not running. It asks for an image, then all or one connected
+  monitor, then `cover` or `contain`. It drives the same helper and writes the same
+  state, so nothing is lost by using it — only the previews.
 
 Both write the same state and use the same Hyprpaper IPC, so choices made in one are
 visible to the other. An empty or missing wallpaper directory produces a message and
@@ -100,8 +107,9 @@ directly — the grid renders exactly what this prints:
 ~/.config/hypr/scripts/wallpaper.sh list
 ```
 
-If `SUPER+SHIFT+W` opens Rofi when you expected the grid, the AGS shell is not
-running (`ags list` should print `hyprveil`); see
+If `SUPER+SHIFT+W` opens Rofi when you expected the grid, that is expected on the
+Quickshell backend — the grid is AGS-only for now (see the note above). With the AGS
+backend, `ags list` should print `hyprveil`; see
 [QUICK-SETTINGS.md](QUICK-SETTINGS.md).
 
 If Hyprpaper is running but the background is wrong, restore the saved selection:

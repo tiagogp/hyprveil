@@ -10,7 +10,8 @@ accent family is stored in `$XDG_STATE_HOME/hyprveil/accent.json` and rendered b
 | Target | Generated file |
 |---|---|
 | Hyprland / hyprlock | `~/.config/hypr/accent.conf` |
-| Waybar, SwayNC, wlogout, GTK3, GTK4 | `accent.css` next to each stylesheet |
+| SwayNC, wlogout, GTK3, GTK4, Waybar | `accent.css` next to each stylesheet |
+| Quickshell (bar, dock, panel, lock) | `~/.config/quickshell/Accent.qml` |
 | AGS | `~/.config/ags/_accent.scss` |
 | Rofi | `~/.config/rofi/accent.rasi` |
 | Kitty | `~/.config/kitty/accent.conf` |
