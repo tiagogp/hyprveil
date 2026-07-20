@@ -26,7 +26,7 @@ DEFAULT_HOVER="#e86a79"
 # The real config tree, so rendering writes into the same layout it does on a
 # deployed system: write_if_changed skips any target whose directory is absent,
 # and the templated consumers need their .in files present.
-for name in hypr ags waybar swaync wlogout gtk-3.0 gtk-4.0 rofi kitty mako qt5ct qt6ct; do
+for name in hypr ags waybar swaync wlogout gtk-3.0 gtk-4.0 rofi kitty mako qt5ct qt6ct quickshell; do
     [ -d "$REPO/config/$name" ] || fail "missing managed config tree: config/$name"
     mkdir -p "$HYPRVEIL_CONFIG_HOME/$name"
     cp -a "$REPO/config/$name/." "$HYPRVEIL_CONFIG_HOME/$name/"
@@ -143,6 +143,10 @@ done
 grep -q "@define-color accent_bg_color $accent;" "$C/gtk-4.0/accent.css" \
     || fail "libadwaita accent roles not rendered"
 grep -q "\$accent: $accent;" "$C/ags/_accent.scss" || fail "AGS Sass fragment not rendered"
+# QML has no include mechanism for values, so the shell gets a generated
+# singleton. Quickshell watches its config dir, so this write is also the reload.
+grep -q "property color accent: *\"$accent\"" "$C/quickshell/Accent.qml" \
+    || fail "Quickshell accent singleton not rendered"
 grep -q "accent:     $accent;" "$C/rofi/accent.rasi" || fail "Rofi fragment not rendered"
 grep -q "cursor                  $accent" "$C/kitty/accent.conf" || fail "Kitty fragment not rendered"
 # Templated consumers have no include mechanism and are regenerated from .in.
@@ -260,7 +264,8 @@ ok "malformed state recovers and invalid colors are rejected"
 # clone shows a half-themed desktop.
 for f in config/hypr/accent.conf config/waybar/accent.css config/swaync/accent.css \
          config/wlogout/accent.css config/gtk-3.0/accent.css config/gtk-4.0/accent.css \
-         config/ags/_accent.scss config/rofi/accent.rasi config/kitty/accent.conf; do
+         config/ags/_accent.scss config/rofi/accent.rasi config/kitty/accent.conf \
+         config/quickshell/Accent.qml; do
     [ -f "$REPO/$f" ] || fail "missing committed accent fragment: $f"
     grep -qi "${DEFAULT_ACCENT#\#}" "$REPO/$f" \
         || fail "committed fragment does not carry the designed accent: $f"

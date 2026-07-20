@@ -227,11 +227,23 @@ reload_ags() {
         || warn "could not push the stylesheet to the AGS shell"
 }
 
-# Quickshell watches its own config directory and reloads on change, so writing
-# Accent.qml or Tokens.qml already is the reload — there is deliberately nothing
-# to send. This exists as a named no-op rather than an omission from reload_all,
-# so the next person looking for "where does the shell get told" finds the answer
-# instead of concluding it was forgotten.
+# Quickshell's Quickshell.watchFiles defaults to true, so writing Accent.qml or
+# Tokens.qml already IS the reload — verified by watching the instance's load
+# count increment on an accent change. There is deliberately nothing to send.
+#
+# A named no-op rather than an omission from reload_all, so the next person
+# looking for "where does the shell get told" finds the answer instead of
+# concluding it was forgotten.
+#
+# The reload is a full config reload, which is why NotificationServer sets
+# keepOnReload: true — without it, changing the wallpaper would silently discard
+# the session's notification history.
+#
+# Caveat worth knowing: the watcher tracks the paths it started with. Replacing
+# ~/.config/quickshell wholesale — a symlink swapped for a directory, or
+# hv_deploy_configs moving a staged tree into place — leaves the running
+# instance watching paths that no longer exist, and it will stop reacting until
+# it is restarted.
 reload_quickshell() { :; }
 
 reload_hyprland() {

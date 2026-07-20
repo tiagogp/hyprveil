@@ -1,0 +1,2 @@
+# See ../qmldir — a subdirectory singleton needs the same explicit registration.
+singleton Pins 1.0 Pins.qml
