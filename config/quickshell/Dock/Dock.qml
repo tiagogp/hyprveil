@@ -112,7 +112,7 @@ PanelWindow {
                         Hyprland.dispatch("closewindow address:" + modelData.toplevel.address)
                     onUnpinned: if (modelData.pinned)
                         Quickshell.execDetached([
-                            Quickshell.env("HOME") + "/.config/waybar/scripts/dock-manager.sh",
+                            Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
                             "remove", modelData.appId])
                 }
             }

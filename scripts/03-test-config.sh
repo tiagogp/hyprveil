@@ -50,14 +50,14 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
          hypr/scripts/lib/render-lib.sh \
          hypr/tokens.conf hypr/scripts/accent.sh hypr/scripts/theme.sh \
-         hypr/scripts/lock.sh \
+         hypr/scripts/lock.sh hypr/scripts/dock-manager.sh hypr/scripts/dock-lib.sh \
          hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
          hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
          hypr/profiles/form-factor/desktop.conf \
          hypr/profiles/form-factor/laptop.conf hypr/profiles/gpu/generic.conf \
          hypr/profiles/gpu/intel.conf hypr/profiles/gpu/amd.conf hypr/profiles/gpu/nvidia.conf \
-         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-lib.sh \
-         waybar/scripts/dock-manager.sh waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
+         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh \
+         waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
          waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
          waybar/scripts/notification.sh waybar/accent.css \
          kitty/kitty.conf kitty/accent.conf \

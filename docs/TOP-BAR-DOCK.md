@@ -27,16 +27,11 @@ order, add applications from installed desktop entries, remove pins, and move th
 up, down, first, or last. The same operations are scriptable:
 
 ```bash
-~/.config/waybar/scripts/dock-manager.sh list
-~/.config/waybar/scripts/dock-manager.sh add org.mozilla.firefox.desktop
-~/.config/waybar/scripts/dock-manager.sh remove org.mozilla.firefox.desktop
-~/.config/waybar/scripts/dock-manager.sh move org.mozilla.firefox.desktop first
+~/.config/hypr/scripts/dock-manager.sh list
+~/.config/hypr/scripts/dock-manager.sh add org.mozilla.firefox.desktop
+~/.config/hypr/scripts/dock-manager.sh remove org.mozilla.firefox.desktop
+~/.config/hypr/scripts/dock-manager.sh move org.mozilla.firefox.desktop first
 ```
-
-> **Path note.** `dock-manager.sh` and `dock-lib.sh` still live under
-> `config/waybar/scripts/` even though Waybar itself is retired — the Rofi pin
-> manager was kept, and the dock's right-click unpin calls into it. Moving them
-> somewhere not named after a retired bar is outstanding work.
 
 Pin order is stored atomically under `$XDG_STATE_HOME/hyprveil/dock-pins.json`
 (normally `~/.local/state/hyprveil/dock-pins.json`), outside the installer-managed

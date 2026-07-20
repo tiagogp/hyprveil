@@ -172,8 +172,11 @@ chmod +x "$TMP/bin/hyprctl" "$TMP/bin/gtk-launch"
 printf '[]\n' > "$TMP/clients.json"
 printf '{"address":""}\n' > "$TMP/active.json"
 
-manager="$REPO/config/waybar/scripts/dock-manager.sh"
+manager="$REPO/config/hypr/scripts/dock-manager.sh"
 dock="$REPO/config/waybar/scripts/dock.sh"
+# dock.sh reaches into hypr/scripts for dock-lib.sh now; keep the test on the
+# repo copy rather than whatever is deployed to this developer's HOME.
+export HYPRVEIL_DOCK_LIB="$REPO/config/hypr/scripts/dock-lib.sh"
 "$manager" add firefox.desktop
 "$manager" add org.example.Electron.desktop
 "$manager" move org.example.Electron.desktop first

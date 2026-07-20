@@ -67,9 +67,8 @@ worth recognising:
   `Tokens.radiusMd` reads as `undefined` and renders as `0` with no error at all.
 
 Restore the backed-up `quickshell` tree if needed. Dock pins live in
-`dock-pins.json`; run `~/.config/waybar/scripts/dock-manager.sh list` to validate
-and safely recover only that state. (That script still lives under the retired
-`waybar` tree — it backs the Rofi pin manager, which was kept.)
+`dock-pins.json`; run `~/.config/hypr/scripts/dock-manager.sh list` to validate
+and safely recover only that state.
 
 To fall back to the previous shell without reinstalling:
 
