@@ -21,9 +21,18 @@ ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
     // for each entry, so hotplugging a display is handled by the model changing
     // rather than by any code of ours.
+    // The bar carries the only on-screen route to the two panels below. Both are
+    // single session-wide scopes rather than one per bar, so every monitor's bar
+    // toggles the same panel and their button states cannot disagree.
     Variants {
         model: Quickshell.screens
-        delegate: Bar { required property var modelData; screen: modelData }
+        delegate: Bar {
+            required property var modelData
+            screen: modelData
+            notifications: notifs
+            quickSettings: qsPanel
+            wallpapers: wallpaperPicker
+        }
     }
 
     Variants {
@@ -38,11 +47,16 @@ ShellRoot {
 
     // The panel reads the popup scope's server rather than owning one, so the
     // history it lists and the toasts that appeared are the same objects.
-    QuickSettings { notifications: notifs; wallpapers: wallpapers }
+    //
+    // The picker's id is NOT `wallpapers`: QuickSettings has a property of that
+    // name, and a property shadows an id of the same name in its own binding
+    // scope, so `wallpapers: wallpapers` bound the property to itself and the
+    // panel's "Wallpapers…" row opened nothing.
+    QuickSettings { id: qsPanel; notifications: notifs; wallpapers: wallpaperPicker }
 
     // The wallpaper picker. wallpaper.sh owns the state and the Hyprpaper IPC;
     // this only renders `list` and calls `apply`.
-    Wallpapers { id: wallpapers }
+    Wallpapers { id: wallpaperPicker }
 
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.
