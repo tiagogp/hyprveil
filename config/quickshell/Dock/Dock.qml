@@ -44,15 +44,14 @@ PanelWindow {
             // Matched across ALL workspaces: the toplevel is what lets a click
             // focus-and-switch from anywhere, while `onscreen` below decides
             // whether the tile reads as lit or dim.
-            const win = Hyprland.toplevels.values.find(
-                t => (t.lastIpcObject?.class ?? "").toLowerCase() === id) ?? null;
+            const win = Compositor.toplevelForClass(pin.app_id);
             out.push({ appId: pin.app_id, desktopId: pin.desktop_id, toplevel: win, pinned: true });
         }
 
         for (const t of Hyprland.toplevels.values) {
             const cls = (t.lastIpcObject?.class ?? "").toLowerCase();
             if (!cls || seen.has(cls)) continue;
-            if (t.workspace?.id !== Hyprland.focusedWorkspace?.id) continue;
+            if (t.workspace?.id !== Compositor.focusedWorkspaceId) continue;
             seen.add(cls);
             out.push({ appId: cls, desktopId: null, toplevel: t, pinned: false });
         }
@@ -96,7 +95,7 @@ PanelWindow {
                     entry: DesktopEntries.byId(modelData.desktopId ?? modelData.appId)
                     tooltip: entry?.name ?? modelData.appId
                     running: modelData.toplevel !== null
-                    onscreen: modelData.toplevel?.workspace?.id === Hyprland.focusedWorkspace?.id
+                    onscreen: modelData.toplevel?.workspace?.id === Compositor.focusedWorkspaceId
                     active: Hyprland.activeToplevel?.address === modelData.toplevel?.address
 
                     // A pinned app that is not running launches; anything else

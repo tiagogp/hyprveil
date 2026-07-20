@@ -48,10 +48,15 @@ Item {
         }
 
         IconImage {
+            id: icon
             anchors.centerIn: parent
             implicitSize: Tokens.iconLg
-            visible: tile.entry !== null
-            source: tile.entry?.icon ?? ""
+            visible: tile.entry !== null && source !== ""
+            // DesktopEntry.icon is a theme icon NAME, not a path. Handing it to
+            // IconImage directly makes it look for a file of that name and warn
+            // once per repaint. iconPath resolves it through the icon theme, and
+            // the fallback keeps an app with a missing icon from rendering blank.
+            source: Quickshell.iconPath(tile.entry?.icon ?? "", "application-x-executable")
             // Dim a pinned app that is running on another workspace, so the
             // dock distinguishes "open elsewhere" from "open here".
             opacity: !tile.running || tile.onscreen ? 1.0 : 0.55
@@ -59,7 +64,7 @@ Item {
 
         Glyph {
             anchors.centerIn: parent
-            visible: tile.entry === null
+            visible: tile.entry === null || icon.source === ""
             text: tile.glyph
             size: Tokens.iconMd
             color: tile.active ? Accent.accent : Tokens.muted

@@ -2,5 +2,6 @@
 # a qmldir exists it REPLACES implicit same-directory resolution, so every
 # component in this directory has to be listed here too.
 singleton Pins 1.0 Pins.qml
+singleton Compositor 1.0 Compositor.qml
 
 BluetoothWatch 1.0 BluetoothWatch.qml

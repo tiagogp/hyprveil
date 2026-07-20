@@ -15,6 +15,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import ".."
+import "../Services"
 
 PanelWindow {
     id: bar
@@ -49,7 +50,7 @@ PanelWindow {
             Text {
                 Layout.maximumWidth: bar.width * 0.35
                 Layout.alignment: Qt.AlignVCenter
-                text: Hyprland.activeToplevel?.title ?? ""
+                text: Compositor.activeTitle
                 font.family: Tokens.fontUi
                 font.pixelSize: Tokens.textSm
                 font.weight: Tokens.weightMedium

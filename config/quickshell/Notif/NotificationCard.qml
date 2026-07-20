@@ -57,7 +57,10 @@ Surface {
             IconImage {
                 anchors.centerIn: parent
                 implicitSize: Tokens.iconMd
-                source: card.notif?.appIcon ?? ""
+                // Same as the dock: an app icon arrives as a theme name, and an
+                // unresolvable one has to fall through to the glyph below rather
+                // than warn on every repaint.
+                source: Quickshell.iconPath(card.notif?.appIcon ?? "", true)
                 visible: source !== ""
             }
 
