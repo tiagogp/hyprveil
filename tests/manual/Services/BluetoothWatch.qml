@@ -1,0 +1,1 @@
+../../../config/quickshell/Services/BluetoothWatch.qml

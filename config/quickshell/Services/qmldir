@@ -1,2 +1,6 @@
-# See ../qmldir — a subdirectory singleton needs the same explicit registration.
+# See ../qmldir — a subdirectory singleton needs explicit registration, and once
+# a qmldir exists it REPLACES implicit same-directory resolution, so every
+# component in this directory has to be listed here too.
 singleton Pins 1.0 Pins.qml
+
+BluetoothWatch 1.0 BluetoothWatch.qml
