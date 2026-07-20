@@ -5,10 +5,8 @@
 // font weights, the pill's inset top highlight, and the bottom status row.
 // Everything else matches what hyprlock.conf already drew.
 //
-// The design's lock is an OPAQUE #0d0e11 sheet with no wallpaper — no blur, no
-// dim, no vignette. That is deliberate and hyprlock.conf got it right; adding a
-// blurred wallpaper here would be a departure from the design, not fidelity to
-// it.
+// The lock uses the same saved wallpaper as the desktop, blurred behind a dark
+// wash so the project typography still carries the screen.
 //
 // SAFETY: this holds an ext-session-lock. If this process dies while locked, the
 // compositor keeps the session locked with no client to unlock it — that is the
@@ -16,6 +14,7 @@
 // lockout. hypr/scripts/lock.sh falls back to hyprlock whenever this shell
 // cannot be confirmed, and hyprlock stays installed for exactly that reason.
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
@@ -27,6 +26,32 @@ Scope {
     id: root
 
     property bool locked: false
+    readonly property string stateHome:
+        Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"
+    readonly property string wallpaperStatePath: stateHome + "/hyprveil/wallpapers.json"
+    readonly property string fallbackWallpaper: Quickshell.env("HOME") + "/.config/hypr/wallpaper-default.jpg"
+    property string wallpaperPath: fallbackWallpaper
+
+    FileView {
+        id: wallpaperState
+        path: root.wallpaperStatePath
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: root.wallpaperPath = root._wallpaperFromState(text())
+        onLoadFailed: root.wallpaperPath = root.fallbackWallpaper
+    }
+
+    function _wallpaperFromState(raw: string): string {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.fallback && typeof parsed.fallback.path === "string"
+                    && parsed.fallback.path.length > 0)
+                return parsed.fallback.path;
+        } catch (e) {
+            console.warn("wallpapers.json is malformed; using the local lock fallback");
+        }
+        return fallbackWallpaper;
+    }
 
     WlSessionLock {
         id: session
@@ -84,6 +109,31 @@ Scope {
             Item {
                 anchors.fill: parent
                 focus: true
+
+                Image {
+                    id: wallpaper
+                    anchors.fill: parent
+                    source: "file://" + root.wallpaperPath
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    visible: false
+                }
+
+                MultiEffect {
+                    anchors.fill: wallpaper
+                    source: wallpaper
+                    blurEnabled: true
+                    blurMax: 64
+                    blur: 1.0
+                    saturation: 0.82
+                    opacity: 0.46
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Qt.rgba(0.05, 0.055, 0.067, 0.58)
+                }
 
                 Keys.onPressed: function (event) {
                     if (busy) return;
