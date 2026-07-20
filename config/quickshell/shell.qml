@@ -61,11 +61,20 @@ ShellRoot {
     // name, and a property shadows an id of the same name in its own binding
     // scope, so `wallpapers: wallpapers` bound the property to itself and the
     // panel's "Wallpapers…" row opened nothing.
-    QuickSettings { id: qsPanel; notifications: notifs; wallpapers: wallpaperPicker }
+    QuickSettings {
+        id: qsPanel
+        notifications: notifs
+        wallpapers: wallpaperPicker
+        cheatsheet: keybindSheet
+    }
 
     // The wallpaper picker. wallpaper.sh owns the state and the Hyprpaper IPC;
     // this only renders `list` and calls `apply`.
     Wallpapers { id: wallpaperPicker }
+
+    // The keybind cheatsheet, rendered from keybindings.conf itself. Reached
+    // from the panel or by SUPER+slash, which goes through the same IPC.
+    Cheatsheet { id: keybindSheet }
 
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.

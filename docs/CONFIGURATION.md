@@ -63,6 +63,8 @@ exactly one selected backend is required.
 The complete source is `config/hypr/keybindings.conf`; the user-facing table is in
 the README under “Keybind cheatsheet.” Important management bindings are:
 
+- `SUPER+slash`: the on-screen cheatsheet, rendered from `keybindings.conf`
+  itself — a bind you add shows up there without editing anything else
 - `SUPER+N`: notification center or Mako fallback action
 - `SUPER+SHIFT+W`: wallpaper picker
 - `SUPER+L`: lock; `SUPER+SHIFT+L`: suspend through the hardware wrapper

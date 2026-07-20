@@ -89,6 +89,14 @@ That completes the original roadmap.
   design mockup's Power screen (reuses wlogout's installed icons so the two
   match pixel-for-pixel). Bundles its own Geist fonts since the greeter runs
   as the `sddm` system user, which can't see `~/.local/share/fonts`.
+- **Greeter backdrop** — `hypr/scripts/sddm-backdrop.sh render` bakes a blurred,
+  dimmed copy of the current wallpaper into the theme, so the greeter reads as
+  the same surface as the lock screen instead of flat black. It's a *copy* for
+  the same reason the fonts are bundled: `$HOME` is `0700`, so the `sddm` user
+  cannot read `~/Pictures/Wallpapers` at any path. Re-run it after changing
+  wallpaper; `clear` reverts to flat dark, `status` shows what's installed.
+  With no backdrop rendered the greeter falls back to the flat background, so
+  skipping this never breaks the login screen.
 - Uses SDDM's own Wayland (Weston-backed) greeter by default — Fedora's real
   compiled-in default, not the "experimental" X11 fallback older docs
   describe — with an X11-greeter opt-out for the NVIDIA hybrid-GPU case (see
@@ -304,13 +312,17 @@ Stage 4 (extra, after `scripts/05-install-fedora-sddm.sh`):
 
 ## Keybind cheatsheet (end-4 style)
 
-Ported from end-4/dots-hyprland, minus its overview, sidebars, and on-screen
-cheatsheet — those are not built here. `SUPER+Tab` maps to rofi's window switcher
-instead of an overview widget. (This note predates the migration: Hyprveil now uses
-Quickshell too, but has not adopted those particular surfaces.)
+Ported from end-4/dots-hyprland, minus its overview and sidebars — those are not
+built here. `SUPER+Tab` maps to rofi's window switcher instead of an overview
+widget.
+
+The table below is a summary. `SUPER+/` opens the **on-screen cheatsheet**, which
+is generated from `config/hypr/keybindings.conf` itself and so lists every bind,
+including any you add — see [Cheatsheet](docs/QUICK-SETTINGS.md#keybind-cheatsheet).
 
 | Bind | Action |
 |---|---|
+| `SUPER+slash` | keybind cheatsheet (every bind, read from the config) |
 | tap `SUPER` / `SUPER+Space` | launcher (rofi) |
 | `SUPER+Tab` | window switcher |
 | `SUPER+Return` / `T` | terminal |

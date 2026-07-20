@@ -19,4 +19,15 @@ QtObject {
     readonly property color success: "#4CAE80"
     readonly property color inputBg: "#0FFFFFFF"       // rgba(255,255,255,0.06)
     readonly property color inputBorder: "#1FFFFFFF"   // rgba(255,255,255,0.12)
+    readonly property color inputFocus: "#3DFFFFFF"    // rgba(255,255,255,0.24) focused pill border
+
+    // Popup/menu fill. Opaque rather than a translucent wash of `bg`, because
+    // it floats over the backdrop image and has to stay readable on a bright
+    // wallpaper — the one surface here that cannot be glass.
+    readonly property color surface: "#15171b"
+
+    // Scrim over the backdrop image. hyprlock bakes its dimming into the
+    // blur (brightness 0.45); the greeter renders a real image, so the
+    // equivalent dim is a wash on top. Kept in step with sddm-backdrop.sh.
+    readonly property color scrim: "#A60d0e11"         // rgba(13,14,17,0.65)
 }

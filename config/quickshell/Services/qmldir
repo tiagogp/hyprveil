@@ -4,5 +4,6 @@
 singleton Pins 1.0 Pins.qml
 singleton Icons 1.0 Icons.qml
 singleton Compositor 1.0 Compositor.qml
+singleton Keybinds 1.0 Keybinds.qml
 
 BluetoothWatch 1.0 BluetoothWatch.qml

@@ -32,6 +32,10 @@ Scope {
     property var notifications: null
     // The Wallpapers scope, passed down from shell.qml.
     property var wallpapers: null
+    // The Cheatsheet scope, likewise. SUPER+slash opens it directly; this row
+    // is the discoverable route for anyone who does not know that yet, which is
+    // exactly the audience a cheatsheet has.
+    property var cheatsheet: null
 
     PanelWindow {
         visible: root.open
@@ -116,32 +120,23 @@ Scope {
                 }
 
                 // Opens the shell's own picker.
-                Rectangle {
+                LinkRow {
                     Layout.fillWidth: true
                     visible: !root.notificationsOnly
-                    implicitHeight: Tokens.spacing8
-                    radius: Tokens.radiusSm
-                    color: wpMouse.containsMouse
-                        ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.06)
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        anchors.centerIn: parent
-                        text: "Wallpapers…"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textXs
-                        color: wpMouse.containsMouse ? Accent.accent : Tokens.muted
+                    text: "Wallpapers…"
+                    onClicked: {
+                        root.open = false;
+                        wallpapers.open = true;
                     }
+                }
 
-                    MouseArea {
-                        id: wpMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.open = false;
-                            wallpapers.open = true;
-                        }
+                LinkRow {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                    text: "Keyboard shortcuts…"
+                    onClicked: {
+                        root.open = false;
+                        cheatsheet.open = true;
                     }
                 }
             }

@@ -18,6 +18,8 @@ otherwise live in separate places or external apps:
   history you read here holds the same objects that appeared as toasts.
 - **Wallpapers** — a "Wallpapers…" row opens the picker. See
   [WALLPAPERS-MOTION.md](WALLPAPERS-MOTION.md#wallpaper-picker).
+- **Keyboard shortcuts** — a "Keyboard shortcuts…" row opens the cheatsheet.
+  See [Keybind cheatsheet](#keybind-cheatsheet) below.
 
 ## Opening the panel
 
@@ -54,6 +56,10 @@ plain `quickshell` with no `-c`):
 | `Panel/Section.qml` / `Toggle.qml` / `Segmented.qml` | Shared section chrome, the switch, and the segmented control. |
 | `Panel/Wallpapers.qml` | Modal thumbnail grid; renders `wallpaper.sh list`, stages a choice, and calls `wallpaper.sh apply` on **Apply**. |
 | `Panel/Button.qml` | Push button for panel footers; `primary: true` is the confirming action. |
+| `Panel/LinkRow.qml` | Full-width panel row that hands off to another surface (Wallpapers, Keyboard shortcuts). |
+| `Panel/Cheatsheet.qml` | Modal keybind cheatsheet; renders `Services/Keybinds` in two balanced columns with a search field. |
+| `Panel/BindRow.qml` | One cheatsheet row: the action, and the key caps for it. |
+| `Services/Keybinds.qml` | Parses `hypr/keybindings.conf` into sections, groups, and binds. The only thing that knows the bind syntax. |
 | `Lock/Lock.qml` | The session lock — see [RECOVERY.md](RECOVERY.md). |
 | `Bar/` / `Dock/` | Bar modules and the dock — see [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md). |
 | `Dock/PinPicker.qml` | Modal pin picker; renders `dock-manager.sh entries`, stages a list, and calls `dock-manager.sh set` on **Apply**. |
@@ -65,8 +71,8 @@ plain `quickshell` with no `-c`):
 | `Accent.qml` | **Generated** from the wallpaper accent — see [ACCENT.md](ACCENT.md). |
 | `qmldir`, `Services/qmldir` | Component registration. Read the note below before adding a file. |
 
-Blur is also applied to `hyprveil-wallpapers` and `hyprveil-dock-pins`; every
-shell surface needs its own `layerrule`.
+Blur is also applied to `hyprveil-wallpapers`, `hyprveil-dock-pins`, and
+`hyprveil-cheatsheet`; every shell surface needs its own `layerrule`.
 
 ### qmldir is not optional
 
@@ -85,6 +91,36 @@ on the `hyprveil-quicksettings`, `hyprveil-bar`, `hyprveil-dock`, and
 the compositor's, not the toolkit's: a surface with no blur rule renders flat no
 matter what the QML asks for.
 
+## Keybind cheatsheet
+
+`SUPER+/`, or the "Keyboard shortcuts…" row in the panel, opens a modal listing
+every bind. `Services/Keybinds.qml` parses `~/.config/hypr/keybindings.conf` and
+the modal renders whatever it finds, so **the config is the only source of
+truth** — a bind you add appears without touching the shell, and the cheatsheet
+cannot drift from the scheme the way the README's hand-written table can.
+
+The file's existing comment conventions carry the structure:
+
+- `##! Window` opens a section, becoming a card. Anything after the first `(`,
+  `—`, or `:` is treated as a note to whoever edits the file, not a heading.
+- A plain `#` comment becomes the heading for the binds beneath it, up to the
+  next blank line.
+
+Two things are rewritten rather than shown raw. `$mod SHIFT, S` becomes the caps
+`Super` `Shift` `S`, and runs of per-digit binds collapse to one `1 – 0` row —
+the workspace section is otherwise thirty rows saying three things. The count in
+the header is deliberately the number of **binds in the file**, not rows on
+screen, so collapsing does not make the scheme look a third smaller than it is.
+
+Actions are shown as the command that actually runs (`$terminal` resolved to
+`kitty`, script directories stripped) rather than a hand-written label, for the
+same reason: a label is a second source of truth that goes stale the first time
+the command changes.
+
+`tests/manual/cheatsheet/probe.qml` opens the modal standalone, so checking a
+change to it does not mean restarting the shell and discarding the session's
+notification history.
+
 ## Talking to the shell
 
 Quickshell exposes typed IPC. `qs ipc show` lists every target:
@@ -96,6 +132,7 @@ qs ipc call notifications count      # tracked notification count
 qs ipc call notifications clear      # dismiss everything
 qs ipc call wallpapers toggle        # open/close the wallpaper grid
 qs ipc call dockpins toggle          # open/close the dock pin picker
+qs ipc call cheatsheet toggle        # open/close the keybind cheatsheet
 qs ipc call lock isLocked            # lock state
 ```
 
