@@ -7,7 +7,7 @@ release complete from mocked checks alone.
 
 - [ ] `./tests/run.sh --require-shellcheck` passes from a clean checkout.
 - [ ] CI passes ShellCheck, Bash syntax, JSON/JSONC parsing, executable checks,
-      offline Markdown checks, generated-file checks, and all P0-P8 non-session
+      offline Markdown checks, generated-file checks, and all P0-P10 non-session
       smoke tests.
 - [ ] `./scripts/03-test-config.sh` passes static validation on supported Fedora.
 - [ ] A nested session launches from each selected notification backend without

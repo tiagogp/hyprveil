@@ -13,24 +13,30 @@ hyprctl configerrors
 ## Roll back an upgrade
 
 Every managed replacement creates a timestamped directory below
-`${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/backups`. Find the newest one:
+`${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/backups`. The supported way to
+restore one is `hyprveil rollback`, which lists snapshots and restores the one you
+pick — backing up the current configuration first, so a rollback is itself
+reversible:
+
+```bash
+./hyprveil rollback --list          # newest first, with the payload each holds
+./hyprveil rollback                 # choose interactively
+./hyprveil rollback --backup 20260720-120000 --yes
+```
+
+Rollback restores the managed **config** trees only. Persistent pins, wallpaper
+mappings, motion choice, and notification selection live in state outside the
+config backup and are deliberately left untouched. If a state migration is the
+problem, move that one state file aside first; its helper will preserve/rebuild it.
+
+If you need to restore by hand — for example from a TTY when the CLI is
+unavailable — find the newest snapshot and copy the affected component into place:
 
 ```bash
 ls -1dt "${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil/backups"/*
-```
-
-From a TTY or another desktop session, move the current component aside and copy
-the matching backup into place. For example:
-
-```bash
 mv "$HOME/.config/hypr" "$HOME/.config/hypr.failed"
 cp -a /path/to/backup/config/hypr "$HOME/.config/hypr"
 ```
-
-Restore only the affected component where possible. Persistent pins, wallpaper
-mappings, motion choice, and notification selection are outside the managed config
-backup and normally should not be rolled back. If a state migration is the problem,
-move that one state file aside first; its helper will preserve/rebuild it.
 
 ## Broken Hyprland configuration
 

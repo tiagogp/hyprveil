@@ -87,7 +87,7 @@ is the practical adoption, release, and product-polish backlog.
 ### Acceptance
 
 - [x] CI catches shell syntax, ShellCheck, JSON/JSONC, executable-bit, generated-file,
-      and P0-P8 smoke-test regressions.
+      and P0-P10 smoke-test regressions.
 - [x] The commands run in CI are the same commands documented for contributors.
 
 ## 5. Complete hardware validation and publish the first release
@@ -110,28 +110,28 @@ is the practical adoption, release, and product-polish backlog.
 
 ## 6. Build a first-run setup experience
 
-- [ ] Create a first-run command or Quickshell flow that can be safely reopened later.
-- [ ] Detect connected monitors and offer preferred-resolution defaults.
-- [ ] Support monitor position, scale, refresh rate, transform, and primary-display
+- [x] Create a first-run command or Quickshell flow that can be safely reopened later.
+- [x] Detect connected monitors and offer preferred-resolution defaults.
+- [x] Support monitor position, scale, refresh rate, transform, and primary-display
       selection.
-- [ ] Offer keyboard layout and locale selection without assuming US defaults.
-- [ ] Confirm or change the detected desktop/laptop and GPU profile.
-- [ ] Let the user choose terminal, browser, file manager, and editor shortcuts from
+- [x] Offer keyboard layout and locale selection without assuming US defaults.
+- [x] Confirm or change the detected desktop/laptop and GPU profile.
+- [x] Let the user choose terminal, browser, file manager, and editor shortcuts from
       installed desktop entries.
-- [ ] Let the user choose Quickshell, SwayNC, or Mako notification behavior where the
+- [x] Let the user choose Quickshell, SwayNC, or Mako notification behavior where the
       fallback choice is useful.
-- [ ] Offer wallpaper, accent mode, motion profile, idle timers, and optional SDDM
+- [x] Offer wallpaper, accent mode, motion profile, idle timers, and optional SDDM
       setup.
-- [ ] Preview the generated configuration before deployment.
-- [ ] Save completion state under `$XDG_STATE_HOME/hyprveil` without preventing the
+- [x] Preview the generated configuration before deployment.
+- [x] Save completion state under `$XDG_STATE_HOME/hyprveil` without preventing the
       setup flow from being run again.
 
 ### Acceptance
 
-- [ ] A fresh install reaches a usable desktop without requiring manual edits to
+- [x] A fresh install reaches a usable desktop without requiring manual edits to
       `monitors.conf` for common single-monitor hardware.
-- [ ] Cancelling setup leaves existing configuration and persistent state intact.
-- [ ] Every first-run choice has a documented command-line alternative.
+- [x] Cancelling setup leaves existing configuration and persistent state intact.
+- [x] Every first-run choice has a documented command-line alternative.
 
 ## 7. Add maintenance commands
 
@@ -143,16 +143,16 @@ is the practical adoption, release, and product-polish backlog.
         profile state.
   - [x] Detect stale managed trees and malformed state without modifying them.
   - [x] Print actionable recovery commands and redact private data from reports.
-- [ ] Add a documented update command that previews changes, backs up managed trees,
+- [x] Add a documented update command that previews changes, backs up managed trees,
       preserves state, deploys atomically, and validates before reload.
-- [ ] Add a rollback command that lists backups and restores a selected snapshot
+- [x] Add a rollback command that lists backups and restores a selected snapshot
       without manual path construction.
-- [ ] Add an uninstall command.
-  - [ ] Remove only Hyprveil-owned user configuration after confirmation.
-  - [ ] Preserve or optionally export user state and backups.
-  - [ ] Restore the previous SDDM configuration when Hyprveil installed it.
-  - [ ] Do not remove shared packages or repositories unless explicitly requested.
-- [ ] Add mocked tests for update, rollback, cancellation, and uninstall paths.
+- [x] Add an uninstall command.
+  - [x] Remove only Hyprveil-owned user configuration after confirmation.
+  - [x] Preserve or optionally export user state and backups.
+  - [x] Restore the previous SDDM configuration when Hyprveil installed it.
+  - [x] Do not remove shared packages or repositories unless explicitly requested.
+- [x] Add mocked tests for update, rollback, cancellation, and uninstall paths.
 
 ## 8. Add desktop interaction polish
 

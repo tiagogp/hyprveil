@@ -11,11 +11,24 @@ WARN=0
 
 usage() {
     cat <<'EOF'
-Usage: ./hyprveil doctor
+Usage: ./hyprveil <command> [options]
 
 Commands:
-  doctor    Read-only health report for Fedora support, dependencies, config,
-            shell wiring, and Hyprveil state.
+  setup             First-run setup: detect monitors, pick keyboard, apps,
+                    idle timers, wallpaper, accent, motion, and notification
+                    backend, preview the result, then deploy. Safe to re-run.
+                    Options: --preview, --ensure, --yes, and a flag for every
+                    choice (see ./scripts/10-first-run-setup.sh --help).
+  doctor            Read-only health report for Fedora support, dependencies,
+                    config, shell wiring, and Hyprveil state.
+  update            Preview repository changes, back up and atomically deploy
+                    the managed config trees, then validate before reloading.
+                    Options: --preview (show changes and exit), --yes.
+  rollback          List timestamped backups and restore a selected snapshot.
+                    Options: --list, --backup <name>, --yes.
+  uninstall         Back up and remove Hyprveil-owned user config after
+                    confirmation. State and backups are preserved by default.
+                    Options: --export-state <dir>, --purge-state, --sddm, --yes.
 EOF
 }
 
@@ -62,7 +75,7 @@ json_valid() {
 }
 
 check_fedora() {
-    local supported release found=0 repos repo official=0 third_party=0
+    local supported release found=0 repos repo official_count=0 third_party_count=0
     section "Fedora And Repositories"
     if hv_load_fedora; then
         supported=$(hv_supported_releases)
@@ -90,13 +103,13 @@ check_fedora() {
     while IFS= read -r repo; do
         [ -n "$repo" ] || continue
         if hv_is_official_repo "$repo"; then
-            official=$((official + 1))
+            official_count=$((official_count + 1))
         else
-            third_party=$((third_party + 1))
+            third_party_count=$((third_party_count + 1))
         fi
     done <<<"$repos"
-    status_ok "enabled repositories: $official official, $third_party third-party"
-    if [ "$third_party" -gt 0 ]; then
+    status_ok "enabled repositories: $official_count official, $third_party_count third-party"
+    if [ "$third_party_count" -gt 0 ]; then
         printf '       Third-party repositories are enabled; package installs still prefer official Fedora sources first.\n'
     fi
 }
@@ -246,16 +259,19 @@ check_state() {
     fi
 
     pins_file="$HV_STATE_HOME/dock-pins.json"
+    # shellcheck disable=SC2088  # recovery hints display ~ literally to the user
     check_state_file "dock pins" "$pins_file" \
         'type == "array" and length <= 10 and all(.[]; type == "object" and (.desktop_id | type == "string") and (.app_id | type == "string"))' \
         '~/.config/hypr/scripts/dock-manager.sh list'
 
     wallpaper_file="$HV_STATE_HOME/wallpapers.json"
+    # shellcheck disable=SC2088  # recovery hints display ~ literally to the user
     check_state_file "wallpaper" "$wallpaper_file" \
         'type == "object" and .version == 1 and (.fallback | type == "object") and (.fallback.path | type == "string") and (.fallback.fit == "cover" or .fallback.fit == "contain") and (.monitors | type == "object") and all(.monitors[]; type == "object" and (.path | type == "string") and (.fit == "cover" or .fit == "contain"))' \
         '~/.config/hypr/scripts/wallpaper.sh restore'
 
     accent_file="$HV_STATE_HOME/accent.json"
+    # shellcheck disable=SC2088  # recovery hints display ~ literally to the user
     check_state_file "accent" "$accent_file" \
         'type == "object" and .version == 1 and (.accent | type == "string") and (.accent | test("^#[0-9a-fA-F]{6}$")) and (.source | type == "string") and (.auto | type == "boolean") and ((has("chromeAlpha") | not) or (.chromeAlpha | test("^[01](\\.[0-9]+)?$"))) and ((has("chromeBand") | not) or (.chromeBand | test("^[0-9a-f]{6}$")))' \
         '~/.config/hypr/scripts/accent.sh render'
@@ -310,8 +326,233 @@ doctor() {
     printf 'Doctor found no failures or warnings.\n'
 }
 
+update() {
+    local preview_only=0
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --preview) preview_only=1 ;;
+            --yes|-y) export HYPRVEIL_ASSUME_YES=1 ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        shift
+    done
+
+    if [ ! -d "$HV_CONFIG_HOME/hypr" ]; then
+        printf 'No deployed Hyprveil configuration found at %s.\n' "$(redact "$HV_CONFIG_HOME")" >&2
+        printf 'Run ./install.sh for the first deployment.\n' >&2
+        return 1
+    fi
+
+    if ! hv_preview_config_changes; then
+        printf '\nDeployed configuration already matches the repository; nothing to update.\n'
+        return 0
+    fi
+    if [ "$preview_only" -eq 1 ]; then
+        printf '\nPreview only; no changes were made. Run without --preview to apply.\n'
+        return 0
+    fi
+
+    printf '\n'
+    if ! hv_confirm "Back up and deploy these changes now?"; then
+        printf 'Update cancelled; no changes were made.\n'
+        return 0
+    fi
+
+    if ! hv_deploy_configs; then
+        hv_bad "deployment failed; see the errors above. Existing configuration was not partially replaced."
+        return 1
+    fi
+    [ -f "$HV_STATE_HOME/hardware-profile.conf" ] && \
+        "$REPO/scripts/06-select-profile.sh" --ensure >/dev/null 2>&1 || true
+    [ -f "$HV_NOTIFICATION_STATE" ] && \
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure >/dev/null 2>&1 || true
+    # Regenerate the setup-owned files (local.conf, apps.conf, hypridle.conf)
+    # that a fresh deploy just reset to their repository defaults.
+    "$REPO/scripts/10-first-run-setup.sh" --ensure >/dev/null 2>&1 || true
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure >/dev/null 2>&1 || true
+    fi
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/accent.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/accent.sh" render >/dev/null 2>&1 || true
+    fi
+
+    printf '\nValidating deployed configuration before reload...\n'
+    if ! cmp -s "$REPO/config/hypr/hyprland.conf" "$HV_CONFIG_HOME/hypr/hyprland.conf"; then
+        hv_bad "deployed hyprland.conf does not match the managed template; not reloading."
+        printf '       Recovery: ./hyprveil rollback\n' >&2
+        return 1
+    fi
+    if have Hyprland && ! Hyprland --verify-config -c "$HV_CONFIG_HOME/hypr/hyprland.conf" >/dev/null 2>&1; then
+        hv_bad "Hyprland rejected the deployed config; not reloading."
+        printf '       Recovery: ./hyprveil rollback\n' >&2
+        return 1
+    fi
+    hv_ok "deployed configuration validated"
+    hv_reload_live_session
+    printf 'Update complete.\n'
+}
+
+rollback() {
+    local list_only=0 selected='' choice line name summary count=0
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --list) list_only=1 ;;
+            --backup) shift; selected=${1:-} ;;
+            --yes|-y) export HYPRVEIL_ASSUME_YES=1 ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        shift
+    done
+
+    local backups
+    backups=$(hv_list_backups)
+    if [ -z "$backups" ]; then
+        printf 'No backups found under %s.\n' "$(redact "$HV_STATE_HOME/backups")" >&2
+        return 1
+    fi
+
+    local -a names=() summaries=()
+    while IFS=$'\t' read -r name summary; do
+        [ -n "$name" ] || continue
+        names+=("$name")
+        summaries+=("$summary")
+    done <<<"$backups"
+
+    printf 'Available backups (newest first):\n'
+    for count in "${!names[@]}"; do
+        printf '  %2d) %s  [%s]\n' "$((count + 1))" "${names[$count]}" "${summaries[$count]}"
+    done
+    [ "$list_only" -eq 1 ] && return 0
+
+    if [ -n "$selected" ]; then
+        for count in "${!names[@]}"; do
+            [ "${names[$count]}" = "$selected" ] && line=$((count + 1))
+        done
+        if [ -z "${line:-}" ]; then
+            printf 'No backup named %s.\n' "$selected" >&2
+            return 1
+        fi
+        choice=$line
+    elif [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
+        choice=1
+        printf 'Selecting newest backup %s [automatic].\n' "${names[0]}"
+    else
+        read -r -p "Restore which backup? [1-${#names[@]}, blank to cancel] " choice
+        if [ -z "$choice" ]; then
+            printf 'Rollback cancelled; no changes were made.\n'
+            return 0
+        fi
+    fi
+
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#names[@]}" ]; then
+        printf 'Invalid selection: %s\n' "$choice" >&2
+        return 1
+    fi
+
+    selected=${names[$((choice - 1))]}
+    local snapshot="$HV_STATE_HOME/backups/$selected"
+    if ! hv_confirm "Restore config from backup $selected? Current config is backed up first."; then
+        printf 'Rollback cancelled; no changes were made.\n'
+        return 0
+    fi
+    if ! hv_restore_backup "$snapshot"; then
+        return 1
+    fi
+    hv_reload_live_session
+    printf 'Rollback complete.\n'
+}
+
+uninstall() {
+    local export_dir='' purge_state=0 do_sddm=0
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --export-state) shift; export_dir=${1:-} ;;
+            --purge-state) purge_state=1 ;;
+            --sddm) do_sddm=1 ;;
+            --yes|-y) export HYPRVEIL_ASSUME_YES=1 ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        shift
+    done
+
+    printf 'This removes Hyprveil-owned user configuration under %s.\n' "$(redact "$HV_CONFIG_HOME")"
+    printf 'Backups and persistent state under %s are preserved by default.\n' "$(redact "$HV_STATE_HOME")"
+    printf 'Installed packages and enabled repositories are never removed.\n'
+    if ! hv_confirm "Back up and remove Hyprveil-managed config now?"; then
+        printf 'Uninstall cancelled; no changes were made.\n'
+        return 0
+    fi
+
+    if [ -n "$export_dir" ]; then
+        mkdir -p "$export_dir"
+        if cp -a "$HV_STATE_HOME/." "$export_dir/" 2>/dev/null; then
+            printf 'Exported state and backups to %s\n' "$(redact "$export_dir")"
+        else
+            hv_warn "could not export state to $(redact "$export_dir")"
+        fi
+    fi
+
+    hv_remove_managed_config
+
+    if [ "$do_sddm" -eq 1 ]; then
+        uninstall_sddm
+    elif [ -e /etc/sddm.conf.d/hyprveil.conf ] || [ -e /usr/share/sddm/themes/hyprveil ]; then
+        printf 'A system SDDM theme or selection installed by Hyprveil is still present.\n'
+        printf 'Re-run with --sddm to restore the previous SDDM configuration (requires sudo).\n'
+    fi
+
+    if [ "$purge_state" -eq 1 ]; then
+        if hv_confirm "Permanently delete all Hyprveil state and backups under $(redact "$HV_STATE_HOME")?"; then
+            rm -rf "$HV_STATE_HOME"
+            printf 'Removed Hyprveil state and backups.\n'
+        else
+            printf 'Kept Hyprveil state and backups.\n'
+        fi
+    else
+        printf 'Preserved Hyprveil state and backups under %s.\n' "$(redact "$HV_STATE_HOME")"
+    fi
+    printf 'Uninstall complete. The Hyprveil repository checkout was not removed.\n'
+}
+
+# Restore the display manager's SDDM configuration to its pre-Hyprveil state.
+# The most recent backup that captured the prior theme selection or theme tree
+# is restored; otherwise the Hyprveil-added files are removed. The active
+# display manager is never switched here — that stays a deliberate manual step.
+uninstall_sddm() {
+    local snapshot='' name summary
+    while IFS=$'\t' read -r name summary; do
+        case "$summary" in
+            *system-config*|*system-themes*) snapshot="$HV_STATE_HOME/backups/$name"; break ;;
+        esac
+    done < <(hv_list_backups)
+
+    if [ -n "$snapshot" ] && [ -e "$snapshot/system-config/hyprveil.conf" ]; then
+        printf 'Restoring previous SDDM selection from %s (sudo)\n' "$snapshot"
+        hv_root cp -a "$snapshot/system-config/hyprveil.conf" /etc/sddm.conf.d/hyprveil.conf
+    elif [ -e /etc/sddm.conf.d/hyprveil.conf ]; then
+        printf 'Removing Hyprveil SDDM selection /etc/sddm.conf.d/hyprveil.conf (sudo)\n'
+        hv_root rm -f /etc/sddm.conf.d/hyprveil.conf
+    fi
+
+    if [ -n "$snapshot" ] && [ -e "$snapshot/system-themes/hyprveil" ]; then
+        printf 'Restoring previous SDDM theme from %s (sudo)\n' "$snapshot"
+        hv_root rm -rf /usr/share/sddm/themes/hyprveil
+        hv_root cp -a "$snapshot/system-themes/hyprveil" /usr/share/sddm/themes/hyprveil
+    elif [ -e /usr/share/sddm/themes/hyprveil ]; then
+        printf 'Removing Hyprveil SDDM theme /usr/share/sddm/themes/hyprveil (sudo)\n'
+        hv_root rm -rf /usr/share/sddm/themes/hyprveil
+    fi
+    printf 'SDDM configuration restored. The active display manager was not changed;\n'
+    printf 'if Hyprveil enabled sddm, re-enable your previous manager manually, e.g.:\n'
+    printf '  sudo systemctl disable sddm.service && sudo systemctl enable gdm.service\n'
+}
+
 case "${1:-}" in
+    setup) shift; exec "$REPO/scripts/10-first-run-setup.sh" "$@" ;;
     doctor) shift; [ "$#" -eq 0 ] || { usage >&2; exit 2; }; doctor ;;
+    update) shift; update "$@" ;;
+    rollback) shift; rollback "$@" ;;
+    uninstall) shift; uninstall "$@" ;;
     -h|--help|'') usage ;;
     *) usage >&2; exit 2 ;;
 esac
