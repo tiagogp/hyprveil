@@ -14,6 +14,7 @@ import "Bar"
 import "Dock"
 import "Notif"
 import "Panel"
+import "Lock"
 
 ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
@@ -37,4 +38,8 @@ ShellRoot {
     // The panel reads the popup scope's server rather than owning one, so the
     // history it lists and the toasts that appeared are the same objects.
     QuickSettings { notifications: notifs }
+
+    // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
+    // failure here is a lockout, so the script never trusts this unconditionally.
+    Lock {}
 }

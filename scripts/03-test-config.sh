@@ -50,6 +50,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
          hypr/scripts/lib/render-lib.sh \
          hypr/tokens.conf hypr/scripts/accent.sh hypr/scripts/theme.sh \
+         hypr/scripts/lock.sh \
          hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
          hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
          hypr/profiles/form-factor/desktop.conf \
@@ -109,10 +110,14 @@ while IFS= read -r script; do
 done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print | sort)
 
 # --- commands the configs call ---
-NEEDED="hyprctl kitty waybar rofi hyprlock hypridle hyprpaper wlogout jq flock gio socat"
+# hyprlock stays required even under Quickshell: it is the lock fallback that
+# hypr/scripts/lock.sh drops to whenever the shell cannot be confirmed.
+NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio"
 OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in
+    quickshell) NEEDED="$NEEDED quickshell qs" ;;
+    ags) NEEDED="$NEEDED ags sass" ;;
     swaync) NEEDED="$NEEDED swaync swaync-client" ;;
     mako)
         NEEDED="$NEEDED mako makoctl"
@@ -153,7 +158,7 @@ else
     warn "bundled fallback is installed during deployment; repo validation uses the design asset"
 fi
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
-    if grep -Eq '^(swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
+    if grep -Eq '^(quickshell|ags|swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
         ok "notification backend state is valid"
     else
         bad "invalid notification backend state (run scripts/07-select-notification-backend.sh)"
