@@ -112,7 +112,7 @@ done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print 
 # --- commands the configs call ---
 # hyprlock stays required even under Quickshell: it is the lock fallback that
 # hypr/scripts/lock.sh drops to whenever the shell cannot be confirmed.
-NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio"
+NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio gtk-launch"
 OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in

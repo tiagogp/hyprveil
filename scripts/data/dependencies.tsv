@@ -18,6 +18,7 @@ required|wlogout|wlogout|power menu
 required|jq|jq|JSON state helpers
 required|util-linux|flock|atomic dock and wallpaper state
 required|glib2|gio|desktop-entry dock launching
+required|gtk3|gtk-launch|dock fallback when DesktopEntries cannot resolve a pin
 optional|socat|socat|legacy dock-watch.sh helper; the shell reads Hyprland's socket in-process
 optional|bluez|bluetoothctl|Bluetooth status
 optional|blueman|blueman-manager|Bluetooth management

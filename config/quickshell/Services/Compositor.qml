@@ -57,6 +57,26 @@ Singleton {
             t => (t.lastIpcObject?.class ?? "").toLowerCase() === id) ?? null;
     }
 
+    // Dispatch a window verb at a toplevel.
+    //
+    // Quickshell reports HyprlandToplevel.address WITHOUT the 0x prefix
+    // ("5591416d69d0"), but Hyprland's dispatchers only match "address:0x...";
+    // handed the bare form they answer "No such window found" and do nothing.
+    // Nothing surfaces that — dispatch has no error path here — so the failure
+    // looked like a dead tile: clicking a running app, on this workspace or
+    // another, simply had no effect. The old Waybar dock never hit this because
+    // it read addresses straight out of `hyprctl clients -j`, which includes
+    // the prefix.
+    //
+    // Conditional rather than unconditional concatenation so this stays correct
+    // if a later Quickshell starts including the prefix itself.
+    function dispatchTo(verb: string, toplevel: var) {
+        const addr = toplevel?.address ?? "";
+        if (addr === "") return;
+        Hyprland.dispatch(
+            verb + " address:" + (addr.startsWith("0x") ? addr : "0x" + addr));
+    }
+
     // The collections are a snapshot: refreshing once at startup populates them,
     // but a window opened afterwards is never added. Events carry the change, so
     // the snapshot is re-taken whenever the window set can have moved.
