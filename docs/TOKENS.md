@@ -180,16 +180,64 @@ any light wallpaper.
 
 If you raise the glassiness, re-check this number first.
 
+#### Chrome sits below the tiers
+
+The bar and the dock take `$chrome-alpha` (**0.76**) instead of their tier alpha,
+via `Surface.alphaOverride`. They are the one exception, and the reason is that
+the budget above prices *body* text: 4.5:1 is the WCAG AA floor for a paragraph.
+Chrome has no paragraph. The bar's widest string is the elided window title and
+the dock is icons only, so the applicable floor is the **3.0:1** AA minimum for
+UI text and large text.
+
+| Alpha | muted `#9a9ca5` | text `#f5f5f7` |
+|---|---|---|
+| 0.88 (tier 0) | 4.69:1 | 11.80:1 |
+| 0.76 (chrome) | 3.05:1 | 7.66:1 |
+| 0.62 | 2.00:1 | 4.53:1 |
+
+0.76 is the floor, not a taste pick — muted crosses 3.0:1 just below it. Going
+further means recoloring the bar's title from `muted` to `text`.
+
+The override is alpha **only**; border and shadow still come from the tier, so a
+surface still cannot end up with a tier-1 border and a tier-3 shadow. Anything
+that renders a paragraph — quick settings, notification bodies, the wallpaper
+grid — stays on its tier.
+
 ### Motion
 
 Hyprland's animation unit is **deciseconds**, so durations that cross into
-`motion/*.conf` are multiples of 100 and mirrored as `$ds-*`. `$dur-2` (150ms) is
-CSS/QML-only for that reason.
+`motion/*.conf` are multiples of 100 and mirrored as `$ds-*`. The decisecond is a
+hard floor on compositor timing — 350ms simply cannot be expressed there.
+`$dur-2` (150ms) and `$dur-2h` (200ms) are CSS/QML-only for that reason;
+`$dur-2h` exists because 150 → 300 is exactly the gap panel and tile motion wants.
 
 The easing curves are stored as bare control points because Hyprland's `bezier =`
 line wants them that way; CSS gets them wrapped in `cubic-bezier()` and QML as a
 list for `easing.bezierCurve`, both derived by the renderer. Before this, the GTK
 stylesheets used a plain `ease` and visibly disagreed with the compositor.
+
+Durations are not applied uniformly. `motion/standard.conf` drives the **child**
+animation nodes rather than only the parents, because setting just `windows`
+gives an open, a close, and a tiling reflow the same duration — and a reflow that
+lags the pointer reads as the compositor struggling, not as polish. The rule:
+entrances may be expressive (`windowsIn`, `$ds-4`), exits get out of the way
+(`windowsOut`, `$ds-2`), and anything tracking the user's hand is near-immediate
+(`windowsMove`, `$ds-2`).
+
+### Blur
+
+Hyprland has **one global blur block** and no per-layer size or passes — the only
+per-layer controls are the boolean-ish layerrules (`blur`, `ignorealpha`, `xray`).
+So blur is the one part of the visual system the elevation ramp **cannot** reach:
+alpha, border, and shadow tier, blur does not.
+
+Within that single setting, size carries the quality and passes carry the cost.
+Each pass is a full downsample/upsample round, so 2 → 3 is roughly a 1.5× GPU
+bill, while widening the kernel at the same pass count is close to free. Hence
+`$blur-size = 8` at `$blur-passes = 2`.
+
+`$blur-noise` is load-bearing rather than decorative: a wide kernel over a smooth
+wallpaper gradient bands visibly, and a touch of grain is what hides it.
 
 ---
 

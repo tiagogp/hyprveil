@@ -100,8 +100,12 @@ Singleton {
     readonly property int  elev3ShadowBlur:  24
     readonly property real elev3ShadowAlpha: 0.55
 
-    readonly property int blurSize:   6
+    readonly property int blurSize:   8
     readonly property int blurPasses: 2
+
+    // The bar and dock only. Glassier than tier 0 because they carry no body
+    // text — the floor there is 3.0:1 for UI text, not 4.5:1. See tokens.conf.
+    readonly property real chromeAlpha: 0.76
 
     // ---------------------------------------------------------------------
     // Motion — milliseconds. Hyprland's deciseconds do not cross into QML.
@@ -110,10 +114,14 @@ Singleton {
     // `easing.bezierCurve` takes; the CSS consumers get the same four numbers
     // wrapped in cubic-bezier() by the same renderer.
     // ---------------------------------------------------------------------
-    readonly property int dur1: 100
-    readonly property int dur2: 150
-    readonly property int dur3: 300
-    readonly property int dur4: 400
+    // dur2h has no decisecond equivalent and so is QML/CSS only, like dur2. It
+    // exists because the 150 -> 300 gap is exactly where panel and tile motion
+    // wants to sit: 150 is too abrupt to read as travel, 300 too slow to repeat.
+    readonly property int dur1:  100
+    readonly property int dur2:  150
+    readonly property int dur2h: 200
+    readonly property int dur3:  300
+    readonly property int dur4:  400
 
     readonly property var easeOut:      [0.16, 1, 0.3, 1]
     readonly property var easeStandard: [0.25, 0.1, 0.25, 1]

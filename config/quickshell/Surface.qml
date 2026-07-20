@@ -18,7 +18,15 @@ Rectangle {
     // surface above it.
     property color tint: Tokens.surface
 
-    readonly property real _alpha: [
+    // Escape hatch for surfaces whose legibility floor is not the tier's. The
+    // only current user is chrome (bar, dock), which carries no body text and
+    // so can sit glassier than tier 0 — see the contrast budget in
+    // docs/TOKENS.md. Deliberately alpha only: the border and shadow still come
+    // from the tier, because the point of elevation is that a surface cannot
+    // end up with a tier-1 border and a tier-3 shadow. Negative = use the tier.
+    property real alphaOverride: -1
+
+    readonly property real _alpha: alphaOverride >= 0 ? alphaOverride : [
         Tokens.elev0Alpha, Tokens.elev1Alpha, Tokens.elev2Alpha, Tokens.elev3Alpha
     ][elevation]
     readonly property real _border: [
