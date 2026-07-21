@@ -323,7 +323,7 @@ grep -q 'HYPRVEIL_STATE_HOME' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion service ignores the HYPRVEIL_STATE_HOME test override"
 # Every animated surface added for the desktop-polish work routes its durations
 # through the service; a raw Tokens.durN in a Behavior would ignore the profile.
-for surface in Osd/Osd Panel/AudioSection; do
+for surface in Osd/Osd Panel/AudioSlider; do
     grep -q 'Motion.duration(' "$REPO/config/quickshell/$surface.qml" \
         || fail "$surface animates without honoring the reduced-motion profile"
 done
