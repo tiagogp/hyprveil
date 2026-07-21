@@ -19,7 +19,7 @@ hv_install_group required "Hyprland compositor" "solopasha/hyprland" hyprland ||
 hv_install_group optional "Hyprland development headers" "solopasha/hyprland" hyprland-devel
 
 hv_install_group required "core desktop utilities" - \
-    kitty polkit-gnome xdg-desktop-portal-hyprland qt5-qtwayland qt6-qtwayland || STAGE_FAIL=1
+    kitty mate-polkit xdg-desktop-portal-hyprland qt5-qtwayland qt6-qtwayland || STAGE_FAIL=1
 
 echo
 echo "Stage 1 complete. Package choices were recorded in $HV_SOURCE_LOG"

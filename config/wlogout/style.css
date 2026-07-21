@@ -1,5 +1,5 @@
 /* Power menu from the design mockup: dimmed backdrop, compact circular glass
-   icon buttons with a label below each, Shutdown in accent. Palette mirrors
+   icon buttons with a label below each, accent on hover. Palette mirrors
    hypr/colors.conf; keep in sync manually.
 
    Each button's ring + icon glyph are baked into ONE svg per button per state
@@ -20,7 +20,10 @@
 
    wlogout lays buttons out in a grid; config/wlogout/power-menu.sh computes
    monitor-specific margins so the grid cells land at the mockup's 56px ring
-   size with 28px gaps. Keep visual styling here and geometry in the launcher. */
+   size with 28px gaps. Keep visual styling here and geometry in the launcher.
+
+   GENERATED from style.css.in by hypr/scripts/theme.sh — edit the template, not
+   this file. See docs/CONFIGURATION.md. */
 
 @import url("accent.css");
 
@@ -35,7 +38,37 @@ window {
   background-color: rgba(0, 0, 0, 0.50);
 }
 
+/* The top-to-bottom entrance. It used to come from Hyprland's global `layersIn`
+   slide, but that animates the whole layer surface — and here the surface IS
+   the 50% backdrop, so the dim slid down over the desktop along with the icons.
+   hypr/appearance.conf now disables compositor animation for this layer and
+   the directional motion is done per-button below, which is also the only way
+   to stagger it.
+
+   margin-top rather than a transform: this is GTK3, which has no CSS transform.
+   Animating the margin relayouts the grid each frame, which is affordable for
+   five buttons and a one-shot entrance. The window's own margins come from
+   power-menu.sh on the command line and are untouched by this. */
+@keyframes hyprveil-drop-in {
+  from {
+    opacity: 0;
+    /* Negative, so the button starts ABOVE its cell and travels down into it —
+       the same direction as the compositor slide this replaces, and as the
+       quickshell dialogs' Translate. A positive value here rises from below,
+       which reads as a different gesture entirely. */
+    margin-top: -20px;
+  }
+  to {
+    opacity: 1;
+    margin-top: 0;
+  }
+}
+
 button {
+  animation-name: hyprveil-drop-in;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: backwards;
   min-width: 56px;
   min-height: 56px;
   padding: 0;
@@ -51,12 +84,25 @@ button {
   outline-style: none;
 }
 
-#shutdown,
-button:focus,
+/* Accent is a *pointer* state only. wlogout gives the first button (lock)
+   keyboard focus the instant the menu opens, so styling :focus made the menu
+   come up with Lock already lit — indistinguishable from a hover the user
+   never made. Shutdown had the same problem baked in permanently. Both now
+   start neutral like every other button. */
 button:active,
 button:hover {
   color: @accent;
 }
+
+/* A small left-to-right stagger, so the row reads as one gesture arriving
+   rather than five things appearing at once. The step is deliberately well
+   under the animation's own duration — the last button has to start before the
+   first has finished, or the row reads as a queue instead of a sweep. */
+#lock { animation-delay: 0ms; }
+#logout { animation-delay: 40ms; }
+#suspend { animation-delay: 80ms; }
+#reboot { animation-delay: 120ms; }
+#shutdown { animation-delay: 160ms; }
 
 #lock {
   background-image: image(url("assets/lock-default.svg"));
@@ -71,20 +117,23 @@ button:hover {
   background-image: image(url("assets/reboot-default.svg"));
 }
 #shutdown {
-  background-image: image(url("assets/shutdown-accent.svg"));
+  background-image: image(url("assets/shutdown-default.svg"));
 }
 
-#lock:focus, #lock:active, #lock:hover {
+#lock:active, #lock:hover {
   background-image: image(url("assets/lock-accent.svg"));
 }
-#logout:focus, #logout:active, #logout:hover {
+#logout:active, #logout:hover {
   background-image: image(url("assets/logout-accent.svg"));
 }
-#suspend:focus, #suspend:active, #suspend:hover {
+#suspend:active, #suspend:hover {
   background-image: image(url("assets/suspend-accent.svg"));
 }
-#reboot:focus, #reboot:active, #reboot:hover {
+#reboot:active, #reboot:hover {
   background-image: image(url("assets/reboot-accent.svg"));
+}
+#shutdown:active, #shutdown:hover {
+  background-image: image(url("assets/shutdown-accent.svg"));
 }
 
 /* wlogout 1.2.2 ignores the layout file's height/width fields (verified by

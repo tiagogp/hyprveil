@@ -21,9 +21,12 @@ Row {
         ]
 
         delegate: Column {
+            id: cell
             spacing: 10
             visible: modelData.enabled
             width: visible ? implicitWidth : 0
+
+            property bool hovering: false
 
             Rectangle {
                 id: btn
@@ -31,9 +34,23 @@ Row {
                 width: 56
                 height: 56
                 radius: 28
-                color: modelData.danger ? colors.accentWashSoft : "transparent"
-                border.width: modelData.danger ? 1.5 : 1.5
-                border.color: modelData.danger ? colors.accent : colors.borderHair
+                activeFocusOnTab: true
+                // Hover lifts the neutral buttons to the accent too, so all
+                // three read as one row of controls rather than "two inert
+                // outlines and a live one".
+                color: modelData.danger || cell.hovering || activeFocus ? colors.accentWashSoft : "transparent"
+                border.width: activeFocus ? 2 : 1.5
+                border.color: modelData.danger || cell.hovering || activeFocus ? colors.accent : colors.borderHair
+                scale: cell.hovering || activeFocus ? 1.06 : 1.0
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.label
+
+                Keys.onReturnPressed: modelData.action()
+                Keys.onSpacePressed: modelData.action()
+
+                Behavior on color { ColorAnimation { duration: 140 } }
+                Behavior on border.color { ColorAnimation { duration: 140 } }
+                Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
                 Image {
                     anchors.centerIn: parent
@@ -41,11 +58,18 @@ Row {
                     height: 22
                     source: Qt.resolvedUrl(root.iconDir + modelData.icon)
                     fillMode: Image.PreserveAspectFit
+                    // wlogout ships these white; dimming the idle state keeps
+                    // the row quiet until it is pointed at.
+                    opacity: modelData.danger || cell.hovering ? 1.0 : 0.72
+                    Behavior on opacity { NumberAnimation { duration: 140 } }
                 }
 
                 MouseArea {
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
+                    onEntered: cell.hovering = true
+                    onExited: cell.hovering = false
                     onClicked: modelData.action()
                 }
             }
@@ -54,8 +78,9 @@ Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: modelData.label
                 font.family: geistRegular ? geistRegular.name : "sans-serif"
-                font.pixelSize: 12.5
-                color: modelData.danger ? colors.accent : colors.textMuted
+                font.pixelSize: 13
+                color: modelData.danger || cell.hovering ? colors.accent : colors.textMuted
+                Behavior on color { ColorAnimation { duration: 140 } }
             }
         }
     }

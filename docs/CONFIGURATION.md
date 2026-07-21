@@ -12,16 +12,40 @@ Normally, `$XDG_STATE_HOME` is `~/.local/state`.
 | Hyprland | `~/.config/hypr/*.conf` | `hyprctl reload` |
 | Hardware | `~/.config/hypr/profiles/active.conf` | `hyprctl reload` |
 | Motion | `~/.config/hypr/motion/active.conf` | selector reloads automatically |
-| Waybar | `~/.config/waybar/config.jsonc`, `style.css` | restart Waybar |
-| Notifications | `~/.config/swaync` or `~/.config/mako` | backend-specific reload |
+| Quickshell | `~/.config/quickshell` | watches files; restart with `notification-daemon.sh restart` after whole-tree deploys |
+| Legacy Waybar | `~/.config/waybar/config.jsonc`, `style.css` | restart Waybar only when using it manually |
+| Notification fallbacks | `~/.config/swaync` or `~/.config/mako` | `notification-daemon.sh restart` |
 | Wallpaper | `~/.config/hypr/hyprpaper.conf` | restart Hyprpaper, then restore |
 | Launcher and terminal | `~/.config/rofi`, `~/.config/kitty` | reopen the application |
 | GTK and Qt | `~/.config/gtk-*`, `~/.config/qt*ct` | reopen applications |
 
 Edit the repository copy when a customization should survive a future deployment.
 The main customization points are `colors.conf`, `variables.conf`, `monitors.conf`,
-`animations.conf`, `keybindings.conf`, `autostart.conf`, and the Waybar/SwayNC CSS.
+`animations.conf`, `keybindings.conf`, `autostart.conf`, Quickshell QML, and the
+fallback Waybar/SwayNC/Mako styles.
 Color values are mirrored because the applications cannot import Hyprland variables.
+Kitty tab/session helpers live in `config/kitty/hyprveil-session.sh`.
+
+## Tokens and accents
+
+`config/hypr/tokens.conf` is the shared scale for radii, spacing, type, alpha,
+shadow, and timing values. After changing tokens, render the generated files:
+
+```bash
+HYPRVEIL_CONFIG_HOME="$PWD/config" ./config/hypr/scripts/theme.sh render
+```
+
+`config/hypr/colors.conf` stores the base palette. Wallpaper-derived accents are
+managed by `config/hypr/scripts/accent.sh`, which renders matching palette files
+for Quickshell, Kitty, Rofi, wlogout, GTK, Qt, SwayNC, and Mako templates.
+
+## Per-app toolkit fixes
+
+GTK and Qt styling should stay global by default. Add a per-app GTK, Qt, or
+window-rule fix only when a confirmed visual defect is recorded with the
+application name, toolkit/version where known, Fedora version, display scale, and
+the before/after behavior. Keep those fixes narrowly scoped to the affected class,
+title, or app stylesheet, and document the reason next to the rule.
 
 ## State inventory
 
@@ -33,6 +57,7 @@ Color values are mirrored because the applications cannot import Hyprland variab
 | `dock-pins.json` | `dock-manager.sh` | invalid file is preserved; empty dock restored |
 | `wallpapers.json` | `wallpaper.sh` | invalid file is preserved; bundled fallback restored |
 | `motion-profile` | `motion-profile.sh` | invalid file is preserved; `standard` restored |
+| `kitty-sessions/*.conf` | `kitty/hyprveil-session.sh` | explicit user snapshots; not read by the shell |
 | `backups/` | installer and manual backup | retained until the user removes it |
 
 All JSON state is schema-checked. Dock and wallpaper writes use a temporary file,
@@ -55,21 +80,22 @@ The template remains usable when optional commands are absent:
 | Firefox, Code, Nautilus | corresponding application shortcut |
 
 Run `./scripts/09-dependency-report.sh` for installed and repository availability.
-The SwayNC/Mako choice is a backend selection, not an optional missing daemon:
-exactly one selected backend is required.
+The Quickshell/SwayNC/Mako choice is a backend selection, not an optional missing
+daemon: exactly one selected backend is required, with Quickshell as the default.
 
 ## Keybindings
 
 The complete source is `config/hypr/keybindings.conf`; the user-facing table is in
 the README under “Keybind cheatsheet.” Important management bindings are:
 
-- `SUPER+N`: notification center or Mako fallback action
+- `SUPER+slash`: the on-screen cheatsheet, rendered from `keybindings.conf`
+  itself — a bind you add shows up there without editing anything else
+- `SUPER+N`: Quickshell or SwayNC notification center; Mako shows a fallback notice
 - `SUPER+SHIFT+W`: wallpaper picker
 - `SUPER+L`: lock; `SUPER+SHIFT+L`: suspend through the hardware wrapper
 - `SUPER+Escape`: power menu
 - `SUPER+SHIFT+Q`: exit Hyprland, including a nested validation session
 
 After changing a binding, run `hyprctl reload` and inspect `hyprctl configerrors`.
-See [HARDWARE.md](HARDWARE.md), [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md),
-[NOTIFICATIONS.md](NOTIFICATIONS.md), and
-[WALLPAPERS-MOTION.md](WALLPAPERS-MOTION.md) for component interfaces.
+See [HARDWARE.md](HARDWARE.md) for profile behavior and
+[QUICK-SETTINGS.md](QUICK-SETTINGS.md) for shell panel interfaces.

@@ -88,7 +88,7 @@ if [[ "$args" == *" repolist --enabled "* ]]; then
 elif [[ "$args" == *" repoquery "* ]]; then
     package=${!#}
     case "$package" in
-        SwayNotificationCenter|aylurs-gtk-shell2|astal-*) ;;
+        SwayNotificationCenter|quickshell) ;;
         *) printf 'fedora\n' ;;
     esac
 elif [[ "$args" == *" copr enable "* ]]; then
@@ -98,12 +98,12 @@ elif [[ "$args" == *" install "* ]]; then
 fi
 EOF
 chmod +x "$TMP/dnf"
-# Installer gates the AGS/SwayNC backends on rpm-verified packages; a hermetic
+# Installer gates the Quickshell/SwayNC backends on rpm-verified packages; a hermetic
 # "nothing installed" rpm forces the full decline path regardless of host binaries.
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/bin/rpm"
 chmod +x "$TMP/bin/rpm"
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend" "$TMP/dnf-mutations"
-# Prompts: desktop-shell(y), decline AGS COPR(n), decline SwayNC COPR(n),
+# Prompts: desktop-shell(y), decline Quickshell COPR(n), decline SwayNC COPR(n),
 # accept Mako(y), then y for the remaining official groups, n for the fonts prompt.
 answers=$'y\nn\nn\ny\ny\ny\ny\ny\ny\nn\n'
 printf '%s' "$answers" | \
@@ -111,9 +111,9 @@ printf '%s' "$answers" | \
     "$REPO/scripts/02-install-fedora-shell.sh" > "$TMP/installer-output" 2>&1 \
     || fail "shell installer failed on the notification COPR refusal path"
 [ "$(cat "$HYPRVEIL_STATE_HOME/notification-backend")" = mako ] \
-    || fail "declining AGS and SwayNC did not select Mako"
-grep -q 'declined COPR solopasha/hyprland' "$TMP/installer-output" \
-    || fail "AGS refusal was not explained"
+    || fail "declining Quickshell and SwayNC did not select Mako"
+grep -q 'declined COPR errornointernet/quickshell' "$TMP/installer-output" \
+    || fail "Quickshell refusal was not explained"
 grep -q 'declined COPR erikreider/SwayNotificationCenter' "$TMP/installer-output" \
     || fail "SwayNC refusal was not explained"
 grep -q 'INSTALL: .* mako' "$TMP/dnf-mutations" || fail "Mako fallback was not installed"
@@ -121,7 +121,7 @@ if grep -q 'COPR MUTATION' "$TMP/dnf-mutations"; then
     fail "declining the notification COPRs changed repository state"
 fi
 rm -f "$TMP/bin/rpm"
-ok "declining the AGS and SwayNC COPRs leaves repositories unchanged and selects Mako"
+ok "declining the Quickshell and SwayNC COPRs leaves repositories unchanged and selects Mako"
 
 for command in swaync mako; do
     printf "#!/usr/bin/env bash\nprintf '%%s\\n' '%s' >> \"\$MOCK_ROOT/started\"\n" \
@@ -136,15 +136,6 @@ cat > "$TMP/bin/pgrep" <<'EOF'
 #!/usr/bin/env bash
 exit 1
 EOF
-# Shadow any real ags on the host so backend switches never touch a live instance;
-# `ags list` reports no running instance so the SwayNC/Mako paths behave hermetically.
-cat > "$TMP/bin/ags" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "$MOCK_ROOT/ags"
-[ "${1:-}" = list ] && exit 0
-exit 0
-EOF
-chmod +x "$TMP/bin/ags"
 cat > "$TMP/bin/swaync-client" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$MOCK_ROOT/client"

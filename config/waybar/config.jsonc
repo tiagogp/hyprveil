@@ -38,7 +38,10 @@
 
     "hyprland/window": {
       "max-length": 64,
-      "separate-outputs": true
+      "separate-outputs": true,
+      "rewrite": {
+        "^(.*) - hyprveil - Visual Studio Code$": "Visual Studio Code - $1"
+      }
     },
 
     "custom/media-previous": {
@@ -73,10 +76,11 @@
     },
 
     "custom/bluetooth": {
-      // Left-click opens the AGS quick-settings panel (Bluetooth section);
-      // if AGS isn't running (SwayNC/Mako fallback backend) fall back to Blueman.
+      // Left-click opens the quick-settings panel (Bluetooth section) via the
+      // backend-aware helper; if no panel-capable backend is running
+      // (SwayNC/Mako fallback) fall back to Blueman.
       "exec": "~/.config/waybar/scripts/bluetooth.sh render",
-      "on-click": "ags request -i hyprveil toggle-quicksettings 2>/dev/null || ~/.config/waybar/scripts/bluetooth.sh open",
+      "on-click": "~/.config/hypr/scripts/notification-daemon.sh toggle 2>/dev/null || ~/.config/waybar/scripts/bluetooth.sh open",
       "on-click-right": "~/.config/waybar/scripts/bluetooth.sh open",
       "return-type": "json",
       "interval": 5,
@@ -84,14 +88,15 @@
     },
 
     "network": {
-      // Left-click opens the AGS quick-settings panel (Wi-Fi section);
-      // right-click and the AGS-absent fallback open nm-connection-editor.
+      // Left-click opens the quick-settings panel (Wi-Fi section) via the
+      // backend-aware helper; right-click and the panel-absent fallback open
+      // nm-connection-editor.
       "format-wifi": "󰖩",
       "format-ethernet": "󰈀",
       "format-disconnected": "󰖪",
       "tooltip-format": "{ifname}: {ipaddr}",
       "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-      "on-click": "ags request -i hyprveil toggle-quicksettings 2>/dev/null || nm-connection-editor",
+      "on-click": "~/.config/hypr/scripts/notification-daemon.sh toggle 2>/dev/null || nm-connection-editor",
       "on-click-right": "nm-connection-editor"
     },
 
@@ -179,7 +184,7 @@
       "format": "󰍜",
       "tooltip-format": "Launcher",
       "on-click": "pkill rofi || rofi -show drun",
-      "on-click-right": "~/.config/waybar/scripts/dock-manager.sh manage"
+      "on-click-right": "~/.config/hypr/scripts/dock-manager.sh manage"
     },
 
     "custom/dock-0": {

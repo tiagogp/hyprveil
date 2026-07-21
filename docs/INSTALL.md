@@ -27,12 +27,15 @@ required dependency blocks the copy; missing optional dependencies do not.
 
 ## Safe reruns
 
-Hyprveil owns these targets: `hypr`, `waybar`, `kitty`, `rofi`, `wlogout`,
-`gtk-3.0`, `gtk-4.0`, and `starship.toml`. Existing targets are copied to a unique,
-timestamped directory below `$XDG_STATE_HOME/hyprveil/backups`, then replaced as a
-whole. Whole-tree replacement prevents removed template files from accumulating.
-It also owns exactly one of `swaync` or `mako`, according to the persisted backend;
-switching backs up and removes the inactive managed tree.
+Hyprveil owns these targets: `hypr`, `quickshell`, `waybar`, `kitty`, `rofi`,
+`wlogout`, `gtk-3.0`, `gtk-4.0`, `qt5ct`, `qt6ct`, `fontconfig`, and
+`starship.toml`. Existing targets are copied to a unique, timestamped directory
+below `$XDG_STATE_HOME/hyprveil/backups`, then replaced as a whole. Whole-tree
+replacement prevents removed template files from accumulating.
+It also owns exactly one notification fallback tree, `swaync` or `mako`, according
+to the persisted backend; switching backs up and removes the inactive managed tree.
+Quickshell is deployed regardless because it owns the shell UI even when
+notifications are served by a fallback daemon.
 
 Legacy `wallpaper.jpg` files are carried forward, and the bundled fallback is
 refreshed during deployment. Wallpaper mappings, motion choice, dock pins, and
@@ -44,12 +47,14 @@ existing target before replacement.
 Select a backend explicitly with:
 
 ```bash
+./scripts/07-select-notification-backend.sh --backend quickshell
 ./scripts/07-select-notification-backend.sh --backend swaync
 ./scripts/07-select-notification-backend.sh --backend mako
 ```
 
-Redeploy configs after switching. Startup and Waybar read the same state file, so
-only the selected daemon starts and all notification actions follow that backend.
+Redeploy configs after switching. Startup, Quickshell, and the legacy Waybar bridge
+read the same state file, so only the selected daemon starts and all notification
+actions follow that backend.
 
 ## Recovery
 
@@ -70,7 +75,6 @@ backup directories automatically.
 
 Run `./scripts/03-test-config.sh` for config validation and Fedora/source reporting,
 or `./tests/run.sh` for Bash/JSON/executable validation and every non-root mocked
-milestone behavior check. Release runs require ShellCheck with
-`./tests/run.sh --require-shellcheck`. See [RECOVERY.md](RECOVERY.md) for component
-recovery and full rollback, and [VM-TEST-MATRIX.md](VM-TEST-MATRIX.md) for the
-manual fresh-install, rerun, upgrade, refusal, and fallback procedure.
+behavior check. Use `./tests/run.sh --require-shellcheck` when ShellCheck should be
+enforced instead of treated as optional. See [RECOVERY.md](RECOVERY.md) for
+component recovery and full rollback.

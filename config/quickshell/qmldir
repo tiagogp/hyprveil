@@ -1,0 +1,15 @@
+# Module definition for the shell's shared root components.
+#
+# Two things make this file mandatory rather than optional:
+#
+#  - A `pragma Singleton` file with no qmldir entry resolves to the
+#    uninstantiated TYPE, not its instance, so `Tokens.radiusMd` reads as
+#    undefined — which QML renders as 0 without raising an error. Silent.
+#  - Once a qmldir exists it REPLACES implicit same-directory resolution, so
+#    every component here has to be listed, not just the singletons.
+singleton Tokens 1.0 Tokens.qml
+singleton Accent 1.0 Accent.qml
+singleton Time 1.0 Time.qml
+
+Surface 1.0 Surface.qml
+Glyph 1.0 Glyph.qml

@@ -1,0 +1,361 @@
+/* Palette mirror of hypr/colors.conf. SwayNC is GTK4, so the neutrals stay
+   self-contained here; the accent is generated from the wallpaper.
+
+   GENERATED from style.css.in by hypr/scripts/theme.sh — edit the template, not
+   the rendered style.css. See docs/CONFIGURATION.md.
+
+   Note for editors: GTK's at-name color references and the renderer's
+   at-name-at placeholders coexist safely because a substitution needs the
+   closing delimiter, which a GTK color reference never has. */
+@import url("accent.css");
+@define-color bg rgba(15, 17, 21, @elev-0-alpha@);
+@define-color surface rgba(22, 24, 29, @elev-0-alpha@);
+@define-color elevated rgba(28, 31, 38, @elev-2-alpha@);
+@define-color text #f5f5f7;
+@define-color muted #9a9ca5;
+@define-color dim #6b6e78;
+@define-color border rgba(255, 255, 255, @elev-0-border@);
+@define-color warning #e1a346;
+
+* {
+  font-family: "@font-ui@", "@font-ui-icons@", sans-serif;
+  color: @text;
+}
+
+.floating-notifications,
+.control-center-list,
+.blank-window {
+  background: transparent;
+}
+
+.control-center {
+  background: @bg;
+  border: 1px solid @border;
+  border-radius: @radius-lg-px@;
+}
+
+.notification-row {
+  outline: none;
+}
+
+.notification-row:focus .notification-background .notification,
+.notification-row:hover .notification-background .notification {
+  border-color: alpha(@accent, 0.72);
+  background: @elevated;
+}
+
+.notification-row .notification-background .notification,
+.control-center .notification-row .notification-background .notification {
+  background: @surface;
+  border: 1px solid @border;
+  border-radius: @radius-md-px@;
+  margin: 0px @space-1-px@;
+  padding: 0;
+}
+
+.notification-row .notification-background .notification.low {
+  background: alpha(@surface, 0.72);
+  color: @muted;
+}
+
+.notification-row .notification-background .notification.normal {
+  border-color: @border;
+}
+
+.notification-row .notification-background .notification.critical {
+  border-color: @accent;
+  background: alpha(@accent, 0.12);
+}
+
+.notification.low .summary,
+.notification.low .body,
+.notification.low .time {
+  color: @muted;
+}
+
+.notification.critical .summary {
+  color: @accent;
+}
+
+.notification-content {
+  padding: @space-2h-px@ @space-3-px@;
+}
+
+.summary {
+  font-size: @text-sm-px@;
+  font-weight: @weight-bold@;
+  color: @text;
+  margin-bottom: @space-hair-px@;
+}
+
+/* The mockup sizes the timestamp one step below the body rather than equal to
+   it, which is what keeps a long app name from reading as part of the message.
+   These shared a rule at 12.5px before and so could not be told apart. */
+.body {
+  color: @muted;
+  font-size: @text-xs-px@;
+  line-height: 1.3;
+}
+
+.time {
+  color: @muted;
+  font-size: @text-2xs-px@;
+  margin-bottom: 0;
+}
+
+.notification-default-action,
+.notification-action {
+  background: transparent;
+  border: none;
+  border-radius: @radius-sm-px@;
+  box-shadow: none;
+}
+
+.notification-action {
+  background: alpha(@accent, 0.12);
+  color: @accent;
+  margin: 0 @space-1-px@ @space-2-px@;
+  padding: @space-1h-px@ @space-2h-px@;
+}
+
+.notification-action:hover,
+.notification-action:focus {
+  background: @accent-soft;
+}
+
+.close-button {
+  background: alpha(@text, 0.08);
+  border: none;
+  border-radius: @radius-pill-px@;
+  color: @muted;
+  margin: @space-2-px@;
+  min-height: @space-6-px@;
+  min-width: @space-6-px@;
+}
+
+.close-button:hover,
+.close-button:focus {
+  background: @accent-soft;
+  color: @accent;
+}
+
+.widget-title {
+  margin: @space-1-px@ @space-2-px@;
+  padding: @space-1-px@ @space-1h-px@;
+}
+
+.widget-dnd {
+  margin: 0px @space-2-px@;
+  padding: @space-3-px@ @space-3-px@;
+  background: @surface;
+  border: 1px solid @border;
+  border-radius: @radius-md-px@;
+}
+
+/* Whole hundreds only. This was 650 — GTK rejects a non-hundred weight and
+   discards the ENTIRE stylesheet, so that one declaration was taking every rule
+   in this file down with it. */
+.widget-title > label,
+.widget-dnd > label {
+  font-size: @text-md-px@;
+  font-weight: @weight-semibold@;
+}
+
+.widget-title > button {
+  background: alpha(@text, 0.07);
+  border: 1px solid @border;
+  border-radius: @radius-sm-px@;
+  color: @muted;
+  padding: @space-1h-px@ @space-2h-px@;
+}
+
+.widget-title > button:hover,
+.widget-title > button:focus {
+  background: @accent-soft;
+  color: @accent;
+}
+
+/* Switch geometry is bespoke control hardware, not layout: the track and knob
+   have to hold a fixed ratio to read as a switch, so the track is deliberately
+   off the spacing grid. The knob is $space-5 only because 20 is where it lands. */
+.widget-dnd > switch {
+  background: alpha(@text, 0.1);
+  border: 1px solid @border;
+  border-radius: @radius-pill-px@;
+  min-width: 46px;
+  min-height: 26px;
+  transition: background @dur-2-ms@ @ease-standard@;
+}
+
+.widget-dnd > switch:checked {
+  background: @accent;
+}
+
+.widget-dnd > switch slider {
+  background: @text;
+  border-radius: @radius-pill-px@;
+  min-height: @space-5-px@;
+  min-width: @space-5-px@;
+  margin: 0px;
+}
+
+.notification-group {
+  background: transparent;
+}
+
+.notification-group-headers {
+  color: @muted;
+  margin: 0px @space-2h-px@;
+}
+
+/* Scrollbar */
+/* scrollbar {
+  background: transparent;
+}
+
+scrollbar trough {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 8px;
+}
+
+scrollbar slider {
+  background: alpha(@text, 0.16);
+  border: none;
+  border-radius: 999px;
+  min-width: 2px;
+  min-height: 8px;
+}
+
+scrollbar slider:hover {
+  background: alpha(@text, 0.3);
+}
+
+scrollbar.dragging slider,
+scrollbar slider:active {
+  background: alpha(@accent, 0.65);
+} */
+
+/* Media player card */
+.widget-mpris {
+  padding: 0;
+}
+
+.widget-mpris .widget-mpris-player {
+  margin: 0px @space-2-px@;
+  border-radius: @radius-md-px@;
+  border: 1px solid @border;
+}
+
+.widget-mpris .mpris-overlay {
+  padding: @space-3-px@;
+  background-color: alpha(@bg, 0.65);
+  border-radius: @radius-md-px@;
+}
+
+.widget-mpris .widget-mpris-album-art {
+  border-radius: @radius-sm-px@;
+}
+
+.widget-mpris .widget-mpris-title {
+  font-size: @text-md-px@;
+  font-weight: @weight-bold@;
+  color: @text;
+}
+
+.widget-mpris .widget-mpris-subtitle {
+  font-size: @text-xs-px@;
+  color: @muted;
+}
+
+.widget-mpris .mpris-overlay button {
+  background: alpha(@text, 0.08);
+  border: none;
+  border-radius: @radius-pill-px@;
+  color: @text;
+}
+
+.widget-mpris .mpris-overlay button:hover {
+  background-color: @accent-soft;
+  color: @accent;
+}
+
+/* Quick action buttons */
+.widget-buttons-grid {
+  margin: 0px @space-2-px@;
+}
+
+.widget-buttons-grid flowboxchild {
+  padding: @space-1-px@;
+}
+
+/* 44px is the design's tile size, shared with the dock — a touch target, not a
+   spacing step, so it stays literal alongside $icon-hit. */
+.widget-buttons-grid flowboxchild > button {
+  background: @surface;
+  border: 1px solid @border;
+  border-radius: @radius-sm-px@;
+  color: @text;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: @text-lg-px@;
+  transition:
+    background @dur-1-ms@ @ease-standard@,
+    border-color @dur-1-ms@ @ease-standard@;
+}
+
+.widget-buttons-grid flowboxchild > button:hover {
+  background: @elevated;
+  border-color: alpha(@accent, 0.5);
+}
+
+.widget-buttons-grid flowboxchild > button.toggle:checked {
+  background: @accent-soft;
+  border-color: @accent;
+  color: @accent;
+}
+
+/* Volume slider */
+.widget-volume {
+  padding: @space-3-px@ @space-3-px@;
+  background: @surface;
+  border: 1px solid @border;
+  border-radius: @radius-md-px@;
+}
+
+.widget-volume label {
+  color: @muted;
+  font-size: @text-xs-px@;
+  font-weight: @weight-semibold@;
+  min-width: 52px;
+  margin-right: @space-2h-px@;
+}
+
+.widget-slider trough {
+  background: alpha(@text, 0.12);
+  border-radius: @radius-pill-px@;
+  min-height: @space-2-px@;
+}
+
+.widget-slider trough highlight {
+  background: @accent;
+  border-radius: @radius-pill-px@;
+  min-height: @space-2-px@;
+}
+
+.widget-slider trough slider {
+  background: @text;
+  border-radius: @radius-pill-px@;
+  min-height: @space-4-px@;
+  min-width: @space-4-px@;
+}
+
+.widget-slider trough slider:hover {
+  background: @accent;
+}
+
+.per-app-volume {
+  background: alpha(@surface, 0.72);
+  border-radius: @radius-sm-px@;
+}

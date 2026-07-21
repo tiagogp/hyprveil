@@ -160,7 +160,7 @@ hv_notification_backend() {
         IFS= read -r backend < "$HV_NOTIFICATION_STATE" || true
     fi
     case "$backend" in
-        ags|swaync|mako) printf '%s\n' "$backend" ;;
+        quickshell|swaync|mako) printf '%s\n' "$backend" ;;
         *) return 1 ;;
     esac
 }
@@ -326,28 +326,69 @@ hv_backup_item() {
 # Replace only Hyprveil-managed trees. Existing targets are backed up first,
 # replacement removes stale managed files, and persistent state remains outside
 # the config tree. User wallpaper files are explicitly carried forward, while the
-# repository's design wallpaper is installed as an always-available fallback.
+# repository's bundled wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
     local backup staged target name starship_tmp backend other
-    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0)
+    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell fontconfig)
+    # quickshell is deployed unconditionally, like waybar, and is deliberately
+    # NOT in all_backends even though it is selectable in
+    # 07-select-notification-backend.sh. Everything in all_backends that is not
+    # the active choice gets REMOVED below, so listing it here would delete the
+    # shell's config on every upgrade that selected a different backend. What
+    # the selection decides is whether the daemon launches, not whether its
+    # config exists — the same split waybar has always had.
+    # ags is retired and can no longer be selected, so it is always "inactive"
+    # and its config is always removed. It stays in this list precisely for that:
+    # dropping it would strand ~/.config/ags on every machine that ever ran the
+    # AGS backend, with nothing left to clean it up.
     local -a all_backends=(ags swaync mako) inactive_backends=()
-    backend=$(hv_notification_backend || printf 'ags\n')
-    names+=("$backend")
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    # quickshell is already deployed unconditionally above; appending it again
+    # would stage, back up, and replace the same tree twice and leave a spurious
+    # entry in the backup directory.
+    local already=0 existing
+    for existing in "${names[@]}"; do
+        [ "$existing" = "$backend" ] && already=1
+    done
+    [ "$already" -eq 1 ] || names+=("$backend")
     for other in "${all_backends[@]}"; do
         [ "$other" = "$backend" ] || inactive_backends+=("$other")
     done
+    # Every source tree is verified before anything is removed. Each target is
+    # deleted just before its replacement is moved into place, so a source that
+    # does not exist — a misresolved HV_REPO, an incomplete checkout — would
+    # otherwise delete a working configuration and install nothing in its place.
+    # The copy failing is not enough to prevent that on its own: cp reports the
+    # error and the loop carries on to the rm.
+    for name in "${names[@]}"; do
+        if [ ! -d "$HV_REPO/config/$name" ]; then
+            hv_bad "source tree missing: $HV_REPO/config/$name"
+            hv_bad "refusing to deploy; the existing configuration is untouched"
+            return 1
+        fi
+    done
+    if [ ! -f "$HV_REPO/config/starship.toml" ]; then
+        hv_bad "source file missing: $HV_REPO/config/starship.toml"
+        hv_bad "refusing to deploy; the existing configuration is untouched"
+        return 1
+    fi
+
     mkdir -p "$HV_CONFIG_HOME"
     backup=$(hv_new_backup_dir)
 
     for name in "${names[@]}"; do
         target="$HV_CONFIG_HOME/$name"
         staged=$(mktemp -d "$HV_CONFIG_HOME/.hyprveil-$name.XXXXXX")
-        cp -a "$HV_REPO/config/$name/." "$staged/"
+        if ! cp -a "$HV_REPO/config/$name/." "$staged/"; then
+            rm -rf "$staged"
+            hv_bad "could not stage $name from $HV_REPO/config/$name"
+            return 1
+        fi
         if [ "$name" = hypr ]; then
             if [ -f "$target/wallpaper.jpg" ]; then
                 cp -a "$target/wallpaper.jpg" "$staged/wallpaper.jpg"
             fi
-            cp -a "$HV_REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+            cp -a "$HV_REPO/config/hypr/wallpaper-default.jpg" \
                 "$staged/wallpaper-default.jpg"
         fi
         if [ -e "$target" ]; then
@@ -379,7 +420,8 @@ hv_deploy_configs() {
         cp -a "$target" "$backup/config/starship.toml"
     fi
     mv -f "$starship_tmp" "$target"
-    chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
+    chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/hypr/scripts/lib/"*.sh \
+        "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
 
     if [ -d "$backup/config" ]; then
         printf 'Existing configuration backed up to %s\n' "$backup"
@@ -387,4 +429,202 @@ hv_deploy_configs() {
         rmdir "$backup" 2>/dev/null || true
     fi
     printf 'Hyprveil-managed configuration installed without merging stale files.\n'
+}
+
+hv_reload_live_session() {
+    local backend joined reloaded=() skipped=()
+
+    if ! command -v hyprctl >/dev/null 2>&1 || [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        printf 'Configs verified. Log into Hyprland, or reload the existing session manually.\n'
+        return 0
+    fi
+
+    if hyprctl reload; then
+        reloaded+=("Hyprland")
+    else
+        skipped+=("Hyprland")
+        hv_warn "could not reload Hyprland"
+    fi
+
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" restart || true
+        case "$backend" in
+            quickshell) reloaded+=("Quickshell") ;;
+            swaync) reloaded+=("SwayNC") ;;
+            mako) reloaded+=("Mako") ;;
+        esac
+    else
+        skipped+=("notification backend")
+        hv_warn "notification daemon helper is unavailable"
+    fi
+
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" restore || true
+        reloaded+=("wallpaper")
+    fi
+
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" || true
+        reloaded+=("GTK/Qt theme")
+    fi
+
+    if [ "${#reloaded[@]}" -gt 0 ]; then
+        joined=$(printf '%s, ' "${reloaded[@]}")
+        printf 'Reloaded %s.\n' "${joined%, }"
+    fi
+    if [ "${#skipped[@]}" -gt 0 ]; then
+        joined=$(printf '%s, ' "${skipped[@]}")
+        printf 'Skipped live reload for %s; see warnings above.\n' "${joined%, }" >&2
+    fi
+}
+
+# The managed config tree names Hyprveil owns under $HV_CONFIG_HOME, including
+# the currently selected notification backend. Kept in sync with the list in
+# hv_deploy_configs so update, rollback, and uninstall act on the same trees the
+# installer deploys. starship.toml is a single file and is handled separately by
+# callers.
+hv_managed_names() {
+    local backend name already=0
+    local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell fontconfig)
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    for name in "${names[@]}"; do
+        [ "$name" = "$backend" ] && already=1
+    done
+    [ "$already" -eq 1 ] || names+=("$backend")
+    printf '%s\n' "${names[@]}"
+}
+
+# Notification backend trees Hyprveil may have deployed in the past that are not
+# the active choice. Used by uninstall to clean up inactive and retired backends.
+hv_inactive_backend_names() {
+    local backend other
+    backend=$(hv_notification_backend || printf 'quickshell\n')
+    for other in ags swaync mako; do
+        [ "$other" = "$backend" ] || printf '%s\n' "$other"
+    done
+}
+
+# Print a read-only summary of what a deploy from $HV_REPO/config would change in
+# the live config home, without touching anything. One line per managed tree:
+# "new", "unchanged", or "changed (N file(s) differ)". Returns 0 if any tree
+# would change, 1 if the deployed configuration already matches the repository.
+hv_preview_config_changes() {
+    local name target differ changed=0
+    local -a names
+    mapfile -t names < <(hv_managed_names)
+    names+=("starship.toml")
+    printf 'Pending changes from %s:\n' "$HV_REPO/config"
+    for name in "${names[@]}"; do
+        local source="$HV_REPO/config/$name"
+        target="$HV_CONFIG_HOME/$name"
+        if [ ! -e "$source" ]; then
+            continue
+        fi
+        if [ ! -e "$target" ]; then
+            printf '  new       %s\n' "$name"
+            changed=1
+            continue
+        fi
+        # Only repository-sourced files that are missing or different in the
+        # deployment count as pending changes. Files that exist only in the
+        # deployment — the injected default wallpaper, user wallpaper, and
+        # generated accent/token fragments — are ignored so an unchanged
+        # checkout reports nothing to do.
+        differ=$(diff -rq "$source" "$target" 2>/dev/null \
+            | grep -c -e 'differ$' -e "Only in $source" || true)
+        if [ "${differ:-0}" -eq 0 ]; then
+            printf '  unchanged %s\n' "$name"
+        else
+            printf '  changed   %s (%s path(s) differ)\n' "$name" "$differ"
+            changed=1
+        fi
+    done
+    [ "$changed" -eq 1 ]
+}
+
+# List timestamped backup snapshots, newest first, one per line as
+# "<name>\t<summary>" where summary describes the payload kinds present.
+hv_list_backups() {
+    local dir base summary
+    local root="$HV_STATE_HOME/backups"
+    [ -d "$root" ] || return 0
+    while IFS= read -r dir; do
+        [ -n "$dir" ] || continue
+        base=$(basename "$dir")
+        summary=""
+        [ -d "$dir/config" ] && summary+="config "
+        [ -d "$dir/system-config" ] && summary+="system-config "
+        [ -d "$dir/system-themes" ] && summary+="system-themes "
+        [ -n "$summary" ] || summary="empty"
+        printf '%s\t%s\n' "$base" "${summary% }"
+    done < <(find "$root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -r)
+}
+
+# Restore the config payload of a saved snapshot directory into the live config
+# home. Current trees are backed up to a fresh timestamped snapshot first, then
+# replaced atomically per tree. Returns 1 if the snapshot has no config payload.
+hv_restore_backup() {
+    local snapshot=$1 fresh item base target staged
+    if [ ! -d "$snapshot/config" ]; then
+        hv_bad "backup has no config payload to restore: $snapshot"
+        return 1
+    fi
+    mkdir -p "$HV_CONFIG_HOME"
+    fresh=$(hv_new_backup_dir)
+    for item in "$snapshot/config"/*; do
+        [ -e "$item" ] || continue
+        base=$(basename "$item")
+        target="$HV_CONFIG_HOME/$base"
+        staged=$(mktemp -d "$HV_CONFIG_HOME/.hyprveil-restore-$base.XXXXXX")
+        if ! cp -a "$item/." "$staged/" 2>/dev/null && ! cp -a "$item" "$staged/payload" 2>/dev/null; then
+            rm -rf "$staged"
+            hv_bad "could not stage restore of $base from $snapshot"
+            return 1
+        fi
+        if [ -e "$target" ]; then
+            mkdir -p "$fresh/config"
+            cp -a "$target" "$fresh/config/$base"
+            rm -rf "$target"
+        fi
+        if [ -e "$staged/payload" ] && [ ! -d "$item" ]; then
+            mv -f "$staged/payload" "$target"
+            rm -rf "$staged"
+        else
+            mv "$staged" "$target"
+        fi
+    done
+    if [ -d "$fresh/config" ]; then
+        printf 'Pre-restore configuration backed up to %s\n' "$fresh"
+    else
+        rmdir "$fresh" 2>/dev/null || true
+    fi
+    printf 'Restored configuration from %s\n' "$snapshot"
+}
+
+# Back up and remove every Hyprveil-managed user config tree, including inactive
+# and retired notification backend trees and starship.toml. Persistent state
+# under $HV_STATE_HOME is never touched here. Prints a one-line summary and the
+# path of the backup snapshot it wrote.
+hv_remove_managed_config() {
+    local backup name target removed=0
+    local -a names
+    mapfile -t names < <(hv_managed_names)
+    mapfile -t -O "${#names[@]}" names < <(hv_inactive_backend_names)
+    names+=("starship.toml")
+    backup=$(hv_new_backup_dir)
+    for name in "${names[@]}"; do
+        target="$HV_CONFIG_HOME/$name"
+        [ -e "$target" ] || continue
+        mkdir -p "$backup/config"
+        cp -a "$target" "$backup/config/$name"
+        rm -rf "$target"
+        removed=$((removed + 1))
+    done
+    if [ "$removed" -gt 0 ]; then
+        printf 'Removed %s managed config tree(s); backup saved to %s\n' "$removed" "$backup"
+    else
+        rmdir "$backup" 2>/dev/null || true
+        printf 'No Hyprveil-managed config trees were present to remove.\n'
+    fi
 }

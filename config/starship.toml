@@ -1,8 +1,8 @@
 # Starship prompt — palette mirror of hypr/colors.conf, keep in sync manually.
-# Minimal two-line prompt: dir + git on top, accent-red ❯ below.
+# Minimal two-line prompt: user + dir + git on top, accent-red ❯ below.
 "$schema" = 'https://starship.rs/config-schema.json'
 
-format = "$directory$git_branch$git_status$cmd_duration$line_break$character"
+format = "$username$directory$git_branch$git_status$cmd_duration$line_break$character"
 add_newline = true
 palette = 'hyprveil'
 
@@ -14,6 +14,12 @@ muted = '#9A9CA5'
 warning = '#E1A346'
 error = '#E5484D'
 success = '#4CAE80'
+
+[username]
+show_always = true
+style_user = 'muted'
+style_root = 'bold error'
+format = '[$user]($style) '
 
 [directory]
 style = 'bold accent'

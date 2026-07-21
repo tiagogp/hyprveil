@@ -20,8 +20,8 @@ Usage:
   wallpaper.sh restore
 
 An omitted monitor updates the fallback and applies it to every connected monitor.
-`pick` opens the AGS grid when the shell is running and falls back to Rofi.
-`list` prints the catalog the AGS picker renders, as JSON.
+`pick` opens the Quickshell grid when the shell is running and falls back to Rofi.
+`list` prints the catalog the Quickshell picker renders, as JSON.
 Selections are saved in $XDG_STATE_HOME/hyprveil/wallpapers.json.
 EOF
 }
@@ -202,6 +202,29 @@ save_selection() {
     return "$status"
 }
 
+# Re-render the accent family from an image. Always warn-only: neither picking a
+# wallpaper nor logging in may be blocked by a failed extraction, and `is-auto`
+# failing is the documented opt-out rather than an error.
+#
+# The chrome alpha is refreshed OUTSIDE the is-auto check. `accent.sh auto off`
+# opts out of the accent following the wallpaper, which is a taste preference;
+# the bar's opacity is a legibility constraint measured from the same image, and
+# leaving it pinned to whatever wallpaper was set before the opt-out is how you
+# get an unreadable bar on a bright background. from-wallpaper solves both in
+# one pass, so it is only the opted-out path that needs the extra call.
+derive_accent() {
+    local image=$1
+    [ -n "$image" ] || return 0
+    [ -x "$ACCENT_HELPER" ] || return 0
+    if "$ACCENT_HELPER" is-auto >/dev/null 2>&1; then
+        "$ACCENT_HELPER" from-wallpaper "$image" >/dev/null \
+            || warn "the accent could not be derived from $image"
+    else
+        "$ACCENT_HELPER" chrome "$image" >/dev/null \
+            || warn "the bar opacity could not be derived from $image"
+    fi
+}
+
 apply_command() {
     local path=${1:-} monitor=${2:-} fit=${3:-cover} runtime
     [ -n "$path" ] || die "apply requires a wallpaper path"
@@ -219,23 +242,29 @@ apply_command() {
     save_selection "$path" "$monitor" "$fit" || die "could not save wallpaper state"
     flock -u 9
 
-    if [ -x "$ACCENT_HELPER" ] && "$ACCENT_HELPER" is-auto >/dev/null 2>&1; then
-        "$ACCENT_HELPER" from-wallpaper "$path" >/dev/null \
-            || warn "wallpaper was saved but the accent could not be derived"
+    # Hyprpaper first, the accent last. Deriving the accent rewrites Accent.qml,
+    # which IS a full Quickshell config reload (see render-lib's
+    # reload_quickshell) - a system-wide side effect, and the last thing this
+    # command should set off. It once ran first, and any caller that waited on
+    # this script as a child was killed by that reload before reaching apply_ipc:
+    # the click recolored the desktop and left the wallpaper untouched. The
+    # Quickshell picker no longer waits, but the ordering is what makes that
+    # safe for every other caller, so keep the visible effect ahead of it.
+    if runtime=$(runtime_path "$path"); then
+        if [ -n "$monitor" ]; then
+            if monitor_connected "$monitor"; then
+                apply_ipc "$monitor" "$runtime" "$fit" \
+                    || warn "selection was saved but Hyprpaper is not ready"
+            else
+                warn "$monitor is disconnected; selection was retained for reconnection"
+            fi
+        else
+            apply_all_connected "$runtime" "$fit" \
+                || warn "selection was saved but Hyprpaper is not ready"
+        fi
     fi
 
-    runtime=$(runtime_path "$path") || return 0
-    if [ -n "$monitor" ]; then
-        if monitor_connected "$monitor"; then
-            apply_ipc "$monitor" "$runtime" "$fit" \
-                || warn "selection was saved but Hyprpaper is not ready"
-        else
-            warn "$monitor is disconnected; selection was retained for reconnection"
-        fi
-    else
-        apply_all_connected "$runtime" "$fit" \
-            || warn "selection was saved but Hyprpaper is not ready"
-    fi
+    derive_accent "$path"
 }
 
 restore_command() {
@@ -269,6 +298,14 @@ restore_command() {
         apply_ipc "$monitor" "$runtime" "$fit" \
             || warn "could not restore wallpaper for $monitor"
     done < <(jq -r '.monitors | to_entries[] | [.key, .value.path, .value.fit] | @tsv' "$STATE_FILE")
+
+    # Keep the accent in step with the wallpaper across logins: a reinstall
+    # replaces the rendered fragments with the default-red copies, and a
+    # hand-edited state file can drift too. The fallback is the system-wide
+    # selection, so it stays the source even when a monitor overrides its own
+    # wallpaper - deriving per monitor would take the accent lock, rewrite every
+    # fragment and reload five daemons once per screen at every login.
+    derive_accent "$fallback_path"
 }
 
 rofi_menu() {
@@ -292,7 +329,7 @@ json_array() {
     fi
 }
 
-# The catalog the AGS grid renders: available images, connected outputs, and the
+# The catalog the Quickshell grid renders: available images, connected outputs, and
 # saved selection it highlights as active.
 list_command() {
     local -a images=() outputs=()
@@ -316,21 +353,21 @@ list_command() {
           fallback: $state[0].fallback, monitors: $state[0].monitors}'
 }
 
-# The AGS shell owns the graphical picker whenever it is running; Rofi is the
-# fallback for the SwayNC/Mako backends and for a session without the panel.
-ags_picker() {
-    local instance="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
-    command -v ags >/dev/null 2>&1 || return 1
-    ags list 2>/dev/null | grep -Fxq "$instance" || return 1
-    ags request -i "$instance" toggle-wallpapers >/dev/null 2>&1
+# The Quickshell shell owns the graphical picker whenever it is running; Rofi is
+# the fallback for the SwayNC/Mako backends and for a session without the panel.
+# Return non-zero and pick_command falls through to the Rofi flow, so a missing or
+# wedged shell degrades to a working picker rather than to nothing.
+qs_picker() {
+    command -v qs >/dev/null 2>&1 || return 1
+    timeout 5 qs ipc call wallpapers open >/dev/null 2>&1
 }
 
 pick_command() {
     local -a paths=() labels=() monitors=()
     local path choice index target fit monitor
-    # The AGS grid shows thumbnails and stays open across selections; Rofi keeps
-    # the picker usable without the panel.
-    ags_picker && return 0
+    # The shell shows a thumbnail grid that stays open across selections; Rofi
+    # keeps the picker usable when it is not running.
+    qs_picker && return 0
     if [ ! -d "$WALLPAPER_DIR" ]; then
         rofi -e "No wallpaper directory: $WALLPAPER_DIR" 2>/dev/null || true
         warn "create $WALLPAPER_DIR and add an image"

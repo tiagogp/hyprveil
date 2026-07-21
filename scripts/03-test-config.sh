@@ -2,7 +2,7 @@
 # Test the hyprveil configs BEFORE installing anything into ~/.config.
 #
 # Two phases:
-#   1. Static checks — always run: config files present, waybar JSON valid,
+#   1. Static checks — always run: config files present, legacy Waybar JSON valid,
 #      required commands installed, fonts available, Hyprland parse check
 #      (--verify-config, if your Hyprland build supports it).
 #   2. Nested test — only when run from inside a Wayland session: boots
@@ -48,24 +48,26 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/scripts/apply-theme.sh \
          hypr/scripts/hardware-action.sh hypr/scripts/notification-daemon.sh \
          hypr/scripts/wallpaper.sh hypr/scripts/motion-profile.sh \
+         hypr/scripts/lib/render-lib.sh \
+         hypr/tokens.conf hypr/scripts/accent.sh hypr/scripts/theme.sh \
+         hypr/scripts/lock.sh hypr/scripts/dock-manager.sh hypr/scripts/dock-lib.sh \
          hypr/motion/active.conf hypr/motion/standard.conf hypr/motion/reduced.conf \
          hypr/profiles/active.conf hypr/profiles/form-factor/generic.conf \
          hypr/profiles/form-factor/desktop.conf \
          hypr/profiles/form-factor/laptop.conf hypr/profiles/gpu/generic.conf \
          hypr/profiles/gpu/intel.conf hypr/profiles/gpu/amd.conf hypr/profiles/gpu/nvidia.conf \
-         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh waybar/scripts/dock-lib.sh \
-         waybar/scripts/dock-manager.sh waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
+         waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh \
+         waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
          waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
          waybar/scripts/notification.sh waybar/accent.css \
-         kitty/kitty.conf kitty/accent.conf \
+         kitty/kitty.conf kitty/accent.conf kitty/hyprveil-session.sh \
          rofi/config.rasi rofi/hyprveil.rasi rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
-         ags/app.ts ags/style.scss ags/_accent.scss ags/tsconfig.json ags/widget/QuickSettings.tsx \
-         ags/widget/Wifi.tsx ags/widget/Bluetooth.tsx ags/widget/Notifications.tsx \
-         ags/widget/NotificationPopups.tsx \
+         swaync/style.css.in wlogout/style.css.in quickshell/Tokens.qml.in quickshell/Tokens.qml \
          wlogout/layout wlogout/style.css wlogout/accent.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \
          qt6ct/qt6ct.conf qt6ct/colors/hyprveil.conf \
+         fontconfig/fonts.conf \
          starship.toml zsh/.zshrc; do
     if [ -f "$CONF/$f" ]; then
         ok "config/$f"
@@ -106,10 +108,13 @@ while IFS= read -r script; do
 done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print | sort)
 
 # --- commands the configs call ---
-NEEDED="hyprctl kitty waybar rofi hyprlock hypridle hyprpaper wlogout jq flock gio socat"
-OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager hyprpicker rofimoji tesseract brightnessctl nautilus firefox code btop zsh starship qt6ct gsettings"
+# hyprlock stays required even under Quickshell: it is the lock fallback that
+# hypr/scripts/lock.sh drops to whenever the shell cannot be confirmed.
+NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio gtk-launch"
+OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager gnome-control-center hyprpicker rofimoji tesseract brightnessctl wf-recorder nautilus firefox code btop zsh starship qt6ct gsettings"
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in
+    quickshell) NEEDED="$NEEDED quickshell qs" ;;
     swaync) NEEDED="$NEEDED swaync swaync-client" ;;
     mako)
         NEEDED="$NEEDED mako makoctl"
@@ -150,7 +155,7 @@ else
     warn "bundled fallback is installed during deployment; repo validation uses the design asset"
 fi
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
-    if grep -Eq '^(swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
+    if grep -Eq '^(quickshell|swaync|mako)$' "$HV_NOTIFICATION_STATE"; then
         ok "notification backend state is valid"
     else
         bad "invalid notification backend state (run scripts/07-select-notification-backend.sh)"
@@ -190,7 +195,7 @@ stage_configs() {
     while IFS= read -r file; do
         sed -i "s|~/.config/hypr|$STAGE/hypr|g" "$file"
     done < <(find "$STAGE/hypr" -type f -name '*.conf')
-    cp "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+    cp "$REPO/config/hypr/wallpaper-default.jpg" \
         "$STAGE/hypr/wallpaper-default.jpg"
     [ -f "$HOME/.config/hypr/wallpaper.jpg" ] && cp "$HOME/.config/hypr/wallpaper.jpg" "$STAGE/hypr/wallpaper.jpg"
     chmod +x "$STAGE/hypr/scripts/"*.sh 2>/dev/null
@@ -236,7 +241,7 @@ echo "Your real home and XDG directories stay untouched. Exit with SUPER+SHIFT+Q
 read -r -p "Launch nested session now? [y/N] " ans
 [[ "$ans" == "y" || "$ans" == "Y" ]] || exit 0
 
-"$REPO/scripts/08-test-nested-session.sh" --backend "${notification_backend:-swaync}" --keep-stage
+"$REPO/scripts/08-test-nested-session.sh" --backend "${notification_backend:-quickshell}" --keep-stage
 echo "Nested session ended. The isolated stage path is shown above for inspection."
 
 echo
@@ -253,7 +258,13 @@ if hv_confirm "Looked right? Back up and replace the managed configs now?"; then
         "$REPO/scripts/07-select-notification-backend.sh"
     fi
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
-    echo "Installed to $HV_CONFIG_HOME. Reload with: hyprctl reload && pkill waybar; waybar & disown"
+    echo "Installed to $HV_CONFIG_HOME. Reload with:"
+    echo "  hyprctl reload"
+    echo "  ~/.config/hypr/scripts/notification-daemon.sh restart"
+    echo "  ~/.config/hypr/scripts/wallpaper.sh restore"
+    echo "  ~/.config/hypr/scripts/apply-theme.sh"
+    echo "(the shell must be restarted after a deploy: its file watcher tracks the"
+    echo " paths it started with, and deployment replaces the tree wholesale)"
 else
     echo "Skipped. Re-run this script or install.sh when ready."
 fi

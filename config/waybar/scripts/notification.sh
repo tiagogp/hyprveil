@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Waybar bridge for the AGS panel, SwayNC's streaming JSON, and the Mako fallback.
+# Waybar bridge for SwayNC's streaming JSON and the Mako fallback.
+#
+# Waybar is the legacy bar; under the Quickshell backend the shell draws its own
+# notification indicator and this script is not what feeds it. The quickshell arm
+# below exists only so a manually-launched Waybar degrades to a quiet placeholder
+# instead of rendering a backend it cannot talk to.
 set -uo pipefail
 
 STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
 STATE_FILE="$STATE_HOME/notification-backend"
 DAEMON_HELPER="${HYPRVEIL_NOTIFICATION_HELPER:-$HOME/.config/hypr/scripts/notification-daemon.sh}"
-AGS_INSTANCE="${HYPRVEIL_AGS_INSTANCE:-hyprveil}"
 CLIENT_PID=
 
 cleanup() {
@@ -23,23 +27,13 @@ backend() {
         IFS= read -r selected < "$STATE_FILE" || true
     fi
     case "$selected" in
-        ags|swaync|mako) printf '%s\n' "$selected" ;;
-        *) printf 'ags\n' ;;
+        quickshell|swaync|mako) printf '%s\n' "$selected" ;;
+        *) printf 'quickshell\n' ;;
     esac
 }
 
-ags_render() {
-    # app.ts answers `notif-status` with Waybar-shaped {alt,class,text,tooltip}.
-    if command -v ags >/dev/null 2>&1 \
-        && ags list 2>/dev/null | grep -Fxq "$AGS_INSTANCE"; then
-        local out
-        out=$(ags request -i "$AGS_INSTANCE" notif-status 2>/dev/null) || out=
-        if [ -n "$out" ]; then
-            printf '%s\n' "$out"
-            return
-        fi
-    fi
-    printf '{"text":"","alt":"none","class":"unavailable","tooltip":"AGS unavailable"}\n'
+qs_render() {
+    printf '{"text":"","alt":"none","class":"unavailable","tooltip":"Quickshell draws its own notification indicator"}\n'
 }
 
 mako_render() {
@@ -56,10 +50,11 @@ listen() {
     local selected
     while :; do
         selected=$(backend)
-        if [ "$selected" = ags ]; then
-            # AGS has no streaming socket for the icon; poll while it stays selected.
-            while [ "$(backend)" = ags ]; do
-                ags_render
+        if [ "$selected" = quickshell ]; then
+            # No streaming source to attach to; re-emit the placeholder while the
+            # backend stays selected so a live switch is still picked up.
+            while [ "$(backend)" = quickshell ]; do
+                qs_render
                 sleep 2
             done
         elif [ "$selected" = swaync ]; then
@@ -90,7 +85,7 @@ case "${1:-listen}" in
     listen) listen ;;
     render)
         case "$(backend)" in
-            ags) ags_render; exit 0 ;;
+            quickshell) qs_render; exit 0 ;;
             swaync)
                 if command -v swaync-client >/dev/null 2>&1; then
                     exec swaync-client -swb

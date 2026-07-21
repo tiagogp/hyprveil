@@ -61,6 +61,13 @@ elif hv_confirm "Back up and replace Hyprveil-managed config trees now?"; then
     "$REPO/scripts/06-select-profile.sh" --ensure
     "$REPO/scripts/07-select-notification-backend.sh" --ensure
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
+    # Deployment replaced every generated accent fragment with the default-red
+    # copy committed to the repo. `render` rewrites them from the saved state,
+    # so a wallpaper-derived accent survives a rerun; with no state yet it
+    # simply re-renders the default, which is why it is safe on a fresh install.
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/accent.sh" ]; then
+        "$HV_CONFIG_HOME/hypr/scripts/accent.sh" render || true
+    fi
     INSTALL_OK=1
 else
     echo "Skipped configuration deployment; package and hardware-profile state were retained."
@@ -74,16 +81,8 @@ if [ "$INSTALL_OK" -ne 1 ]; then
 elif ! cmp -s "$REPO/config/hypr/hyprland.conf" "$HV_CONFIG_HOME/hypr/hyprland.conf"; then
     echo "FAIL: installed hyprland.conf does not match the managed template."
     INSTALL_OK=0
-elif command -v hyprctl >/dev/null && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-    hyprctl reload
-    pkill waybar 2>/dev/null || true
-    (waybar & disown) 2>/dev/null || true
-    "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" restart || true
-    "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" restore || true
-    [ -x "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh" ] && "$HV_CONFIG_HOME/hypr/scripts/apply-theme.sh"
-    echo "Reloaded Hyprland and Waybar."
 else
-    echo "Configs verified. Log into Hyprland, or reload the existing session manually."
+    hv_reload_live_session
 fi
 
 echo

@@ -1,12 +1,12 @@
 # importance|package|command|feature
 required|hyprland|Hyprland|Hyprland session
 required|kitty|kitty|terminal
-required|polkit-gnome|polkit-gnome-authentication-agent-1|authentication agent
+required|mate-polkit|polkit-mate-authentication-agent-1|authentication agent
 required|xdg-desktop-portal-hyprland|xdg-desktop-portal-hyprland|desktop portal
-required|waybar|waybar|desktop bars
+optional|waybar|waybar|legacy bar; the shell draws its own
 required|rofi-wayland|rofi|application launcher
-backend|aylurs-gtk-shell2|ags|AGS quick-settings panel (Wi-Fi/Bluetooth) + notifications
-backend|dart-sass|sass|AGS stylesheet compilation (see docs/QUICK-SETTINGS.md)
+required|libnotify|notify-send|desktop notifications from scripts and the Bluetooth watcher
+backend|quickshell|quickshell|Quickshell shell (bar, dock, notifications)
 backend|SwayNotificationCenter|swaync|SwayNC notification-center fallback
 backend|mako|mako|Mako notification fallback
 required|hyprlock|hyprlock|screen lock
@@ -16,12 +16,18 @@ required|wlogout|wlogout|power menu
 required|jq|jq|JSON state helpers
 required|util-linux|flock|atomic dock and wallpaper state
 required|glib2|gio|desktop-entry dock launching
-required|socat|socat|instant dock focus updates
+required|gtk3|gtk-launch|dock fallback when DesktopEntries cannot resolve a pin
+optional|socat|socat|legacy dock-watch.sh helper; the shell reads Hyprland's socket in-process
 optional|bluez|bluetoothctl|Bluetooth status
 optional|blueman|blueman-manager|Bluetooth management
+optional|gnome-control-center|gnome-control-center|settings pages the bar's Bluetooth, network, and volume glyphs open
 optional|NetworkManager|nmcli|Wi-Fi panel scan and connect
 optional|brightnessctl|brightnessctl|laptop brightness keys
-optional|playerctl|playerctl|media keys and Waybar media controls
+optional|power-profiles-daemon|powerprofilesctl|laptop power profile controls
+optional|cliphist|cliphist|clipboard history picker and panel
+optional|wl-clipboard|wl-copy|Wayland clipboard writes
+optional|playerctl|playerctl|media keybinds (the bar uses MPRIS directly)
+optional|wf-recorder|wf-recorder|screen recording helper
 optional|rofimoji|rofimoji|emoji picker
 optional|tesseract|tesseract|screen OCR
 optional|ImageMagick|magick|wallpaper accent extraction

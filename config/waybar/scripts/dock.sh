@@ -4,8 +4,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 ICONS_FILE="$SCRIPT_DIR/dock-icons.json"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/dock-lib.sh"
+# shellcheck source=config/hypr/scripts/dock-lib.sh
+# dock-lib.sh moved to hypr/scripts/ when Waybar was retired as the bar: the pin
+# state it owns is still live, and it no longer belongs in a directory named
+# after a shell that does not run.
+. "${HYPRVEIL_DOCK_LIB:-$HOME/.config/hypr/scripts/dock-lib.sh}"
 
 icon_for() {
     jq -r --arg id "$1" '(.[$id] // ._default)' "$ICONS_FILE"
@@ -114,11 +117,11 @@ cmd_click() {
         middle) [ -z "$address" ] || hyprctl dispatch closewindow "address:$address" >/dev/null ;;
         right)
             if [ "$kind" = pinned ]; then
-                "$SCRIPT_DIR/dock-manager.sh" remove "${desktop_id:-$app_id}"
+                "$HOME/.config/hypr/scripts/dock-manager.sh" remove "${desktop_id:-$app_id}"
             else
                 resolved=$(dock_resolve_class "$app_id" || true)
                 if [ -n "$resolved" ]; then
-                    "$SCRIPT_DIR/dock-manager.sh" add "$resolved"
+                    "$HOME/.config/hypr/scripts/dock-manager.sh" add "$resolved"
                 else
                     dock_message "No installed desktop entry matches window class '$app_id'; use the dock manager to choose it."
                 fi

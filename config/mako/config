@@ -4,11 +4,16 @@
 # ("now" / "2m ago") and the tinted circle behind the icon — mako has no
 # timestamp format token and draws app icons as-is, with no icon backdrop.
 
+# mako sizes text in Pango POINTS, not pixels, so this one deliberately does not
+# come from the type scale — 10.5pt is the optical match for $text-sm at this
+# DPI, and substituting 13 here would render half again too large.
 font=Geist 10.5
 width=340
 height=140
 # outer-margin (edge of screen) + margin (between/around each card) add
-# together: 19+5=24px from the screen edge, 5+5=10px between stacked cards.
+# together: 19+5=24px ($space-6) from the screen edge, 5+5=10px ($space-2h)
+# between stacked cards. The halves are what mako's two knobs can express, so
+# they stay literal — the tokens are the sums, not these operands.
 outer-margin=19
 margin=5
 padding=16
@@ -19,7 +24,7 @@ text-color=#F5F5F7
 border-color=#FFFFFF1A
 border-size=1
 border-radius=14
-icon-border-radius=9
+icon-border-radius=10
 
 icons=1
 max-icon-size=36

@@ -17,17 +17,55 @@ Item {
     readonly property var geistLight: geistLightLoader.status === FontLoader.Ready ? geistLightLoader : null
     readonly property var geistRegular: geistRegularLoader.status === FontLoader.Ready ? geistRegularLoader : null
 
+    // Always painted, and always under the image: it is what shows on a fresh
+    // install (no backdrop rendered yet), on a decode failure, and in the
+    // letterbox if the image's aspect ratio does not match the panel.
     Rectangle {
         anchors.fill: parent
         color: colors.bg
     }
 
+    // Blurred wallpaper, baked by hypr/scripts/sddm-backdrop.sh into the theme
+    // directory. `sddm-backdrop.sh render` refreshes it after a wallpaper
+    // change; absent, this stays invisible and the flat fill above shows
+    // through. See docs/CONFIGURATION.md.
+    Image {
+        id: backdrop
+        anchors.fill: parent
+        source: "backgrounds/backdrop.jpg"
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        // Already blurred on disk, so it can be decoded at panel size instead
+        // of at the wallpaper's native 5K.
+        sourceSize.width: Screen.width
+        sourceSize.height: Screen.height
+        visible: status === Image.Ready
+        opacity: status === Image.Ready ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+    }
+
+    // The dim hyprlock bakes into its blur. Only over the image — dimming the
+    // flat fallback would just make it blacker.
+    Rectangle {
+        anchors.fill: parent
+        color: colors.scrim
+        visible: backdrop.status === Image.Ready
+    }
+
     // Only the primary screen gets the interactive greeter — secondary
-    // monitors just show the flat background, same single-surface approach
+    // monitors just show the background, same single-surface approach
     // hyprlock.conf takes for a one-monitor lock UI.
     Item {
+        id: greeter
         anchors.fill: parent
         visible: primaryScreen
+
+        // Settles in rather than snapping on. The greeter is the first frame
+        // of a boot, where an abrupt cut reads as a flicker.
+        opacity: 0
+        Component.onCompleted: greeter.opacity = 1
+        Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
 
         Column {
             anchors.centerIn: parent
@@ -42,7 +80,10 @@ Item {
 
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 22
+                // Wide enough to clear PasswordField's Caps Lock warning, which
+                // hangs below the pill without taking layout height (so the
+                // column does not jump when it appears).
+                spacing: 28
 
                 Components.UserAvatar {
                     id: userAvatar

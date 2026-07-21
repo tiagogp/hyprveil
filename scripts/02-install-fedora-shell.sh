@@ -13,19 +13,17 @@ hv_show_enabled_repos
 
 STAGE_FAIL=0
 hv_install_group required "Fedora desktop shell" - \
-    waybar rofi-wayland wlogout pavucontrol fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
+    waybar rofi-wayland wlogout gnome-control-center fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
 
 echo
 echo "== Notification + quick-settings backend =="
-# AGS (Aylur's GTK Shell v2 / Astal) is the default: a glass quick-settings panel
-# for Wi-Fi + Bluetooth that also serves notifications via AstalNotifd. SwayNC and
-# Mako remain fallbacks. The Astal package names below come from solopasha/hyprland;
-# aylurs-gtk-shell2 pulls most as deps, and the widget libraries are listed
-# explicitly so `ags run` finds the AstalBluetooth/AstalNetwork/AstalNotifd typelibs.
-AGS_PACKAGES=(aylurs-gtk-shell2 astal-io astal-notifd astal-bluetooth astal-network astal-wireplumber)
+# Quickshell is the default: it draws the bar, dock, and quick-settings panel and
+# also serves notifications (popups, history, DND). SwayNC and Mako remain
+# notification-only fallbacks for systems where the Quickshell COPR is declined
+# or unavailable.
 
 install_swaync_or_mako() {
-    # Shared fallback path when AGS is unavailable or declined.
+    # Shared fallback path when Quickshell is unavailable or declined.
     echo "SwayNC provides popup history, clear-all, and persistent do-not-disturb."
     hv_install_group optional "SwayNC notification center" \
         "erikreider/SwayNotificationCenter" SwayNotificationCenter
@@ -42,8 +40,14 @@ install_swaync_or_mako() {
 
 saved_backend=$(hv_notification_backend || true)
 case "$saved_backend" in
+    quickshell)
+        echo "Keeping saved Quickshell shell + notifications backend."
+        hv_install_group required "Quickshell shell (bar, dock, notifications)" \
+            "errornointernet/quickshell" quickshell || STAGE_FAIL=1
+        "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        ;;
     mako)
-        echo "Keeping saved Mako fallback; the AGS/SwayNC COPRs will not be offered on this rerun."
+        echo "Keeping saved Mako fallback; the Quickshell/SwayNC COPRs will not be offered on this rerun."
         hv_install_group required "Mako notification fallback" - mako || STAGE_FAIL=1
         "$REPO/scripts/07-select-notification-backend.sh" --ensure
         ;;
@@ -53,22 +57,17 @@ case "$saved_backend" in
             "erikreider/SwayNotificationCenter" SwayNotificationCenter || STAGE_FAIL=1
         "$REPO/scripts/07-select-notification-backend.sh" --ensure
         ;;
-    ags)
-        echo "Keeping saved AGS quick-settings + notifications backend."
-        hv_install_group required "AGS quick-settings panel + notifications" \
-            "solopasha/hyprland" "${AGS_PACKAGES[@]}" || STAGE_FAIL=1
-        "$REPO/scripts/07-select-notification-backend.sh" --ensure
-        ;;
     *)
-        echo "AGS is a glass quick-settings panel (Wi-Fi/Bluetooth) that also serves notifications (popups, history, DND)."
-        hv_install_group optional "AGS quick-settings panel + notifications" \
-            "solopasha/hyprland" "${AGS_PACKAGES[@]}"
-        # Gate on the package we tried to install, not any `ags` binary already on
-        # PATH — a stray/older ags must not mask a declined or failed COPR install.
-        if command -v rpm >/dev/null 2>&1 && rpm -q aylurs-gtk-shell2 >/dev/null 2>&1; then
-            "$REPO/scripts/07-select-notification-backend.sh" --backend ags
+        echo "Quickshell draws the bar, dock, and quick-settings panel (Wi-Fi/Bluetooth) and serves notifications (popups, history, DND)."
+        hv_install_group optional "Quickshell shell (bar, dock, notifications)" \
+            "errornointernet/quickshell" quickshell
+        # Gate on the package we tried to install, not any `quickshell` binary
+        # already on PATH — a stray/older build must not mask a declined or
+        # failed COPR install.
+        if command -v rpm >/dev/null 2>&1 && rpm -q quickshell >/dev/null 2>&1; then
+            "$REPO/scripts/07-select-notification-backend.sh" --backend quickshell
         else
-            hv_warn "AGS was not installed; falling back to the SwayNC notification center"
+            hv_warn "Quickshell was not installed; falling back to the SwayNC notification center"
             install_swaync_or_mako
         fi
         ;;
@@ -129,7 +128,7 @@ echo
 echo "== Bundled fallback wallpaper =="
 mkdir -p "$HV_CONFIG_HOME/hypr"
 wallpaper_tmp=$(mktemp "$HV_CONFIG_HOME/hypr/.wallpaper-default.XXXXXX")
-cp -a "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+cp -a "$REPO/config/hypr/wallpaper-default.jpg" \
     "$wallpaper_tmp"
 mv -f "$wallpaper_tmp" "$HV_CONFIG_HOME/hypr/wallpaper-default.jpg"
 echo "Installed $HV_CONFIG_HOME/hypr/wallpaper-default.jpg; saved wallpaper choices remain unchanged."

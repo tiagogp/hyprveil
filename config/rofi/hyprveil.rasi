@@ -1,4 +1,4 @@
-/* accent / accent-dim are generated from the wallpaper — see docs/ACCENT.md. */
+/* accent / accent-dim are generated from the wallpaper — see docs/CONFIGURATION.md. */
 @import "accent.rasi"
 
 /* Palette mirror of hypr/colors.conf — keep in sync manually. */

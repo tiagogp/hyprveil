@@ -25,8 +25,8 @@ while IFS='|' read -r importance package command feature; do
     [[ "$importance" = \#* ]] && continue
     if [ "$importance" = backend ]; then
         case "$notification_backend:$package" in
-            ags:aylurs-gtk-shell2|ags:dart-sass) importance=required ;;
             swaync:SwayNotificationCenter|mako:mako) importance=required ;;
+            quickshell:quickshell) importance=required ;;
             *) continue ;;
         esac
     fi

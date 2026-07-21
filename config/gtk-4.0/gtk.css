@@ -1,7 +1,7 @@
 /* Palette mirror of hypr/colors.conf — keep the neutrals in sync manually.
  * libadwaita apps read these named colors directly; this is what turns the
  * stock blue accent into the Hyprveil accent across GTK4 apps.
- * accent.css is generated from the wallpaper — see docs/ACCENT.md. */
+ * accent.css is generated from the wallpaper — see docs/CONFIGURATION.md. */
 @import url("accent.css");
 
 @define-color window_bg_color #0F1115;

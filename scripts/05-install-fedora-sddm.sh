@@ -92,6 +92,18 @@ if hv_confirm "Back up and install the system theme now?"; then
 fi
 
 echo
+echo "== Step 2b: render the current wallpaper into the greeter backdrop =="
+echo "  $REPO/config/hypr/scripts/sddm-backdrop.sh render"
+echo "The greeter runs as the 'sddm' system user and \$HOME is 0700, so it cannot"
+echo "read ~/Pictures/Wallpapers directly — a blurred copy is baked into the theme"
+echo "instead. Skipping this is harmless: the greeter falls back to flat dark."
+echo "Re-run that command yourself after changing wallpaper to refresh it."
+if hv_confirm "Render the backdrop now?"; then
+    "$REPO/config/hypr/scripts/sddm-backdrop.sh" render \
+        || echo "Backdrop render failed — the greeter will use the flat dark background."
+fi
+
+echo
 echo "== Step 3: point sddm at the theme — writes /etc/sddm.conf.d/hyprveil.conf (sudo) =="
 echo "  [Theme]"
 echo "  Current=hyprveil"

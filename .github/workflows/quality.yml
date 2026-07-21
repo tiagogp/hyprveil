@@ -13,5 +13,5 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq shellcheck
-      - name: Run P0-P4 quality gate
+      - name: Run P0-P10 quality gate
         run: ./tests/run.sh --require-shellcheck

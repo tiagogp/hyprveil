@@ -4,7 +4,7 @@
    dim #6B6E78 · border #2A2D35 · warn #E1A346 · error #E5484D
 
    The accent is generated from the wallpaper — never hardcode it here.
-   accent.css defines @accent / @accent-hover / @accent-soft. See docs/ACCENT.md. */
+   accent.css defines @accent / @accent-hover / @accent-soft. See docs/CONFIGURATION.md. */
 @import url("accent.css");
 
 * {
