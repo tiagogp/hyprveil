@@ -1,6 +1,6 @@
 // GENERATED from Accent.qml.in by hypr/scripts/accent.sh — do not edit.
 // The accent is derived from the wallpaper; change the wallpaper, not this file.
-// `accent.sh reset` restores the designed red. See docs/ACCENT.md.
+// `accent.sh reset` restores the designed red. See docs/CONFIGURATION.md.
 //
 // Quickshell watches its config directory and reloads when a file changes, so
 // writing this file IS the reload — there is no push step, and none of the
@@ -49,7 +49,7 @@ Singleton {
     // at 3.0:1 through opacity needs ~0.97, which is a solid slab and throws
     // away the glass on exactly the wallpapers worth seeing; lifting the two
     // dark glyph colours instead costs a shade of fidelity and keeps the
-    // surface. See the contrast budget in docs/TOKENS.md.
+    // surface. See the contrast budget in docs/CONFIGURATION.md.
     //
     // Over a dark wallpaper these come back unchanged — the lift is zero when
     // the contrast is already free.

@@ -2,7 +2,7 @@
    self-contained here; the accent is generated from the wallpaper.
 
    GENERATED from style.css.in by hypr/scripts/theme.sh — edit the template, not
-   the rendered style.css. See docs/TOKENS.md.
+   the rendered style.css. See docs/CONFIGURATION.md.
 
    Note for editors: GTK's at-name color references and the renderer's
    at-name-at placeholders coexist safely because a substitution needs the

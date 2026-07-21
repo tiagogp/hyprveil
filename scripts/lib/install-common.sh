@@ -326,7 +326,7 @@ hv_backup_item() {
 # Replace only Hyprveil-managed trees. Existing targets are backed up first,
 # replacement removes stale managed files, and persistent state remains outside
 # the config tree. User wallpaper files are explicitly carried forward, while the
-# repository's design wallpaper is installed as an always-available fallback.
+# repository's bundled wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
     local backup staged target name starship_tmp backend other
     local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell fontconfig)
@@ -388,7 +388,7 @@ hv_deploy_configs() {
             if [ -f "$target/wallpaper.jpg" ]; then
                 cp -a "$target/wallpaper.jpg" "$staged/wallpaper.jpg"
             fi
-            cp -a "$HV_REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+            cp -a "$HV_REPO/config/hypr/wallpaper-default.jpg" \
                 "$staged/wallpaper-default.jpg"
         fi
         if [ -e "$target" ]; then

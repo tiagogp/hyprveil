@@ -104,6 +104,233 @@ grep -q 'form-factor/laptop.conf' "$HYPRVEIL_CONFIG_HOME/hypr/profiles/active.co
 grep -q 'gpu/amd.conf' "$HYPRVEIL_CONFIG_HOME/hypr/profiles/active.conf" || fail "AMD include missing"
 ok "hardware profile persists unchanged on rerun"
 
+grep -q 'AudioSection' "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+    || fail "Quick Settings does not instantiate the audio section"
+grep -q 'Quickshell.Services.Pipewire' "$REPO/config/quickshell/Panel/AudioSection.qml" \
+    || fail "audio section is not driven by the PipeWire service"
+grep -q 'AudioSection.qml' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits the audio section"
+ok "Quick Settings includes documented PipeWire audio controls"
+
+grep -q 'visible: !Pipewire.ready' "$REPO/config/quickshell/Panel/AudioSection.qml" \
+    || fail "audio section does not expose an unavailable PipeWire state"
+grep -q 'visible: Pipewire.ready' "$REPO/config/quickshell/Panel/AudioSection.qml" \
+    || fail "audio section does not hide controls until PipeWire is ready"
+grep -q 'Audio service unavailable' "$REPO/config/quickshell/Panel/AudioSection.qml" \
+    || fail "audio section does not explain unavailable PipeWire"
+
+grep -q 'visible: root.device !== null' "$REPO/config/quickshell/Panel/WifiSection.qml" \
+    || fail "Wi-Fi toggle is not hidden when no adapter exists"
+grep -q 'No Wi-Fi adapter' "$REPO/config/quickshell/Panel/WifiSection.qml" \
+    || fail "Wi-Fi section does not explain absent hardware"
+grep -q 'No networks found' "$REPO/config/quickshell/Panel/WifiSection.qml" \
+    || fail "Wi-Fi section does not expose an empty scan state"
+grep -q 'command -v nmcli' "$REPO/config/quickshell/Panel/WifiSection.qml" \
+    || fail "Wi-Fi secured-network fallback does not probe nmcli availability"
+grep -q 'Wi-Fi connection unavailable' "$REPO/config/quickshell/Panel/WifiSection.qml" \
+    || fail "Wi-Fi secured-network fallback does not fail visibly without nmcli"
+
+grep -q 'blueman-manager' "$REPO/config/quickshell/Panel/BluetoothSection.qml" \
+    || fail "Bluetooth section does not expose the Blueman pairing fallback"
+grep -q 'Blueman' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits the Bluetooth pairing fallback"
+ok "Quick Settings exposes documented Bluetooth pairing fallback"
+
+grep -q 'visible: root.adapter !== null' "$REPO/config/quickshell/Panel/BluetoothSection.qml" \
+    || fail "Bluetooth toggle is not hidden when no adapter exists"
+grep -q 'No Bluetooth adapter' "$REPO/config/quickshell/Panel/BluetoothSection.qml" \
+    || fail "Bluetooth section does not explain absent hardware"
+grep -q "Bluetooth pairing unavailable" "$REPO/config/quickshell/Panel/BluetoothSection.qml" \
+    || fail "Bluetooth pairing fallback does not fail visibly when Blueman is absent"
+
+grep -q 'PowerProfileSection' "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+    || fail "Quick Settings does not instantiate the power profile section"
+grep -q 'powerprofilesctl' "$REPO/config/quickshell/Panel/PowerProfileSection.qml" \
+    || fail "power profile section is not driven by powerprofilesctl"
+grep -q 'power-profiles-daemon' "$REPO/scripts/data/dependencies.tsv" \
+    || fail "dependency report omits the power profile helper"
+grep -q 'PowerProfileSection.qml' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits the power profile section"
+ok "Quick Settings includes documented laptop power profile controls"
+
+grep -q 'command -v powerprofilesctl' "$REPO/config/quickshell/Panel/PowerProfileSection.qml" \
+    || fail "power profile section does not probe command availability"
+grep -q 'Power profiles unavailable' "$REPO/config/quickshell/Panel/PowerProfileSection.qml" \
+    || fail "power profile section does not explain unavailable service"
+grep -q 'visible: root.available' "$REPO/config/quickshell/Panel/PowerProfileSection.qml" \
+    || fail "power profile choices are not hidden when unavailable"
+
+grep -q 'ClipboardSection' "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+    || fail "Quick Settings does not instantiate the clipboard section"
+grep -q 'cliphist list' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not read cliphist history"
+grep -q 'cliphist delete' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not expose clear-item behavior"
+grep -q 'cliphist", "wipe' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not expose clear-all behavior"
+grep -q 'ClipboardSection.qml' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits the clipboard section"
+ok "Quick Settings includes documented clipboard history controls"
+
+grep -q 'command -v cliphist' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not probe cliphist availability"
+grep -q 'command -v wl-copy' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not probe wl-copy availability"
+grep -q 'Clipboard tools unavailable' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard section does not explain unavailable tools"
+grep -q 'visible: root.toolsAvailable' "$REPO/config/quickshell/Panel/ClipboardSection.qml" \
+    || fail "clipboard controls are not hidden when tools are unavailable"
+
+grep -q 'No notifications' "$REPO/config/quickshell/Panel/NotificationSection.qml" \
+    || fail "notification section does not expose an empty history state"
+grep -q 'notifications?' "$REPO/config/quickshell/Panel/NotificationSection.qml" \
+    || fail "notification controls do not guard missing notification state"
+
+for section in WifiSection BluetoothSection AudioSection PowerProfileSection ClipboardSection NotificationSection; do
+    grep -q 'Section {' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section does not use the shared quick-settings surface"
+    grep -q 'glyph:' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section does not use the shared icon slot"
+    grep -q 'Tokens\.' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section does not use design tokens"
+    ! grep -Eq '#[0-9A-Fa-f]{3,8}' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section hardcodes a hex color instead of the token/accent system"
+done
+for section in WifiSection BluetoothSection AudioSection ClipboardSection NotificationSection; do
+    grep -q 'Glyph {' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section custom rows do not use the shared Glyph icon component"
+    grep -q 'Accent\.' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section custom rows do not use the accent system"
+done
+grep -q 'Segmented {' "$REPO/config/quickshell/Panel/PowerProfileSection.qml" \
+    || fail "power profile section does not use the shared segmented control"
+grep -q 'Surface {' "$REPO/config/quickshell/Osd/Osd.qml" \
+    || fail "OSD does not use the shared surface system"
+grep -q 'Glyph {' "$REPO/config/quickshell/Osd/Osd.qml" \
+    || fail "OSD does not use the shared Glyph icon component"
+grep -q 'Accent\.' "$REPO/config/quickshell/Osd/Osd.qml" \
+    || fail "OSD does not use the accent system"
+! grep -Eq '#[0-9A-Fa-f]{3,8}' "$REPO/config/quickshell/Osd/Osd.qml" \
+    || fail "OSD hardcodes a hex color instead of the token/accent system"
+ok "new desktop-polish controls use shared tokens, accent, surfaces, and icons"
+ok "optional quick-settings controls hide or explain unavailable services and hardware"
+
+cat > "$TMP/bin/mock-kitty" <<'EOF'
+#!/usr/bin/env bash
+printf 'kitty %s\n' "$*" >> "${MOCK_DNF_ROOT:?}/kitty-actions"
+if [ "${1:-}" = @ ] && [ "${2:-}" = ls ]; then
+    printf 'launch --cwd=current\n'
+fi
+EOF
+chmod +x "$TMP/bin/mock-kitty"
+
+rm -f "$TMP/kitty-actions"
+HYPRVEIL_KITTY="$TMP/bin/mock-kitty" "$REPO/config/kitty/hyprveil-session.sh" save work >/dev/null
+[ -f "$HYPRVEIL_STATE_HOME/kitty-sessions/work.conf" ] \
+    || fail "Kitty session helper did not save a named session"
+grep -q 'launch --cwd=current' "$HYPRVEIL_STATE_HOME/kitty-sessions/work.conf" \
+    || fail "Kitty session helper did not write Kitty session output"
+[ "$(stat -c '%a' "$HYPRVEIL_STATE_HOME/kitty-sessions")" = 700 ] \
+    || fail "Kitty session directory is not private"
+[ "$(stat -c '%a' "$HYPRVEIL_STATE_HOME/kitty-sessions/work.conf")" = 600 ] \
+    || fail "Kitty session snapshot is not private"
+HYPRVEIL_KITTY="$TMP/bin/mock-kitty" "$REPO/config/kitty/hyprveil-session.sh" new-tab >/dev/null
+grep -q 'kitty @ launch --type=tab --cwd=current --add-to-session=.' "$TMP/kitty-actions" \
+    || fail "Kitty session helper did not open tabs through Kitty remote control"
+HYPRVEIL_KITTY="$TMP/bin/mock-kitty" "$REPO/config/kitty/hyprveil-session.sh" open work >/dev/null
+grep -q "kitty --session $HYPRVEIL_STATE_HOME/kitty-sessions/work.conf --detach" "$TMP/kitty-actions" \
+    || fail "Kitty session helper did not reopen saved sessions with Kitty"
+HYPRVEIL_KITTY="$TMP/bin/mock-kitty" "$REPO/config/kitty/hyprveil-session.sh" delete work
+[ ! -e "$HYPRVEIL_STATE_HOME/kitty-sessions/work.conf" ] \
+    || fail "Kitty session helper did not delete a named session"
+ok "Kitty tab/session helper saves, opens, and deletes optional sessions outside shell state"
+
+grep -q 'valid_name' "$REPO/config/kitty/hyprveil-session.sh" \
+    || fail "Kitty session helper does not schema-check snapshot names"
+grep -Fq "mktemp \"\$SESSION_DIR" "$REPO/config/kitty/hyprveil-session.sh" \
+    || fail "Kitty session helper does not write snapshots through a temporary file"
+grep -Fq "mv \"\$tmp\" \"\$path\"" "$REPO/config/kitty/hyprveil-session.sh" \
+    || fail "Kitty session helper does not atomically replace snapshots"
+grep -q 'kitty-sessions' "$REPO/docs/CONFIGURATION.md" \
+    || fail "configuration inventory omits Kitty session state"
+ok "new persistent Kitty state is schema-checked, private, atomic, and inventoried"
+
+for control in Button Toggle Segmented LinkRow; do
+    grep -q 'activeFocusOnTab: true' "$REPO/config/quickshell/Panel/$control.qml" \
+        || fail "$control does not accept keyboard focus"
+    grep -q 'Keys.on.*Pressed' "$REPO/config/quickshell/Panel/$control.qml" \
+        || fail "$control does not expose keyboard activation"
+    grep -q 'Accessible.name' "$REPO/config/quickshell/Panel/$control.qml" \
+        || fail "$control does not expose an accessible name"
+done
+for section in WifiSection BluetoothSection AudioSection ClipboardSection NotificationSection; do
+    grep -q 'activeFocusOnTab: true' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section does not expose keyboard-focusable custom controls"
+    grep -q 'Accessible.name' "$REPO/config/quickshell/Panel/$section.qml" \
+        || fail "$section does not name custom controls for assistive tech"
+done
+grep -q 'accessible names' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits shared accessibility behavior"
+for modal in QuickSettings Wallpapers Cheatsheet; do
+    grep -q 'Close .*"' "$REPO/config/quickshell/Panel/$modal.qml" \
+        || fail "$modal close button does not expose an accessible name"
+done
+grep -q 'Select wallpaper' "$REPO/config/quickshell/Panel/Wallpapers.qml" \
+    || fail "wallpaper picker thumbnails are not named for assistive tech"
+grep -q 'Pin ") + modelData.name' "$REPO/config/quickshell/Dock/PinPicker.qml" \
+    || fail "dock pin picker rows are not named for assistive tech"
+grep -q 'Qt.Key_MediaTogglePlayPause' "$REPO/config/quickshell/Lock/Lock.qml" \
+    || fail "lock screen does not handle media keys without a pointer"
+grep -q 'hardware media keys' "$REPO/docs/QUICK-SETTINGS.md" \
+    || fail "Quick Settings documentation omits lock-screen pointer-free media behavior"
+grep -q 'activeFocus' "$REPO/config/sddm/hyprveil/Components/SessionPicker.qml" \
+    || fail "SDDM session picker focus does not light the control"
+grep -q 'Accessible.name' "$REPO/config/sddm/hyprveil/Components/PasswordField.qml" \
+    || fail "SDDM password field does not expose an accessible name"
+python3 - <<'PY' || fail "focus accent does not meet the 3:1 UI contrast floor"
+def linear(c):
+    c = c / 255
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+def luminance(hex_color):
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+
+def contrast(a, b):
+    hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+accent = "#e14658"
+surfaces = ["#0d0e11", "#15171b", "#1c1f26", "#23262e"]
+assert min(contrast(accent, surface) for surface in surfaces) >= 3.0
+PY
+ok "Quick Settings, modal, dock-picker, and lock controls expose keyboard/accessibility wiring"
+
+# Reduced motion is a Hyprland source line, and Hyprland does not animate the
+# Quickshell surfaces — they draw their own transitions in QML. So the shell has
+# to honor the same motion-profile state file itself, or "reduced motion" leaves
+# the panel, OSD, and sliders moving exactly as before.
+grep -q 'motion-profile' "$REPO/config/quickshell/Services/Motion.qml" \
+    || fail "Motion service does not read the motion-profile state file"
+grep -q 'reduced ? 0' "$REPO/config/quickshell/Services/Motion.qml" \
+    || fail "Motion.duration does not collapse to zero under reduced motion"
+grep -q 'HYPRVEIL_STATE_HOME' "$REPO/config/quickshell/Services/Motion.qml" \
+    || fail "Motion service ignores the HYPRVEIL_STATE_HOME test override"
+# Every animated surface added for the desktop-polish work routes its durations
+# through the service; a raw Tokens.durN in a Behavior would ignore the profile.
+for surface in Osd/Osd Panel/AudioSection; do
+    grep -q 'Motion.duration(' "$REPO/config/quickshell/$surface.qml" \
+        || fail "$surface animates without honoring the reduced-motion profile"
+done
+# Icon-only and grouped controls name themselves for assistive tech.
+grep -q 'Accessible.role: showHeader ? Accessible.Grouping' "$REPO/config/quickshell/Panel/Section.qml" \
+    || fail "quick-settings sections are not exposed as named groups"
+grep -q 'Accessible.role: Accessible.StaticText' "$REPO/config/quickshell/Panel/BindRow.qml" \
+    || fail "cheatsheet rows are not named for assistive tech"
+ok "reduced-motion profile and section/cheatsheet accessible names reach the QML shell"
+
+
 printf 'old wallpaper\n' > "$HYPRVEIL_CONFIG_HOME/hypr/wallpaper.jpg"
 printf 'stale\n' > "$HYPRVEIL_CONFIG_HOME/hypr/stale-managed.conf"
 mkdir -p "$HYPRVEIL_STATE_HOME"
@@ -125,6 +352,38 @@ HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" "$REPO/config/hypr/scripts/hardware-action.
 battery_output=$(HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" "$REPO/config/waybar/scripts/battery.sh")
 printf '%s' "$battery_output" | grep -q '"text":""' || fail "battery module did not hide without a battery"
 ok "absent brightness and battery hardware is handled safely"
+
+cat > "$TMP/bin/wpctl" <<'EOF'
+#!/usr/bin/env bash
+printf 'wpctl %s\n' "$*" >> "${MOCK_DNF_ROOT:?}/osd-actions"
+if [ "${1:-}" = get-volume ]; then
+    printf 'Volume: 0.42\n'
+fi
+EOF
+cat > "$TMP/bin/brightnessctl" <<'EOF'
+#!/usr/bin/env bash
+printf 'brightnessctl %s\n' "$*" >> "${MOCK_DNF_ROOT:?}/osd-actions"
+if [ "${1:-}" = -m ]; then
+    printf 'mock,intel_backlight,42,100,42%%\n'
+fi
+EOF
+cat > "$TMP/bin/qs" <<'EOF'
+#!/usr/bin/env bash
+printf 'qs %s\n' "$*" >> "${MOCK_DNF_ROOT:?}/osd-actions"
+EOF
+chmod +x "$TMP/bin/wpctl" "$TMP/bin/brightnessctl" "$TMP/bin/qs"
+
+rm -f "$TMP/osd-actions"
+"$REPO/config/hypr/scripts/osd-action.sh" volume-up
+grep -q 'wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 2%+' "$TMP/osd-actions" \
+    || fail "OSD volume helper did not change sink volume"
+grep -q 'qs ipc call osd show volume 42 false' "$TMP/osd-actions" \
+    || fail "OSD volume helper did not show the coalesced overlay"
+
+rm -f "$TMP/osd-actions"
+HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" "$REPO/config/hypr/scripts/osd-action.sh" brightness-up
+[ ! -e "$TMP/osd-actions" ] || fail "OSD brightness helper touched tools without backlight hardware"
+ok "OSD media-key helper reports audio and preserves absent-brightness no-op"
 
 report=$("$REPO/scripts/09-dependency-report.sh")
 printf '%s' "$report" | grep -q 'Fedora: Fedora Linux 44 (Mock)' || fail "dependency report omitted Fedora version"

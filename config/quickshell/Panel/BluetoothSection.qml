@@ -28,6 +28,7 @@ Section {
     Toggle {
         Layout.alignment: Qt.AlignRight
         visible: root.adapter !== null
+        accessibleName: "Bluetooth"
         checked: root.adapter?.enabled ?? false
         onToggled: value => root.adapter.enabled = value
     }
@@ -55,7 +56,19 @@ Section {
                 Layout.fillWidth: true
                 implicitHeight: Tokens.spacing8
                 radius: Tokens.radiusSm
+                activeFocusOnTab: true
                 color: btMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                border.width: activeFocus ? 1 : 0
+                border.color: Accent.accent
+                Accessible.role: Accessible.Button
+                Accessible.name: (modelData.connected ? "Disconnect " : "Connect ") + modelData.name
+
+                function activate() {
+                    modelData.connected ? modelData.disconnect() : modelData.connect();
+                }
+
+                Keys.onReturnPressed: activate()
+                Keys.onSpacePressed: activate()
 
                 RowLayout {
                     anchors.fill: parent
@@ -103,11 +116,20 @@ Section {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: modelData.connected
-                        ? modelData.disconnect()
-                        : modelData.connect()
+                    onClicked: parent.activate()
                 }
             }
         }
+    }
+
+    Button {
+        Layout.alignment: Qt.AlignRight
+        visible: root.adapter !== null && (root.adapter?.enabled ?? false)
+        text: "Pair device"
+        accessibleName: "Pair Bluetooth device"
+        onClicked: Quickshell.execDetached([
+            "sh", "-c",
+            "if command -v blueman-manager >/dev/null 2>&1; then blueman-manager; else notify-send 'Bluetooth pairing unavailable' 'Install blueman to pair new devices from Hyprveil.'; fi"
+        ])
     }
 }

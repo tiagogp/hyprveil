@@ -193,7 +193,7 @@ Scope {
                 }
             }
 
-            implicitWidth: 560
+            implicitWidth: Math.max(0, Math.min(560, parent.width - Tokens.spacing4 * 2))
             implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
                                      parent.height - Tokens.spacing8 * 2)
 
@@ -224,8 +224,16 @@ Scope {
                         implicitWidth: Tokens.spacing6
                         implicitHeight: Tokens.spacing6
                         radius: Tokens.radiusPill
+                        activeFocusOnTab: true
                         color: closeMouse.containsMouse
                             ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Close dock pins"
+
+                        Keys.onReturnPressed: root.open = false
+                        Keys.onSpacePressed: root.open = false
 
                         Glyph {
                             anchors.centerIn: parent
@@ -261,7 +269,15 @@ Scope {
                             width: 36
                             height: 36
                             radius: Tokens.radiusSm
-                            color: chipMouse.containsMouse ? "#23262e" : "#1c1f26"
+                            activeFocusOnTab: true
+                            color: chipMouse.containsMouse || activeFocus ? "#23262e" : "#1c1f26"
+                            border.width: activeFocus ? 1 : 0
+                            border.color: Accent.accent
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Unpin " + modelData.name
+
+                            Keys.onReturnPressed: root.toggle(modelData.desktop_id)
+                            Keys.onSpacePressed: root.toggle(modelData.desktop_id)
 
                             IconImage {
                                 anchors.centerIn: parent
@@ -333,6 +349,8 @@ Scope {
                             renderType: Text.NativeRendering
                             Layout.fillWidth: true
                             focus: true
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: "Search applications to pin"
                             color: Tokens.text
                             font.family: Tokens.fontUi
                             font.pixelSize: Tokens.textSm
@@ -391,9 +409,17 @@ Scope {
                         width: ListView.view.width
                         height: 44
                         radius: Tokens.radiusSm
-                        color: rowMouse.containsMouse && available
+                        activeFocusOnTab: available
+                        color: (rowMouse.containsMouse || activeFocus) && available
                              ? "#23262e" : "transparent"
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
                         opacity: available ? 1.0 : 0.4
+                        Accessible.role: Accessible.Button
+                        Accessible.name: (pinned ? "Unpin " : "Pin ") + modelData.name
+
+                        Keys.onReturnPressed: if (available) root.toggle(modelData.desktop_id)
+                        Keys.onSpacePressed: if (available) root.toggle(modelData.desktop_id)
 
                         RowLayout {
                             anchors.fill: parent

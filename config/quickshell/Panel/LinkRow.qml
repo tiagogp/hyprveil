@@ -10,12 +10,21 @@ Rectangle {
     id: root
 
     property string text: ""
+    property string accessibleName: text
 
     signal clicked()
 
     implicitHeight: Tokens.spacing8
     radius: Tokens.radiusSm
-    color: mouse.containsMouse ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.06)
+    activeFocusOnTab: true
+    border.width: activeFocus ? 1 : 0
+    border.color: Accent.accent
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName
+    color: mouse.containsMouse || activeFocus ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.06)
+
+    Keys.onReturnPressed: root.clicked()
+    Keys.onSpacePressed: root.clicked()
 
     Text {
         renderType: Text.NativeRendering
@@ -23,7 +32,7 @@ Rectangle {
         text: root.text
         font.family: Tokens.fontUi
         font.pixelSize: Tokens.textXs
-        color: mouse.containsMouse ? Accent.accent : Tokens.muted
+        color: mouse.containsMouse || root.activeFocus ? Accent.accent : Tokens.muted
     }
 
     MouseArea {

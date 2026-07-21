@@ -1,5 +1,7 @@
 # Hyprveil
 
+[![quality](https://github.com/tiagogp/hyprveil/actions/workflows/quality.yml/badge.svg)](https://github.com/tiagogp/hyprveil/actions/workflows/quality.yml)
+
 Hyprveil is a reusable Fedora Hyprland desktop template with a dark glass visual
 system, a Quickshell-based shell, wallpaper-aware accents, persistent hardware
 profiles, and a cautious installer that backs up managed configuration before
@@ -67,23 +69,16 @@ Important warnings:
 
 ## Documentation
 
-See [docs/INSTALL.md](docs/INSTALL.md) for repository and rerun behavior,
-[docs/HARDWARE.md](docs/HARDWARE.md) for profiles,
-[docs/TOP-BAR-DOCK.md](docs/TOP-BAR-DOCK.md) for Bluetooth, media, and pin management,
-[docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md) for the Wi-Fi/Bluetooth/notification panel,
-[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) for the Quickshell default plus SwayNC and Mako fallbacks,
-[docs/TOKENS.md](docs/TOKENS.md) for the design token scale,
-[docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md) for persistent per-monitor wallpapers and reduced motion,
-[docs/ACCENT.md](docs/ACCENT.md) for wallpaper-derived accent colors,
-[docs/CONFIGURATION.md](docs/CONFIGURATION.md) for managed files, optional dependencies, keybindings, and state locations,
-[docs/MAINTENANCE.md](docs/MAINTENANCE.md) for the read-only doctor command,
-[docs/RECOVERY.md](docs/RECOVERY.md) for component recovery and rollback,
-[docs/SUPPORT.md](docs/SUPPORT.md) for the rolling Fedora policy, and
-[ROADMAP.md](ROADMAP.md) for milestone history.
+The docs are intentionally small:
 
-Project process lives in [CONTRIBUTING.md](CONTRIBUTING.md), release notes in
-[CHANGELOG.md](CHANGELOG.md), security reporting in [SECURITY.md](SECURITY.md),
-and licensing in [LICENSE](LICENSE).
+- [docs/INSTALL.md](docs/INSTALL.md): installer behavior, reruns, and backups.
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md): managed files, state, tokens,
+  accents, keybindings, and optional dependencies.
+- [docs/HARDWARE.md](docs/HARDWARE.md): desktop/laptop and GPU profiles.
+- [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md): panel controls and cheatsheet.
+- [docs/RECOVERY.md](docs/RECOVERY.md): rollback and component recovery.
+
+Licensing lives in [LICENSE](LICENSE).
 
 ## Fedora packages and hardware
 
@@ -124,7 +119,7 @@ config/
 │   └── scripts/             # theme, zoom, and hardware-aware actions
 ├── quickshell/              # the session shell: bar, dock, panel, lock (QML)
 ├── waybar/                  # legacy bar and helper scripts
-├── kitty/                   # terminal theme
+├── kitty/                   # terminal theme and optional tab/session helper
 ├── rofi/                    # launcher and accent selector theme
 ├── swaync/                  # notification fallback config and CSS
 ├── mako/                    # minimal notification fallback config
@@ -141,8 +136,6 @@ config/
     ├── Main.qml
     └── Components/          # Palette.qml, Clock.qml, UserAvatar.qml,
                               # PasswordField.qml, SessionPicker.qml, PowerRow.qml
-design/
-└── Custom Hyprland Desktop Environment/   # source design export and assets
 scripts/
 ├── 00-backup.sh
 ├── 01-install-fedora-core.sh
@@ -153,7 +146,9 @@ scripts/
 ├── 06-select-profile.sh
 ├── 07-select-notification-backend.sh
 ├── 08-test-nested-session.sh   # fully isolated nested Hyprland launch
-└── 09-dependency-report.sh
+├── 09-dependency-report.sh
+├── 10-first-run-setup.sh       # guided or flag-driven local setup
+└── lib/                       # shared installer and render helpers
 tests/
 ├── p0-smoke.sh ... p10-setup-smoke.sh
 └── run.sh                      # non-session P0-P10 quality gate
@@ -200,8 +195,8 @@ P0-P10 suite:
 ./tests/run.sh
 ```
 
-Release validation uses `./tests/run.sh --require-shellcheck`, which fails instead
-of warning when ShellCheck is unavailable. Then run `scripts/03-test-config.sh`
+Use `./tests/run.sh --require-shellcheck` when ShellCheck must be enforced instead
+of treated as optional. Then run `scripts/03-test-config.sh`
 from the repo root. Phases 1 and 2 never touch real user config or state:
 
 1. **Static checks** (run anywhere): all config files present, legacy Waybar/wlogout JSON
@@ -221,10 +216,6 @@ The standalone nested launcher accepts `--backend quickshell|swaync|mako` and `-
 ./scripts/08-test-nested-session.sh --backend quickshell
 ```
 
-Manual release evidence is recorded in
-[docs/VM-TEST-MATRIX.md](docs/VM-TEST-MATRIX.md); the tag gate is
-[docs/RELEASE.md](docs/RELEASE.md).
-
 ### First-run setup
 
 After installing, run the guided setup to configure the machine:
@@ -236,8 +227,7 @@ After installing, run the guided setup to configure the machine:
 It detects monitors and offers their preferred resolution/scale, then collects
 keyboard layout, app shortcuts, idle timers, wallpaper, accent, and motion. It
 previews everything before writing and is safe to re-run. Every choice has a flag
-(`./scripts/10-first-run-setup.sh --help`), so it also runs unattended. See
-[docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+(`./scripts/10-first-run-setup.sh --help`), so it also runs unattended.
 
 ### Maintenance doctor
 
@@ -249,8 +239,7 @@ Run a read-only support report without changing configuration or state:
 
 The doctor reports Fedora support, repository source shape, dependency presence,
 Hyprland and Quickshell health, selected backend/profile state, wallpaper/accent
-state, dock pins, and managed-tree deployment. See
-[docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+state, dock pins, and managed-tree deployment.
 
 ## Reload / restart
 
@@ -347,7 +336,7 @@ including any you add — see [Cheatsheet](docs/QUICK-SETTINGS.md#keybind-cheats
 ## Customization quick guide
 
 - **Sizes, spacing, type, motion** → edit `hypr/tokens.conf`, then run
-  `~/.config/hypr/scripts/theme.sh render`. See [docs/TOKENS.md](docs/TOKENS.md).
+  `~/.config/hypr/scripts/theme.sh render`.
 - **Colors** → edit `hypr/colors.conf` for Hyprland; Quickshell/Kitty/Rofi/SwayNC/
   wlogout each carry a palette mirror block at the top of their file (these tools
   can't read Hyprland variables — grep for the old hex when changing a color).
@@ -369,8 +358,7 @@ including any you add — see [Cheatsheet](docs/QUICK-SETTINGS.md#keybind-cheats
 - **Idle/lock timeouts** → `./hyprveil setup --idle-lock/--idle-dpms/--idle-suspend`
   (writes `hypr/hypridle.conf`).
 - **Wallpaper** → put images under `~/Pictures/Wallpapers` and press
-  `SUPER+SHIFT+W`, or use `hypr/scripts/wallpaper.sh apply`; see
-  [docs/WALLPAPERS-MOTION.md](docs/WALLPAPERS-MOTION.md).
+  `SUPER+SHIFT+W`, or use `hypr/scripts/wallpaper.sh apply`.
 - **Cursor theme/size** → env vars in `hypr/variables.conf` **and**
   `hypr/scripts/apply-theme.sh` (keep both in sync), then `hyprctl reload` and
   re-run the script.

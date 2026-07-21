@@ -1,5 +1,5 @@
 // GENERATED from Tokens.qml.in by hypr/scripts/theme.sh — do not edit.
-// Edit hypr/tokens.conf, then run `theme.sh render`. See docs/TOKENS.md.
+// Edit hypr/tokens.conf, then run `theme.sh render`. See docs/CONFIGURATION.md.
 //
 // This is the whole reason the shell is QML: every value below is a real
 // property, so `radius: Tokens.radiusMd` is a live binding. There is no unit

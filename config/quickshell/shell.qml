@@ -16,6 +16,7 @@ import "Notif"
 import "Panel"
 import "Lock"
 import "Services"
+import "Osd"
 
 ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
@@ -88,4 +89,9 @@ ShellRoot {
     // notify-send so they land in the same history and honour the same DND as
     // everything else.
     BluetoothWatch {}
+
+    // Volume, microphone, and brightness feedback for hardware keys. The helper
+    // script owns the system command and this scope only renders the latest
+    // value, so repeated keypresses update one overlay instead of stacking.
+    Osd {}
 }

@@ -21,6 +21,13 @@ Surface {
     elevation: 1
     radius: Tokens.radiusMd
 
+    // A section is a labelled group to assistive tech: the title names it, so a
+    // screen reader reads "Power, group" before the controls inside rather than
+    // announcing four unrelated toggles. A headerless section carries no title
+    // and no chrome, so it stays an anonymous container.
+    Accessible.role: showHeader ? Accessible.Grouping : Accessible.NoRole
+    Accessible.name: showHeader ? title : ""
+
     // A headerless section is not a visual section: nothing names it, the panel
     // header already does, and its chrome then reads as a stray box drawn
     // around content that carries its own border. Drop fill, hairline and

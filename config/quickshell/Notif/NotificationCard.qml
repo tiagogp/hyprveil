@@ -137,17 +137,30 @@ Surface {
                         Layout.fillWidth: true
                         implicitHeight: Tokens.spacing6 + Tokens.spacing1
                         radius: Tokens.radiusSm
+                        activeFocusOnTab: true
                         color: actionMouse.containsMouse
                             ? Accent.accentSoft
                             : Qt.rgba(Accent.accent.r, Accent.accent.g, Accent.accent.b, 0.12)
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Notification action " + modelData.text
+
+                        Keys.onReturnPressed: modelData.invoke()
+                        Keys.onSpacePressed: modelData.invoke()
 
                         Text {
                             renderType: Text.NativeRendering
-                            anchors.centerIn: parent
+                            anchors.fill: parent
+                            anchors.leftMargin: Tokens.spacing2
+                            anchors.rightMargin: Tokens.spacing2
                             text: modelData.text
                             font.family: Tokens.fontUi
                             font.pixelSize: Tokens.textXs
                             color: Accent.accent
+                            elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
                         }
 
                         MouseArea {
@@ -167,9 +180,17 @@ Surface {
             implicitWidth: Tokens.spacing6
             implicitHeight: Tokens.spacing6
             radius: Tokens.radiusPill
+            activeFocusOnTab: true
             color: closeMouse.containsMouse
                 ? Accent.accentSoft
                 : Qt.rgba(1, 1, 1, 0.08)
+            border.width: activeFocus ? 1 : 0
+            border.color: Accent.accent
+            Accessible.role: Accessible.Button
+            Accessible.name: "Dismiss notification"
+
+            Keys.onReturnPressed: card.dismissed()
+            Keys.onSpacePressed: card.dismissed()
 
             Glyph {
                 anchors.centerIn: parent

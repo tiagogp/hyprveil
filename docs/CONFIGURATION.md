@@ -24,6 +24,28 @@ The main customization points are `colors.conf`, `variables.conf`, `monitors.con
 `animations.conf`, `keybindings.conf`, `autostart.conf`, Quickshell QML, and the
 fallback Waybar/SwayNC/Mako styles.
 Color values are mirrored because the applications cannot import Hyprland variables.
+Kitty tab/session helpers live in `config/kitty/hyprveil-session.sh`.
+
+## Tokens and accents
+
+`config/hypr/tokens.conf` is the shared scale for radii, spacing, type, alpha,
+shadow, and timing values. After changing tokens, render the generated files:
+
+```bash
+HYPRVEIL_CONFIG_HOME="$PWD/config" ./config/hypr/scripts/theme.sh render
+```
+
+`config/hypr/colors.conf` stores the base palette. Wallpaper-derived accents are
+managed by `config/hypr/scripts/accent.sh`, which renders matching palette files
+for Quickshell, Kitty, Rofi, wlogout, GTK, Qt, SwayNC, and Mako templates.
+
+## Per-app toolkit fixes
+
+GTK and Qt styling should stay global by default. Add a per-app GTK, Qt, or
+window-rule fix only when a confirmed visual defect is recorded with the
+application name, toolkit/version where known, Fedora version, display scale, and
+the before/after behavior. Keep those fixes narrowly scoped to the affected class,
+title, or app stylesheet, and document the reason next to the rule.
 
 ## State inventory
 
@@ -35,6 +57,7 @@ Color values are mirrored because the applications cannot import Hyprland variab
 | `dock-pins.json` | `dock-manager.sh` | invalid file is preserved; empty dock restored |
 | `wallpapers.json` | `wallpaper.sh` | invalid file is preserved; bundled fallback restored |
 | `motion-profile` | `motion-profile.sh` | invalid file is preserved; `standard` restored |
+| `kitty-sessions/*.conf` | `kitty/hyprveil-session.sh` | explicit user snapshots; not read by the shell |
 | `backups/` | installer and manual backup | retained until the user removes it |
 
 All JSON state is schema-checked. Dock and wallpaper writes use a temporary file,
@@ -74,6 +97,5 @@ the README under “Keybind cheatsheet.” Important management bindings are:
 - `SUPER+SHIFT+Q`: exit Hyprland, including a nested validation session
 
 After changing a binding, run `hyprctl reload` and inspect `hyprctl configerrors`.
-See [HARDWARE.md](HARDWARE.md), [TOP-BAR-DOCK.md](TOP-BAR-DOCK.md),
-[NOTIFICATIONS.md](NOTIFICATIONS.md), and
-[WALLPAPERS-MOTION.md](WALLPAPERS-MOTION.md) for component interfaces.
+See [HARDWARE.md](HARDWARE.md) for profile behavior and
+[QUICK-SETTINGS.md](QUICK-SETTINGS.md) for shell panel interfaces.

@@ -13,6 +13,8 @@ Item {
 
     width: 280
     height: 46
+    Accessible.role: Accessible.EditableText
+    Accessible.name: qsTr("Password")
 
     property bool showError: false
     // Tracked by toggle rather than read from the keyboard: Qt exposes no

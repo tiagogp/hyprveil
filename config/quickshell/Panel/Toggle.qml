@@ -10,14 +10,21 @@ Rectangle {
     id: root
 
     property bool checked: false
+    property string accessibleName: "Toggle"
     signal toggled(bool value)
 
     implicitWidth: 46
     implicitHeight: 26
     radius: Tokens.radiusPill
+    activeFocusOnTab: true
     color: checked ? Accent.accent : Qt.rgba(1, 1, 1, 0.1)
-    border.width: 1
-    border.color: checked ? Accent.accent : Qt.rgba(1, 1, 1, Tokens.elev0Border)
+    border.width: activeFocus ? 2 : 1
+    border.color: activeFocus || checked ? Accent.accent : Qt.rgba(1, 1, 1, Tokens.elev0Border)
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: accessibleName
+
+    Keys.onReturnPressed: root.toggled(!root.checked)
+    Keys.onSpacePressed: root.toggled(!root.checked)
 
     Behavior on color {
         ColorAnimation {

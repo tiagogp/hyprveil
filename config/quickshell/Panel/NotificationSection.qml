@@ -31,8 +31,21 @@ Section {
             implicitWidth: Tokens.spacing6 + Tokens.spacingHair
             implicitHeight: Tokens.spacing6 + Tokens.spacingHair
             radius: Tokens.radiusSm
+            activeFocusOnTab: true
             color: dndMouse.containsMouse || (root.notifications?.dontDisturb ?? false)
                 ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.07)
+            border.width: activeFocus ? 1 : 0
+            border.color: Accent.accent
+            Accessible.role: Accessible.CheckBox
+            Accessible.name: "Do not disturb"
+
+            function activate() {
+                if (root.notifications)
+                    root.notifications.dontDisturb = !root.notifications.dontDisturb;
+            }
+
+            Keys.onReturnPressed: activate()
+            Keys.onSpacePressed: activate()
 
             Glyph {
                 anchors.centerIn: parent
@@ -48,8 +61,7 @@ Section {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (root.notifications)
-                    root.notifications.dontDisturb = !root.notifications.dontDisturb
+                onClicked: parent.activate()
             }
         }
 
@@ -57,7 +69,15 @@ Section {
             implicitWidth: Tokens.spacing6 + Tokens.spacingHair
             implicitHeight: Tokens.spacing6 + Tokens.spacingHair
             radius: Tokens.radiusSm
+            activeFocusOnTab: true
             color: clearMouse.containsMouse ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.07)
+            border.width: activeFocus ? 1 : 0
+            border.color: Accent.accent
+            Accessible.role: Accessible.Button
+            Accessible.name: "Clear notifications"
+
+            Keys.onReturnPressed: root.notifications?.clearAll()
+            Keys.onSpacePressed: root.notifications?.clearAll()
 
             Glyph {
                 anchors.centerIn: parent

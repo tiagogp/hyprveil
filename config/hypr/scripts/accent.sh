@@ -42,7 +42,7 @@ Usage:
 `chrome` measures the wallpaper where the bar sits and picks the glassiest alpha
 that keeps muted text at 3.0:1, so a dark wallpaper gets a near-invisible bar.
 Unlike the accent it is legibility rather than taste, so `auto off` does not
-disable it. See docs/TOKENS.md.
+disable it. See docs/CONFIGURATION.md.
 
 `render` is the repair path: it rewrites all generated fragments from
 $XDG_STATE_HOME/hyprveil/accent.json. install.sh runs it after replacing a
@@ -196,7 +196,7 @@ score_histogram() {
 
 # The chrome tint the bar fills with, and the two neutrals that constrain it.
 # Duplicated here rather than read from colors.conf because they are the binding
-# constraint of the solve below, not styling. See the budget in docs/TOKENS.md.
+# constraint of the solve below, not styling. See the budget in docs/CONFIGURATION.md.
 #
 # CHROME_FG is muted ($text-muted), the faintest TEXT chrome draws — the window
 # title and the clock, both at 13px. It sets the alpha.

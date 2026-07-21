@@ -9,7 +9,7 @@
 #
 # Values in tokens.conf are stored unitless, so the unit is appended here, per
 # target: the same 10 reaches Hyprland as `10`, CSS as `10px`, and QML as `10`.
-# See docs/TOKENS.md.
+# See docs/CONFIGURATION.md.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

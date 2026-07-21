@@ -47,3 +47,21 @@ driver/upstream recommendation; old blanket recommendations such as always setti
 The optional SDDM installer reads the saved GPU choice. It offers Fedora's X11
 greeter package for NVIDIA and the Wayland greeter package for Intel/AMD, while
 keeping every system-wide action separately confirmed.
+
+## Manual Checks
+
+Mocked tests prove fallback behavior and profile persistence, but hardware-specific
+features are still worth checking on real machines after install:
+
+- Wi-Fi scans and connects through NetworkManager.
+- Bluetooth powers on, discovers devices, connects, and reports battery state.
+- The selected Intel, AMD, or NVIDIA profile matches the actual GPU.
+- Single-monitor, multi-monitor, mixed-scale, and disconnect/reconnect behavior
+  match the layout written by `./hyprveil setup`.
+
+For a quick report, run:
+
+```bash
+./hyprveil doctor
+hyprctl monitors
+```

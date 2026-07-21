@@ -19,7 +19,7 @@
 // The accent and dim glyphs ARE non-text components and do get 3.0:1 — but via
 // Accent.accentOnChrome and Accent.dimOnChrome, which lift those two colours
 // against the solved fill. Alpha alone would have needed ~0.97 and made the bar
-// a solid slab. See the contrast budget in docs/TOKENS.md.
+// a solid slab. See the contrast budget in docs/CONFIGURATION.md.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell

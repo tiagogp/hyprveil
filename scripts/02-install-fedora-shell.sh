@@ -128,7 +128,7 @@ echo
 echo "== Bundled fallback wallpaper =="
 mkdir -p "$HV_CONFIG_HOME/hypr"
 wallpaper_tmp=$(mktemp "$HV_CONFIG_HOME/hypr/.wallpaper-default.XXXXXX")
-cp -a "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+cp -a "$REPO/config/hypr/wallpaper-default.jpg" \
     "$wallpaper_tmp"
 mv -f "$wallpaper_tmp" "$HV_CONFIG_HOME/hypr/wallpaper-default.jpg"
 echo "Installed $HV_CONFIG_HOME/hypr/wallpaper-default.jpg; saved wallpaper choices remain unchanged."

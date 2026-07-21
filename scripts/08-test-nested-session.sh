@@ -66,7 +66,7 @@ mkdir -p "$STAGE_HOME" "$STAGE_CONFIG" "$STAGE_STATE/hyprveil" \
 chmod 700 "$STAGE_RUNTIME"
 ln -s "$STAGE_CONFIG" "$STAGE_HOME/.config"
 cp -a "$REPO/config/." "$STAGE_CONFIG/"
-cp -a "$REPO/design/Custom Hyprland Desktop Environment/uploads/elliott-engelmann-DjlKxYFJlTc-unsplash.jpg" \
+cp -a "$REPO/config/hypr/wallpaper-default.jpg" \
     "$STAGE_CONFIG/hypr/wallpaper-default.jpg"
 chmod +x "$STAGE_CONFIG/hypr/scripts/"*.sh "$STAGE_CONFIG/waybar/scripts/"*.sh
 

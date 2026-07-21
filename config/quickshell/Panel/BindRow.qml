@@ -16,6 +16,13 @@ RowLayout {
 
     spacing: Tokens.spacing2
 
+    // A cheatsheet row reads as two separate text runs on screen — the action
+    // and the key caps — but a screen reader should hear one sentence, so the
+    // row names itself "<action>, <keys joined>" and the caps below are left
+    // silent rather than spelled out one Rectangle at a time.
+    Accessible.role: Accessible.StaticText
+    Accessible.name: root.action + (root.keys.length > 0 ? ", " + root.keys.join(" ") : "")
+
     Text {
         renderType: Text.NativeRendering
         Layout.fillWidth: true

@@ -25,7 +25,10 @@ ComboBox {
     readonly property int hPadding: 16
     readonly property int chevronBox: 22
     property bool hovering: false
-    readonly property bool lit: hovering || popup.visible
+    readonly property bool lit: hovering || popup.visible || activeFocus
+    activeFocusOnTab: true
+    Accessible.role: Accessible.ComboBox
+    Accessible.name: qsTr("Session")
 
     // Measures every entry off-screen so the pill can be sized to the widest
     // one. The visible label's implicitWidth only knows the CURRENT entry, so

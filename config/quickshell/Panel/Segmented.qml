@@ -13,6 +13,7 @@ Rectangle {
     property var options: []
     property var values: []
     property string current: ""
+    property string accessibleName: "Options"
 
     signal picked(string value)
 
@@ -20,6 +21,34 @@ Rectangle {
     implicitHeight: row.implicitHeight + Tokens.spacing1
     radius: Tokens.radiusSm
     color: Qt.rgba(1, 1, 1, 0.06)
+    activeFocusOnTab: true
+    border.width: activeFocus ? 1 : 0
+    border.color: Accent.accent
+    Accessible.role: Accessible.Grouping
+    Accessible.name: accessibleName
+
+    function currentIndex() {
+        const index = values.indexOf(current);
+        return index >= 0 ? index : 0;
+    }
+
+    function pickOffset(delta) {
+        if (values.length === 0)
+            return;
+        const next = (currentIndex() + delta + values.length) % values.length;
+        root.picked(values[next] ?? "");
+    }
+
+    Keys.onLeftPressed: root.pickOffset(-1)
+    Keys.onRightPressed: root.pickOffset(1)
+    Keys.onSpacePressed: {
+        if (values.length > 0)
+            root.picked(values[currentIndex()] ?? "");
+    }
+    Keys.onReturnPressed: {
+        if (values.length > 0)
+            root.picked(values[currentIndex()] ?? "");
+    }
 
     RowLayout {
         id: row

@@ -34,13 +34,19 @@ Row {
                 width: 56
                 height: 56
                 radius: 28
+                activeFocusOnTab: true
                 // Hover lifts the neutral buttons to the accent too, so all
                 // three read as one row of controls rather than "two inert
                 // outlines and a live one".
-                color: modelData.danger || cell.hovering ? colors.accentWashSoft : "transparent"
-                border.width: 1.5
-                border.color: modelData.danger || cell.hovering ? colors.accent : colors.borderHair
-                scale: cell.hovering ? 1.06 : 1.0
+                color: modelData.danger || cell.hovering || activeFocus ? colors.accentWashSoft : "transparent"
+                border.width: activeFocus ? 2 : 1.5
+                border.color: modelData.danger || cell.hovering || activeFocus ? colors.accent : colors.borderHair
+                scale: cell.hovering || activeFocus ? 1.06 : 1.0
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.label
+
+                Keys.onReturnPressed: modelData.action()
+                Keys.onSpacePressed: modelData.action()
 
                 Behavior on color { ColorAnimation { duration: 140 } }
                 Behavior on border.color { ColorAnimation { duration: 140 } }

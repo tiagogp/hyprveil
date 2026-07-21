@@ -5,7 +5,7 @@
 // read as layered before. Setting `elevation: 2` picks all three from the token
 // scale, so a card cannot end up with a tier-1 border and a tier-3 shadow.
 //
-// See docs/TOKENS.md for the ramp and the contrast budget behind tier 0.
+// See docs/CONFIGURATION.md for the ramp and the contrast budget behind tier 0.
 import QtQuick
 import QtQuick.Effects
 
@@ -21,7 +21,7 @@ Rectangle {
     // Escape hatch for surfaces whose legibility floor is not the tier's. The
     // only current user is chrome (bar, dock), which carries no body text and
     // so can sit glassier than tier 0 — see the contrast budget in
-    // docs/TOKENS.md. Deliberately alpha only: the border and shadow still come
+    // docs/CONFIGURATION.md. Deliberately alpha only: the border and shadow still come
     // from the tier, because the point of elevation is that a surface cannot
     // end up with a tier-1 border and a tier-3 shadow. Negative = use the tier.
     property real alphaOverride: -1

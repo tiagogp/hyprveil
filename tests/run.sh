@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P4 non-session quality gate. Use --require-shellcheck in CI/release validation.
+# P0-P10 non-session quality gate. Use --require-shellcheck in CI.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +23,7 @@ if command -v shellcheck >/dev/null 2>&1; then
 elif [ "$REQUIRE_SHELLCHECK" -eq 1 ]; then
     fail "ShellCheck is required (install the ShellCheck package)"
 else
-    printf 'WARN: ShellCheck is unavailable; bash -n ran, but the release gate requires tests/run.sh --require-shellcheck.\n' >&2
+    printf 'WARN: ShellCheck is unavailable; bash -n ran. Use tests/run.sh --require-shellcheck when ShellCheck must be enforced.\n' >&2
 fi
 
 for file in "${shell_files[@]}"; do

@@ -179,7 +179,7 @@ grep -q 'source = ~/.config/hypr/tokens.conf' "$REPO/config/hypr/hyprlock.conf" 
     || fail "hyprlock.conf does not source tokens.conf"
 grep -q 'tokens.conf' "$REPO/config/hypr/hyprland.conf" \
     || fail "hyprland.conf does not source tokens.conf"
-[ -f "$REPO/docs/TOKENS.md" ] || fail "docs/TOKENS.md is referenced from tokens.conf but missing"
+[ -f "$REPO/docs/CONFIGURATION.md" ] || fail "docs/CONFIGURATION.md is referenced from tokens.conf but missing"
 ok "tokens.conf is sourced by Hyprland and hyprlock, and documented"
 
 printf 'P7 token smoke tests passed.\n'

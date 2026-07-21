@@ -154,7 +154,7 @@ Scope {
                 }
             }
 
-            implicitWidth: 620
+            implicitWidth: Math.max(0, Math.min(620, parent.width - Tokens.spacing4 * 2))
             implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
                                      parent.height - Tokens.spacing8 * 2)
 
@@ -185,8 +185,16 @@ Scope {
                         implicitWidth: Tokens.spacing6
                         implicitHeight: Tokens.spacing6
                         radius: Tokens.radiusPill
+                        activeFocusOnTab: true
                         color: closeMouse.containsMouse
                             ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Close wallpaper picker"
+
+                        Keys.onReturnPressed: root.open = false
+                        Keys.onSpacePressed: root.open = false
 
                         Glyph {
                             anchors.centerIn: parent
@@ -210,6 +218,7 @@ Scope {
                     spacing: Tokens.spacing2
 
                     Segmented {
+                        accessibleName: "Wallpaper target monitor"
                         options: ["All monitors"].concat(root.outputs)
                         values: [""].concat(root.outputs)
                         current: root.target
@@ -219,6 +228,7 @@ Scope {
                     Item { Layout.fillWidth: true }
 
                     Segmented {
+                        accessibleName: "Wallpaper fit"
                         options: ["Cover", "Contain"]
                         values: ["cover", "contain"]
                         current: root.fit
@@ -259,15 +269,21 @@ Scope {
                             anchors.fill: parent
                             anchors.margins: Tokens.spacing2
                             radius: Tokens.radiusSm
+                            activeFocusOnTab: true
                             color: "#1c1f26"
                             antialiasing: true
                             property int imageInset: Tokens.spacing1
                             // The staged tile carries a heavier border than a
                             // hovered one, so the choice stays legible once the
                             // pointer has moved on to Apply.
-                            border.width: parent.chosen ? 2
+                            border.width: parent.chosen || activeFocus ? 2
                                         : tileMouse.containsMouse ? 1 : 0
                             border.color: Accent.accent
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Select wallpaper " + modelData.split("/").pop()
+
+                            Keys.onReturnPressed: root.selected = modelData
+                            Keys.onSpacePressed: root.selected = modelData
 
                             // sourceSize decodes at thumbnail resolution rather
                             // than loading a 5120x2880 original and scaling it,

@@ -11,6 +11,7 @@ Rectangle {
     id: root
 
     property string text: ""
+    property string accessibleName: text
     property bool primary: false
     // `enabled` is Item's own and is deliberately not redeclared — setting it
     // false already stops this item and its MouseArea from taking events, so
@@ -21,6 +22,11 @@ Rectangle {
     implicitWidth: label.implicitWidth + Tokens.spacing3 * 2
     implicitHeight: label.implicitHeight + Tokens.spacing2 * 2
     radius: Tokens.radiusSm
+    activeFocusOnTab: true
+    border.width: activeFocus ? 1 : 0
+    border.color: Accent.accent
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName
 
     // Disabled is drawn, not hidden: an Apply that vanishes until something is
     // picked leaves no clue that picking is what the dialog wants.
@@ -30,6 +36,9 @@ Rectangle {
          ? (mouse.containsMouse && root.enabled ? Accent.accent : Accent.accentSoft)
          : (mouse.containsMouse && root.enabled ? Qt.rgba(1, 1, 1, 0.10)
                                                 : Qt.rgba(1, 1, 1, 0.06))
+
+    Keys.onReturnPressed: if (root.enabled) root.clicked()
+    Keys.onSpacePressed: if (root.enabled) root.clicked()
 
     Text {
         id: label

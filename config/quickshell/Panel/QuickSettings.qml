@@ -42,7 +42,7 @@ Scope {
         anchors { top: true; right: true }
         margins { top: Tokens.spacing2h; right: Tokens.spacing2h }
 
-        implicitWidth: 360
+        implicitWidth: Math.max(0, Math.min(360, (screen?.width ?? 360) - Tokens.spacing2h * 2))
         implicitHeight: Math.min(column.implicitHeight + Tokens.spacing3 * 2, 900)
         color: "transparent"
         WlrLayershell.namespace: "hyprveil-quicksettings"
@@ -83,8 +83,16 @@ Scope {
                         implicitWidth: Tokens.spacing6
                         implicitHeight: Tokens.spacing6
                         radius: Tokens.radiusPill
+                        activeFocusOnTab: true
                         color: closeMouse.containsMouse
                             ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Close Quick Settings"
+
+                        Keys.onReturnPressed: root.open = false
+                        Keys.onSpacePressed: root.open = false
 
                         Glyph {
                             anchors.centerIn: parent
@@ -108,6 +116,18 @@ Scope {
                     visible: !root.notificationsOnly
                 }
                 BluetoothSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
+                AudioSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
+                PowerProfileSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
+                ClipboardSection {
                     Layout.fillWidth: true
                     visible: !root.notificationsOnly
                 }

@@ -175,6 +175,34 @@ Scope {
                 id: keyScope
                 anchors.fill: parent
                 focus: true
+                Accessible.role: Accessible.EditableText
+                Accessible.name: "Lock password"
+
+                function activePlayer() {
+                    const all = Mpris.players.values;
+                    return all.find(p => p.playbackState === MprisPlaybackState.Playing)
+                        ?? all.find(p => p.playbackState === MprisPlaybackState.Paused)
+                        ?? null;
+                }
+
+                function transport(action) {
+                    const p = activePlayer();
+                    if (!p)
+                        return false;
+                    if (action === "previous" && p.canGoPrevious) {
+                        p.previous();
+                        return true;
+                    }
+                    if (action === "next" && p.canGoNext) {
+                        p.next();
+                        return true;
+                    }
+                    if (action === "toggle" && p.canTogglePlaying) {
+                        p.togglePlaying();
+                        return true;
+                    }
+                    return false;
+                }
 
                 // The lock surface is the only thing on screen, so it should
                 // never lose focus — but if it ever does, every keystroke goes
@@ -237,6 +265,20 @@ Scope {
                 }
 
                 Keys.onPressed: function (event) {
+                    if (event.key === Qt.Key_MediaPrevious) {
+                        event.accepted = transport("previous");
+                        return;
+                    }
+                    if (event.key === Qt.Key_MediaNext) {
+                        event.accepted = transport("next");
+                        return;
+                    }
+                    if (event.key === Qt.Key_MediaPlay
+                            || event.key === Qt.Key_MediaTogglePlayPause) {
+                        event.accepted = transport("toggle");
+                        return;
+                    }
+
                     // Toggling caps lock produces no text, so the heuristic
                     // below cannot see it — but the key press itself arrives.
                     // Handled before the busy check so the warning stays honest

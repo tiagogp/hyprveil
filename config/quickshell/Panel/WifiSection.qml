@@ -30,6 +30,7 @@ Section {
     Toggle {
         Layout.alignment: Qt.AlignRight
         visible: root.device !== null
+        accessibleName: "Wi-Fi"
         checked: Networking.wifiEnabled
         onToggled: value => Networking.wifiEnabled = value
     }
@@ -58,7 +59,26 @@ Section {
                 Layout.fillWidth: true
                 implicitHeight: Tokens.spacing8
                 radius: Tokens.radiusSm
+                activeFocusOnTab: true
                 color: rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                border.width: activeFocus ? 1 : 0
+                border.color: Accent.accent
+                Accessible.role: Accessible.Button
+                Accessible.name: "Connect to Wi-Fi network " + modelData.name
+
+                function activate() {
+                    if (modelData.known || modelData.security === WifiSecurityType.Open)
+                        modelData.connect(null);
+                    else
+                        Quickshell.execDetached([
+                            "sh", "-c",
+                            "if command -v nmcli >/dev/null 2>&1; then nmcli device wifi connect \"$1\"; else notify-send 'Wi-Fi connection unavailable' 'Install NetworkManager/nmcli to connect to secured networks from Hyprveil.'; fi",
+                            "hyprveil-wifi-connect", modelData.name
+                        ]);
+                }
+
+                Keys.onReturnPressed: activate()
+                Keys.onSpacePressed: activate()
 
                 RowLayout {
                     anchors.fill: parent
@@ -115,13 +135,7 @@ Section {
                     // that has to be as careful as the system's, this hands off to
                     // nmcli — which triggers NetworkManager's own secret agent.
                     // The AGS panel shelled out for exactly this reason.
-                    onClicked: {
-                        if (modelData.known || modelData.security === WifiSecurityType.Open)
-                            modelData.connect(null);
-                        else
-                            Quickshell.execDetached(
-                                ["nmcli", "device", "wifi", "connect", modelData.name]);
-                    }
+                    onClicked: parent.activate()
                 }
             }
         }

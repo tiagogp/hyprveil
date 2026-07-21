@@ -156,8 +156,16 @@ Scope {
                         implicitWidth: Tokens.spacing6
                         implicitHeight: Tokens.spacing6
                         radius: Tokens.radiusPill
+                        activeFocusOnTab: true
                         color: closeMouse.containsMouse
                             ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: activeFocus ? 1 : 0
+                        border.color: Accent.accent
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Close keyboard shortcuts"
+
+                        Keys.onReturnPressed: root.open = false
+                        Keys.onSpacePressed: root.open = false
 
                         Glyph {
                             anchors.centerIn: parent
@@ -201,6 +209,8 @@ Scope {
                             renderType: Text.NativeRendering
                             Layout.fillWidth: true
                             focus: true
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: "Search keyboard shortcuts"
                             color: Tokens.text
                             font.family: Tokens.fontUi
                             font.pixelSize: Tokens.textSm

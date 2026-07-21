@@ -75,7 +75,6 @@ backup directories automatically.
 
 Run `./scripts/03-test-config.sh` for config validation and Fedora/source reporting,
 or `./tests/run.sh` for Bash/JSON/executable validation and every non-root mocked
-milestone behavior check. Release runs require ShellCheck with
-`./tests/run.sh --require-shellcheck`. See [RECOVERY.md](RECOVERY.md) for component
-recovery and full rollback, and [VM-TEST-MATRIX.md](VM-TEST-MATRIX.md) for the
-manual fresh-install, rerun, upgrade, refusal, and fallback procedure.
+behavior check. Use `./tests/run.sh --require-shellcheck` when ShellCheck should be
+enforced instead of treated as optional. See [RECOVERY.md](RECOVERY.md) for
+component recovery and full rollback.
