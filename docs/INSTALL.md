@@ -56,6 +56,21 @@ Redeploy configs after switching. Startup, Quickshell, and the legacy Waybar bri
 read the same state file, so only the selected daemon starts and all notification
 actions follow that backend.
 
+## Uninstall
+
+Use the standalone helper when you want Hyprveil removed but want to keep your
+terminal and shell setup:
+
+```bash
+./scripts/uninstall.sh
+```
+
+It backs up and removes Hyprveil-managed config, Qt theme config, and optional
+user-local assets, but preserves `~/.config/kitty`, `~/.zshrc`, and the `kitty`
+and `zsh` packages. Pass `--packages` to offer removal of recorded DNF packages
+other than Kitty and zsh. Pass `--sddm` if you also installed the optional system
+login theme and want Hyprveil to restore or remove those SDDM files.
+
 ## Recovery
 
 List backups newest first:

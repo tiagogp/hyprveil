@@ -95,8 +95,8 @@ dock_write_locked() {
     tmp=$(mktemp "$DOCK_STATE_DIR/.dock-pins.XXXXXX")
     printf '%s\n' "$json" > "$tmp"
     mv -f "$tmp" "$DOCK_PINS_FILE"
-    # Pin changes don't emit a Hyprland window event for dock-watch.sh to
-    # catch, so nudge Waybar directly instead of waiting on the fallback poll.
+    # Pin changes are local state writes, so nudge the legacy Waybar dock
+    # directly instead of waiting on its polling interval.
     pkill -RTMIN+8 waybar 2>/dev/null || true
 }
 

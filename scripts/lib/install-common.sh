@@ -8,17 +8,66 @@ HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
 HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
 
-hv_ok()   { printf '  OK   %s\n' "$*"; }
-hv_warn() { printf '  WARN %s\n' "$*" >&2; }
-hv_bad()  { printf '  FAIL %s\n' "$*" >&2; }
+hv_color_enabled() {
+    [ -z "${NO_COLOR:-}" ] || return 1
+    case "${HYPRVEIL_COLOR:-auto}" in
+        always) return 0 ;;
+        never) return 1 ;;
+    esac
+    [ -t 1 ] && [ "${TERM:-}" != dumb ]
+}
+
+hv_style() {
+    local code=$1 text=$2
+    if hv_color_enabled; then
+        printf '\033[%sm%s\033[0m' "$code" "$text"
+    else
+        printf '%s' "$text"
+    fi
+}
+
+hv_banner() {
+    local detail=${1:-} line
+    printf '\n'
+    printf '%s\n' "$(hv_style '2' "+-- hyprveil -------------------------------------------------------------+")"
+    while IFS= read -r line; do
+        printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '1;35' "$line")"
+    done <<'EOF'
+ _   _                              _ _
+| | | |_   _ _ __  _ ____   _____ (_) |
+| |_| | | | | '_ \| '__\ \ / / _ \| | |
+|  _  | |_| | |_) | |   \ V /  __/| | |
+|_| |_|\__, | .__/|_|    \_/ \___||_|_|
+       |___/|_|
+EOF
+    [ -z "$detail" ] || printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '2' "$detail")"
+    printf '%s\n' "$(hv_style '2' "+-----------------------------------------------------------------------+")"
+}
+
+hv_section() {
+    local title=$1 detail=${2:-}
+    printf '\n%s %s\n' "$(hv_style '2' "::")" "$(hv_style '1;36' "$title")"
+    [ -z "$detail" ] || printf '   %s\n' "$(hv_style '2' "$detail")"
+}
+
+hv_step() {
+    local number=$1 title=$2
+    printf -v number '%02d' "$number"
+    printf '\n%s %s\n' "$(hv_style '1;36' "[$number]")" "$(hv_style '1' "$title")"
+}
+
+hv_note() { printf '  %s %s\n' "$(hv_style '1;34' INFO)" "$*"; }
+hv_ok()   { printf '  %s   %s\n' "$(hv_style '1;32' OK)" "$*"; }
+hv_warn() { printf '  %s %s\n' "$(hv_style '1;33' WARN)" "$*" >&2; }
+hv_bad()  { printf '  %s %s\n' "$(hv_style '1;31' FAIL)" "$*" >&2; }
 
 hv_confirm() {
     local prompt=$1 answer
     if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
-        printf '%s [automatic yes]\n' "$prompt"
+        printf '%s %s [automatic yes]\n' "$(hv_style '1;34' AUTO)" "$prompt"
         return 0
     fi
-    read -r -p "$prompt [y/N] " answer
+    read -r -p "$(hv_style '1;34' ASK) $prompt [y/N] " answer
     [[ "$answer" = y || "$answer" = Y ]]
 }
 
@@ -241,24 +290,28 @@ hv_install_group() {
     local package source
     local -a official=() fallback=() still_missing=()
 
-    printf '\n== Package source probe: %s ==\n' "$feature"
+    hv_section "Package source probe" "$feature"
+    printf '  %-32s %-18s %s\n' "Package" "Source" "Status"
+    printf '  %-32s %-18s %s\n' "-------" "------" "------"
     for package in "$@"; do
         source=$(hv_package_source "$package" || true)
         if hv_is_official_repo "$source"; then
-            printf '  %-32s official (%s)\n' "$package" "$source"
+            printf '  %-32s %-18s %s\n' "$package" "$source" "$(hv_style '1;32' official)"
             official+=("$package")
         else
-            printf '  %-32s not in official enabled repositories\n' "$package"
+            printf '  %-32s %-18s %s\n' "$package" "-" "$(hv_style '1;33' "needs fallback")"
             fallback+=("$package")
         fi
     done
 
     if [ "${#official[@]}" -gt 0 ] && hv_confirm "Install official Fedora packages for $feature?"; then
+        hv_note "Installing from official Fedora repositories: ${official[*]}"
         hv_install_from_repos "" "${official[@]}"
         for package in "${official[@]}"; do
             source=$(hv_package_source "$package" || true)
             hv_record_source "$package" "$source" "$feature"
         done
+        hv_ok "Recorded official package sources for $feature"
     fi
 
     [ "${#fallback[@]}" -gt 0 ] || return 0
@@ -291,8 +344,10 @@ hv_install_group() {
             hv_record_source "$package" unavailable "$feature"
         else
             if hv_confirm "Install $package from $source?"; then
+                hv_note "Installing $package from $source"
                 hv_install_from_repos "$source" "$package"
                 hv_record_source "$package" "$source" "$feature"
+                hv_ok "Recorded $package source: $source"
             else
                 hv_record_source "$package" declined "$feature"
             fi
@@ -505,6 +560,14 @@ hv_inactive_backend_names() {
     done
 }
 
+hv_should_keep_managed_name() {
+    local candidate=$1 keep
+    for keep in ${HYPRVEIL_KEEP_MANAGED_NAMES:-}; do
+        [ "$candidate" = "$keep" ] && return 0
+    done
+    return 1
+}
+
 # Print a read-only summary of what a deploy from $HV_REPO/config would change in
 # the live config home, without touching anything. One line per managed tree:
 # "new", "unchanged", or "changed (N file(s) differ)". Returns 0 if any tree
@@ -614,6 +677,7 @@ hv_remove_managed_config() {
     names+=("starship.toml")
     backup=$(hv_new_backup_dir)
     for name in "${names[@]}"; do
+        hv_should_keep_managed_name "$name" && continue
         target="$HV_CONFIG_HOME/$name"
         [ -e "$target" ] || continue
         mkdir -p "$backup/config"
@@ -627,4 +691,37 @@ hv_remove_managed_config() {
         rmdir "$backup" 2>/dev/null || true
         printf 'No Hyprveil-managed config trees were present to remove.\n'
     fi
+}
+
+# Restore the display manager's SDDM configuration to its pre-Hyprveil state.
+# The most recent backup that captured the prior theme selection or theme tree
+# is restored; otherwise the Hyprveil-added files are removed. The active
+# display manager is never switched here — that stays a deliberate manual step.
+hv_uninstall_sddm() {
+    local snapshot='' name summary
+    while IFS=$'\t' read -r name summary; do
+        case "$summary" in
+            *system-config*|*system-themes*) snapshot="$HV_STATE_HOME/backups/$name"; break ;;
+        esac
+    done < <(hv_list_backups)
+
+    if [ -n "$snapshot" ] && [ -e "$snapshot/system-config/hyprveil.conf" ]; then
+        printf 'Restoring previous SDDM selection from %s (sudo)\n' "$snapshot"
+        hv_root cp -a "$snapshot/system-config/hyprveil.conf" /etc/sddm.conf.d/hyprveil.conf
+    elif [ -e /etc/sddm.conf.d/hyprveil.conf ]; then
+        printf 'Removing Hyprveil SDDM selection /etc/sddm.conf.d/hyprveil.conf (sudo)\n'
+        hv_root rm -f /etc/sddm.conf.d/hyprveil.conf
+    fi
+
+    if [ -n "$snapshot" ] && [ -e "$snapshot/system-themes/hyprveil" ]; then
+        printf 'Restoring previous SDDM theme from %s (sudo)\n' "$snapshot"
+        hv_root rm -rf /usr/share/sddm/themes/hyprveil
+        hv_root cp -a "$snapshot/system-themes/hyprveil" /usr/share/sddm/themes/hyprveil
+    elif [ -e /usr/share/sddm/themes/hyprveil ]; then
+        printf 'Removing Hyprveil SDDM theme /usr/share/sddm/themes/hyprveil (sudo)\n'
+        hv_root rm -rf /usr/share/sddm/themes/hyprveil
+    fi
+    printf 'SDDM configuration restored. The active display manager was not changed;\n'
+    printf 'if Hyprveil enabled sddm, re-enable your previous manager manually, e.g.:\n'
+    printf '  sudo systemctl disable sddm.service && sudo systemctl enable gdm.service\n'
 }

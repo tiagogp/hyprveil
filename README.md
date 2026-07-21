@@ -148,6 +148,7 @@ scripts/
 ├── 08-test-nested-session.sh   # fully isolated nested Hyprland launch
 ├── 09-dependency-report.sh
 ├── 10-first-run-setup.sh       # guided or flag-driven local setup
+├── uninstall.sh                 # remove Hyprveil while keeping Kitty and zsh
 └── lib/                       # shared installer and render helpers
 tests/
 ├── p0-smoke.sh ... p10-setup-smoke.sh
@@ -215,6 +216,18 @@ The standalone nested launcher accepts `--backend quickshell|swaync|mako` and `-
 ```bash
 ./scripts/08-test-nested-session.sh --backend quickshell
 ```
+
+### Uninstall
+
+To remove Hyprveil-managed config while keeping Kitty and zsh:
+
+```bash
+./scripts/uninstall.sh
+```
+
+Add `--packages` if you also want it to offer removal of recorded DNF packages.
+Add `--sddm` to also restore/remove the optional system SDDM files. The script
+still keeps `kitty`, `zsh`, `~/.config/kitty`, and `~/.zshrc`.
 
 ### First-run setup
 

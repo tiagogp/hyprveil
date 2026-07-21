@@ -7,33 +7,28 @@ REPO="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
 
-echo "== hyprveil: Fedora template installer =="
+hv_banner "Fedora template installer"
 hv_load_fedora
 hv_check_supported_release || true
 hv_show_enabled_repos
-echo "This installs packages in stages, selects a persistent hardware profile,"
-echo "reports dependencies, then offers to deploy the managed configuration."
+hv_note "Installs packages in stages, selects a persistent hardware profile,"
+hv_note "reports dependencies, then offers to deploy the managed configuration."
 hv_confirm "Continue?" || exit 0
 PACKAGE_STAGE_FAIL=0
 
-echo
-echo "########## Step 0: backup existing configs ##########"
+hv_step 0 "Backup existing configs"
 "$REPO/scripts/00-backup.sh"
 
-echo
-echo "########## Step 1: Hyprland core ##########"
+hv_step 1 "Hyprland core"
 "$REPO/scripts/01-install-fedora-core.sh" || PACKAGE_STAGE_FAIL=1
 
-echo
-echo "########## Step 2: desktop shell ##########"
+hv_step 2 "Desktop shell"
 "$REPO/scripts/02-install-fedora-shell.sh" || PACKAGE_STAGE_FAIL=1
 
-echo
-echo "########## Step 3: theming and shell environment ##########"
+hv_step 3 "Theming and shell environment"
 "$REPO/scripts/04-install-fedora-theming.sh" || PACKAGE_STAGE_FAIL=1
 
-echo
-echo "########## Step 4: persistent hardware profile ##########"
+hv_step 4 "Persistent hardware profile"
 if [ -f "$HV_STATE_HOME/hardware-profile.conf" ]; then
     "$REPO/scripts/06-select-profile.sh" --ensure
 else
@@ -44,14 +39,12 @@ if [ -f "$HV_NOTIFICATION_STATE" ]; then
     "$REPO/scripts/07-select-notification-backend.sh" --ensure
 fi
 
-echo
-echo "########## Step 5: dependency report before config copy ##########"
+hv_step 5 "Dependency report before config copy"
 PREFLIGHT_OK=1
 "$REPO/scripts/09-dependency-report.sh" --preflight || PREFLIGHT_OK=0
 [ "$PACKAGE_STAGE_FAIL" -eq 0 ] || PREFLIGHT_OK=0
 
-echo
-echo "########## Step 6: safe configuration deployment ##########"
+hv_step 6 "Safe configuration deployment"
 if [ "$PREFLIGHT_OK" -ne 1 ]; then
     echo "Required dependencies are unavailable. Configs were not copied."
     echo "Resolve the failures above, then rerun this installer."
@@ -74,8 +67,7 @@ else
     INSTALL_OK=0
 fi
 
-echo
-echo "########## Step 7: verify and reload ##########"
+hv_step 7 "Verify and reload"
 if [ "$INSTALL_OK" -ne 1 ]; then
     echo "No configs were deployed in this run."
 elif ! cmp -s "$REPO/config/hypr/hyprland.conf" "$HV_CONFIG_HOME/hypr/hyprland.conf"; then
@@ -85,8 +77,7 @@ else
     hv_reload_live_session
 fi
 
-echo
-echo "########## Optional SDDM theme ##########"
+hv_section "Optional SDDM theme"
 echo "SDDM changes system-wide login configuration and remains separately gated."
 if hv_confirm "Run scripts/05-install-fedora-sddm.sh now?"; then
     "$REPO/scripts/05-install-fedora-sddm.sh"

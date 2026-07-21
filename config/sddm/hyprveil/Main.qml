@@ -7,8 +7,13 @@ import "Components" as Components
 // design mockup's Power screen (wlogout implements the post-login version).
 Item {
     id: root
-    width: Screen.width
-    height: Screen.height
+    width: parent && parent.width > 0 ? parent.width : Screen.width
+    height: parent && parent.height > 0 ? parent.height : Screen.height
+
+    // SDDM injects `primaryScreen` for the real multi-monitor greeter, but
+    // older/test invocations may not. Falling back to true keeps the preview
+    // and single-surface greeter from hiding the only login controls.
+    readonly property bool showGreeter: typeof primaryScreen === "undefined" ? true : primaryScreen
 
     Components.Palette { id: colors }
 
@@ -38,8 +43,8 @@ Item {
         cache: false
         // Already blurred on disk, so it can be decoded at panel size instead
         // of at the wallpaper's native 5K.
-        sourceSize.width: Screen.width
-        sourceSize.height: Screen.height
+        sourceSize.width: root.width
+        sourceSize.height: root.height
         visible: status === Image.Ready
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
@@ -59,7 +64,7 @@ Item {
     Item {
         id: greeter
         anchors.fill: parent
-        visible: primaryScreen
+        visible: root.showGreeter
 
         // Settles in rather than snapping on. The greeter is the first frame
         // of a boot, where an abrupt cut reads as a flicker.
@@ -120,6 +125,6 @@ Item {
     }
 
     Component.onCompleted: {
-        if (primaryScreen) passwordField.focusInput()
+        if (root.showGreeter) passwordField.focusInput()
     }
 }

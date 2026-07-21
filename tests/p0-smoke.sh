@@ -287,6 +287,10 @@ grep -q 'activeFocus' "$REPO/config/sddm/hyprveil/Components/SessionPicker.qml" 
     || fail "SDDM session picker focus does not light the control"
 grep -q 'Accessible.name' "$REPO/config/sddm/hyprveil/Components/PasswordField.qml" \
     || fail "SDDM password field does not expose an accessible name"
+grep -q 'typeof primaryScreen === "undefined" ? true : primaryScreen' "$REPO/config/sddm/hyprveil/Main.qml" \
+    || fail "SDDM greeter hides controls when primaryScreen is unavailable"
+grep -q 'sourceSize.width: root.width' "$REPO/config/sddm/hyprveil/Main.qml" \
+    || fail "SDDM backdrop is not decoded at the greeter surface size"
 python3 - <<'PY' || fail "focus accent does not meet the 3:1 UI contrast floor"
 def linear(c):
     c = c / 255

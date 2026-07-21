@@ -6,7 +6,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
 
-echo "== Stage 2: Fedora and repository detection =="
+hv_section "Stage 2: Fedora and repository detection"
 hv_load_fedora
 hv_check_supported_release || true
 hv_show_enabled_repos
@@ -15,8 +15,7 @@ STAGE_FAIL=0
 hv_install_group required "Fedora desktop shell" - \
     waybar rofi-wayland wlogout gnome-control-center fira-code-fonts papirus-icon-theme || STAGE_FAIL=1
 
-echo
-echo "== Notification + quick-settings backend =="
+hv_section "Notification + quick-settings backend"
 # Quickshell is the default: it draws the bar, dock, and quick-settings panel and
 # also serves notifications (popups, history, DND). SwayNC and Mako remain
 # notification-only fallbacks for systems where the Quickshell COPR is declined
@@ -80,13 +79,12 @@ hv_install_group optional "color picker shortcut" "solopasha/hyprland" hyprpicke
 
 hv_install_group optional "Bluetooth status and manager" - bluez blueman
 
-hv_install_group required "Waybar helper and desktop-entry dock runtime" - jq util-linux glib2 socat
+hv_install_group required "Waybar helper and desktop-entry dock runtime" - jq util-linux glib2
 
 hv_install_group optional "screenshots, clipboard, media, brightness, and OCR" - \
     grim slurp cliphist wl-clipboard playerctl brightnessctl btop rofimoji tesseract ImageMagick
 
-echo
-echo "== Fonts: Geist and Nerd Font symbols (user-local) =="
+hv_section "Fonts: Geist and Nerd Font symbols (user-local)"
 if hv_confirm "Download and install the user-local fonts?"; then
     FONTDIR="$HOME/.local/share/fonts"
     mkdir -p "$FONTDIR"
@@ -124,8 +122,7 @@ if hv_confirm "Download and install the user-local fonts?"; then
     command -v fc-cache >/dev/null && fc-cache -f
 fi
 
-echo
-echo "== Bundled fallback wallpaper =="
+hv_section "Bundled fallback wallpaper"
 mkdir -p "$HV_CONFIG_HOME/hypr"
 wallpaper_tmp=$(mktemp "$HV_CONFIG_HOME/hypr/.wallpaper-default.XXXXXX")
 cp -a "$REPO/config/hypr/wallpaper-default.jpg" \
@@ -134,5 +131,5 @@ mv -f "$wallpaper_tmp" "$HV_CONFIG_HOME/hypr/wallpaper-default.jpg"
 echo "Installed $HV_CONFIG_HOME/hypr/wallpaper-default.jpg; saved wallpaper choices remain unchanged."
 
 echo
-echo "Stage 2 complete. Package choices were recorded in $HV_SOURCE_LOG"
+hv_ok "Stage 2 complete. Package choices were recorded in $HV_SOURCE_LOG"
 exit "$STAGE_FAIL"

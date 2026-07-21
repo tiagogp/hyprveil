@@ -22,6 +22,7 @@ export HYPRVEIL_OS_RELEASE="$TMP/os-release"
 export HYPRVEIL_STATE_HOME="$TMP/state"
 export HYPRVEIL_CONFIG_HOME="$TMP/config"
 export HYPRVEIL_NO_SUDO=1
+export MOCK_ROOT="$TMP"
 export PATH="$TMP/bin:$PATH"
 mkdir -p "$HOME" "$HYPRVEIL_CONFIG_HOME" "$HYPRVEIL_STATE_HOME" "$TMP/bin"
 
@@ -124,6 +125,46 @@ printf 'sentinel\n' > "$HYPRVEIL_STATE_HOME/notification-backend.marker"
 find "$HYPRVEIL_STATE_HOME/backups" -path '*/config/hypr/hyprland.conf' -print -quit | grep -q . \
     || fail "uninstall did not back up removed config"
 ok "uninstall exports state, removes managed config, and preserves state and backups"
+
+# --- scripts/uninstall.sh: preserves Kitty/zsh while removing the rest -------
+hv_deploy_configs >/dev/null
+mkdir -p "$HYPRVEIL_CONFIG_HOME/qt5ct" "$HYPRVEIL_CONFIG_HOME/qt6ct" \
+    "$HOME/.local/share/icons/Bibata-Modern-Classic" "$HOME/.local/share/fonts/geist" \
+    "$HOME/.local/share/fonts/nerd-symbols" "$HOME/.local/bin"
+printf 'zsh sentinel\n' > "$HOME/.zshrc"
+printf 'qt5\n' > "$HYPRVEIL_CONFIG_HOME/qt5ct/qt5ct.conf"
+printf 'qt6\n' > "$HYPRVEIL_CONFIG_HOME/qt6ct/qt6ct.conf"
+printf 'cursor\n' > "$HOME/.local/share/icons/Bibata-Modern-Classic/cursor.theme"
+printf 'font\n' > "$HOME/.local/share/fonts/geist/Geist.ttf"
+printf 'font\n' > "$HOME/.local/share/fonts/nerd-symbols/Symbols.ttf"
+printf 'helper\n' > "$HOME/.local/bin/papirus-folders"
+cat > "$HYPRVEIL_STATE_HOME/package-sources.tsv" <<'EOF'
+hyprland	fedora	Hyprland compositor
+kitty	fedora	core desktop utilities
+zsh	fedora	application theming and zsh environment
+quickshell	copr:copr.fedorainfracloud.org:errornointernet:quickshell	Quickshell shell
+mako	declined	Mako notification fallback
+unknown-extra	fedora	not owned by uninstall list
+EOF
+cat > "$TMP/bin/dnf" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_ROOT/dnf-remove"
+EOF
+chmod +x "$TMP/bin/dnf"
+export HYPRVEIL_DNF="$TMP/bin/dnf"
+"$REPO/scripts/uninstall.sh" --yes --packages >/dev/null
+[ -d "$HYPRVEIL_CONFIG_HOME/kitty" ] || fail "scripts/uninstall.sh removed Kitty config"
+[ -f "$HOME/.zshrc" ] || fail "scripts/uninstall.sh removed zsh config"
+[ ! -e "$HYPRVEIL_CONFIG_HOME/hypr" ] || fail "scripts/uninstall.sh left hypr config"
+[ ! -e "$HYPRVEIL_CONFIG_HOME/qt5ct" ] || fail "scripts/uninstall.sh left qt5ct config"
+[ ! -e "$HOME/.local/share/icons/Bibata-Modern-Classic" ] || fail "scripts/uninstall.sh left Bibata asset"
+grep -q 'hyprland' "$TMP/dnf-remove" || fail "scripts/uninstall.sh did not remove recorded Hyprland package"
+grep -q 'quickshell' "$TMP/dnf-remove" || fail "scripts/uninstall.sh did not remove recorded Quickshell package"
+! grep -q 'kitty' "$TMP/dnf-remove" || fail "scripts/uninstall.sh tried to remove kitty"
+! grep -q 'zsh' "$TMP/dnf-remove" || fail "scripts/uninstall.sh tried to remove zsh"
+! grep -q 'unknown-extra' "$TMP/dnf-remove" || fail "scripts/uninstall.sh removed an unknown package"
+unset HYPRVEIL_DNF
+ok "scripts/uninstall.sh preserves Kitty and zsh while removing other owned config and recorded packages"
 
 # --- uninstall --purge-state removes state after a second confirmation -------
 # Re-deploy so there is something to remove, then purge.

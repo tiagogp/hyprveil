@@ -6,7 +6,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
 
-echo "== Stage 1: Fedora and repository detection =="
+hv_section "Stage 1: Fedora and repository detection"
 hv_load_fedora
 hv_check_supported_release || true
 hv_show_enabled_repos
@@ -22,5 +22,5 @@ hv_install_group required "core desktop utilities" - \
     kitty mate-polkit xdg-desktop-portal-hyprland qt5-qtwayland qt6-qtwayland || STAGE_FAIL=1
 
 echo
-echo "Stage 1 complete. Package choices were recorded in $HV_SOURCE_LOG"
+hv_ok "Stage 1 complete. Package choices were recorded in $HV_SOURCE_LOG"
 exit "$STAGE_FAIL"

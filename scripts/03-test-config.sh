@@ -57,7 +57,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          hypr/profiles/form-factor/laptop.conf hypr/profiles/gpu/generic.conf \
          hypr/profiles/gpu/intel.conf hypr/profiles/gpu/amd.conf hypr/profiles/gpu/nvidia.conf \
          waybar/config.jsonc waybar/style.css waybar/scripts/dock.sh \
-         waybar/scripts/dock-watch.sh waybar/scripts/dock-icons.json \
+         waybar/scripts/dock-icons.json \
          waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
          waybar/scripts/notification.sh waybar/accent.css \
          kitty/kitty.conf kitty/accent.conf kitty/hyprveil-session.sh \

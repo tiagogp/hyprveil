@@ -519,32 +519,7 @@ uninstall() {
 # is restored; otherwise the Hyprveil-added files are removed. The active
 # display manager is never switched here — that stays a deliberate manual step.
 uninstall_sddm() {
-    local snapshot='' name summary
-    while IFS=$'\t' read -r name summary; do
-        case "$summary" in
-            *system-config*|*system-themes*) snapshot="$HV_STATE_HOME/backups/$name"; break ;;
-        esac
-    done < <(hv_list_backups)
-
-    if [ -n "$snapshot" ] && [ -e "$snapshot/system-config/hyprveil.conf" ]; then
-        printf 'Restoring previous SDDM selection from %s (sudo)\n' "$snapshot"
-        hv_root cp -a "$snapshot/system-config/hyprveil.conf" /etc/sddm.conf.d/hyprveil.conf
-    elif [ -e /etc/sddm.conf.d/hyprveil.conf ]; then
-        printf 'Removing Hyprveil SDDM selection /etc/sddm.conf.d/hyprveil.conf (sudo)\n'
-        hv_root rm -f /etc/sddm.conf.d/hyprveil.conf
-    fi
-
-    if [ -n "$snapshot" ] && [ -e "$snapshot/system-themes/hyprveil" ]; then
-        printf 'Restoring previous SDDM theme from %s (sudo)\n' "$snapshot"
-        hv_root rm -rf /usr/share/sddm/themes/hyprveil
-        hv_root cp -a "$snapshot/system-themes/hyprveil" /usr/share/sddm/themes/hyprveil
-    elif [ -e /usr/share/sddm/themes/hyprveil ]; then
-        printf 'Removing Hyprveil SDDM theme /usr/share/sddm/themes/hyprveil (sudo)\n'
-        hv_root rm -rf /usr/share/sddm/themes/hyprveil
-    fi
-    printf 'SDDM configuration restored. The active display manager was not changed;\n'
-    printf 'if Hyprveil enabled sddm, re-enable your previous manager manually, e.g.:\n'
-    printf '  sudo systemctl disable sddm.service && sudo systemctl enable gdm.service\n'
+    hv_uninstall_sddm
 }
 
 case "${1:-}" in

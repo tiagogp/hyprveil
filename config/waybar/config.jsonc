@@ -162,10 +162,9 @@
     // ten-slot pool is also the manager's pin limit. Icon glyphs come from
     // scripts/dock-icons.json — add an app's class there for a real icon
     // instead of the generic fallback.
-    // The "active" highlight refreshes on SIGRTMIN+8, sent by
-    // scripts/dock-watch.sh (Hyprland focus/open/close events) and by
-    // dock-lib.sh (pin changes); "interval": 30 is only a fallback in case
-    // that watcher isn't running.
+    // The "active" highlight refreshes on SIGRTMIN+8 after pin changes; the
+    // interval poll covers Hyprland focus/open/close changes for this legacy
+    // Waybar dock.
     "modules-center": [
       "custom/launcher",
       "custom/dock-0",

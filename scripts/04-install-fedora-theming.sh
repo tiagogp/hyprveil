@@ -8,17 +8,17 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
 
-echo "== Stage 3: Fedora and repository detection =="
+hv_section "Stage 3: Fedora and repository detection"
 hv_load_fedora
 hv_check_supported_release || true
 hv_show_enabled_repos
 hv_install_group optional "application theming and zsh environment" - \
     adw-gtk3-theme qt5ct qt6ct zsh zsh-autosuggestions zsh-syntax-highlighting
 
-echo "== Starship prompt =="
+hv_section "Starship prompt"
 hv_install_group optional "Starship prompt" - starship
 
-echo "== Bibata cursor theme — no sudo, installs to ~/.local/share/icons =="
+hv_section "Bibata cursor theme" "No sudo; installs to ~/.local/share/icons"
 if hv_confirm "Download and install the Bibata cursor?"; then
     ICONDIR="$HOME/.local/share/icons"
     mkdir -p "$ICONDIR"
@@ -44,7 +44,7 @@ if hv_confirm "Download and install the Bibata cursor?"; then
     fi
 fi
 
-echo "== Papirus red folder accent (papirus-folders, needs sudo to edit /usr/share/icons) =="
+hv_section "Papirus red folder accent" "Uses papirus-folders and sudo to edit /usr/share/icons"
 if hv_confirm "Install and apply the Papirus red folder helper?"; then
     mkdir -p "$HOME/.local/bin"
     papirus_tmp=$(mktemp "${TMPDIR:-/tmp}/papirus-folders.XXXXXX")
@@ -64,7 +64,7 @@ if hv_confirm "Install and apply the Papirus red folder helper?"; then
     fi
 fi
 
-echo "== Qt configs -> $HV_CONFIG_HOME (absolute paths expanded) =="
+hv_section "Qt configs" "$HV_CONFIG_HOME with absolute paths expanded"
 if hv_confirm "Back up and install Qt theme configs?"; then
     backup=
     for toolkit in qt5ct qt6ct; do
@@ -87,7 +87,7 @@ if hv_confirm "Back up and install Qt theme configs?"; then
     fi
 fi
 
-echo "== zsh: install ~/.zshrc and make zsh the login shell =="
+hv_section "zsh" "Install ~/.zshrc and make zsh the login shell"
 if hv_confirm "Back up and install the Hyprveil zsh config?"; then
     if [ -f "$HOME/.zshrc" ] && ! cmp -s "$REPO/config/zsh/.zshrc" "$HOME/.zshrc"; then
         backup=$(hv_new_backup_dir)
@@ -101,6 +101,6 @@ if hv_confirm "Back up and install the Hyprveil zsh config?"; then
 fi
 
 echo
-echo "Stage 3 install done. The full installer deploys remaining managed configs safely."
-echo "Then reload: hyprctl reload && $HV_CONFIG_HOME/hypr/scripts/apply-theme.sh"
-echo "Cursor + Qt env vars only reach apps started after the reload; log out/in for everything."
+hv_ok "Stage 3 install done. The full installer deploys remaining managed configs safely."
+hv_note "Then reload: hyprctl reload && $HV_CONFIG_HOME/hypr/scripts/apply-theme.sh"
+hv_note "Cursor + Qt env vars only reach apps started after the reload; log out/in for everything."
