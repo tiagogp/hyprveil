@@ -62,6 +62,11 @@ if [ "${1:-}" = hyprpaper ] && [ "${2:-}" = --help ]; then
     # judged from the text, so keep this failure status in the mock.
     exit 1
 fi
+if [ "${1:-}" = hyprpaper ] && { [ "${2:-}" = listloaded ] || [ "${2:-}" = listactive ]; }; then
+    [ "${MOCK_IPC:-modern}" != unavailable ] || exit 3
+    [ "${MOCK_HYPRPAPER_READY:-1}" = 1 ] || exit 3
+    exit 0
+fi
 if [ "${1:-}" = reload ]; then
     printf 'compositor-reload\n' >> "$MOCK_ROOT/ipc.log"
     [ "${MOCK_RELOAD_FAIL:-0}" != 1 ]
@@ -150,6 +155,11 @@ grep -Fqx "from-wallpaper $special" "$TMP/accent.log" \
     || fail "restore did not re-derive the accent at login"
 [ "$(grep -c '^from-wallpaper ' "$TMP/accent.log")" = 1 ] \
     || fail "restore derived the accent more than once"
+: > "$TMP/ipc.log"
+MOCK_HYPRPAPER_READY=0 MOCK_MONITORS='[{"name":"DP-1"}]' "$WALLPAPER" restore 2> "$TMP/not-ready-warning"
+[ ! -s "$TMP/ipc.log" ] || fail "restore applied wallpaper before Hyprpaper IPC was ready"
+grep -q 'Hyprpaper IPC did not become ready' "$TMP/not-ready-warning" \
+    || fail "restore did not explain an unavailable Hyprpaper IPC"
 # `auto off` must leave the wallpaper working and the accent untouched.
 : > "$TMP/accent.log"
 MOCK_AUTO=off "$WALLPAPER" apply "$special" contain
