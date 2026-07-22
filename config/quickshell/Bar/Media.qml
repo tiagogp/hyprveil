@@ -60,8 +60,25 @@ RowLayout {
 
     visible: active
 
+    // Distance from Media's own right edge to the bar's right edge, added to
+    // banner's margins below. Recomputed on every hover rather than bound
+    // reactively: mapToItem is a C++ call, not a QML property read, so a
+    // binding built on it would not re-evaluate when the bar's contents
+    // change width — it would just be a different kind of stale. Measuring it
+    // fresh each time the row is entered is what TrayItem.openMenu already
+    // does for its own context menu, and covers the case that mattered here:
+    // the tray growing or shrinking, the notification badge appearing, or the
+    // clock's text changing width between one hover and the next.
+    property real bannerRightOffset: 168
+    function updateBannerOffset() {
+        if (!root.barWindow) return;
+        const p = root.mapToItem(null, root.width, 0);
+        root.bannerRightOffset = root.barWindow.width - p.x;
+    }
+
     onHoveredChanged: {
         if (hovered) {
+            updateBannerOffset();
             hidePreview.stop();
             previewOpen = true;
         } else {
@@ -153,9 +170,10 @@ RowLayout {
     // width: the clock, the notification badge, and the status glyphs all come
     // and go, so the card drifted out from under its own row.
     //
-    // Both numbers now come from the bar itself. The card is flush with the
-    // bar's right edge and starts at the bar's bottom edge, so it cannot overlap
-    // and cannot drift.
+    // The top margin comes from the bar itself. The right margin is the bar's
+    // own margin plus `bannerRightOffset` (see above) — measured off Media's
+    // actual position in the bar rather than guessed once, so the card stays
+    // under its own row no matter what the tray or clock are doing.
     PanelWindow {
         id: banner
 
@@ -173,7 +191,7 @@ RowLayout {
         anchors { top: true; right: true }
         margins {
             top: barTop;
-            right: (root.barWindow?.margins.right ?? Tokens.spacing2h ) + 168;
+            right:  root.bannerRightOffset - 86;
         }
 
         implicitWidth: 344

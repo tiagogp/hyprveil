@@ -19,7 +19,6 @@ HYPR_DIR="$HV_CONFIG_HOME/hypr"
 
 ENSURE=0
 PREVIEW=0
-DO_SDDM=0
 # Empty means "not passed on the command line"; the value is then taken from
 # saved state, detection, or an interactive prompt in that order.
 OPT_KB_LAYOUT=''
@@ -76,7 +75,6 @@ flag, so the flow can run unattended. Re-running is always safe.
   --form-factor desktop|laptop   Confirm the hardware profile (see 06-select-profile.sh).
   --gpu intel|amd|nvidia
   --backend quickshell|swaync|mako  Notification backend (see 07-select-notification-backend.sh).
-  --sddm                   Also run the SDDM greeter setup (05-install-fedora-sddm.sh).
 
   -h, --help               Show this help.
 EOF
@@ -103,7 +101,6 @@ while [ "$#" -gt 0 ]; do
         --form-factor) shift; OPT_FORM_FACTOR=${1:-} ;;
         --gpu) shift; OPT_GPU=${1:-} ;;
         --backend) shift; OPT_BACKEND=${1:-} ;;
-        --sddm) DO_SDDM=1 ;;
         -h|--help) usage; exit 0 ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
     esac
@@ -461,7 +458,7 @@ persist_state() {
 }
 
 # ---------------------------------------------------------------------------
-# Delegated selections (profile, backend, wallpaper, accent, motion, sddm)
+# Delegated selections (profile, backend, wallpaper, accent, motion)
 # ---------------------------------------------------------------------------
 run_delegates() {
     local -a args
@@ -492,9 +489,6 @@ run_delegates() {
     fi
     if [ -n "$OPT_MOTION" ] && [ -x "$HYPR_DIR/scripts/motion-profile.sh" ]; then
         "$HYPR_DIR/scripts/motion-profile.sh" "$OPT_MOTION" || hv_warn "could not set motion profile $OPT_MOTION"
-    fi
-    if [ "$DO_SDDM" -eq 1 ]; then
-        "$REPO/scripts/05-install-fedora-sddm.sh" || hv_warn "SDDM setup did not complete"
     fi
 }
 

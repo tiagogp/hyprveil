@@ -37,6 +37,20 @@ done
 # reprompted, rather than being silently migrated to a backend they never chose.
 valid_backend() { [[ "$1" = quickshell || "$1" = swaync || "$1" = mako ]]; }
 
+backend_running() {
+    case "$1" in
+        quickshell)
+            pgrep -x quickshell >/dev/null 2>&1 || pgrep -x qs >/dev/null 2>&1
+            ;;
+        swaync|mako)
+            pgrep -x "$1" >/dev/null 2>&1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 saved=
 if [ -f "$HV_NOTIFICATION_STATE" ]; then
     IFS= read -r saved < "$HV_NOTIFICATION_STATE" || true
@@ -79,9 +93,10 @@ elif [ "$BACKEND" = swaync ]; then
 fi
 
 # An explicit live switch should not require logout. The installed launcher safely
-# replaces the selected backend; the legacy Waybar bridge observes the same state
-# file if the user starts it manually.
-if [ "$saved" != "$BACKEND" ] \
+# replaces the selected backend. --ensure also heals a live session where the
+# selected backend is saved but not running, which keeps configure-only reruns
+# from leaving the Quickshell bar/dock stopped.
+if { [ "$saved" != "$BACKEND" ] || ! backend_running "$BACKEND"; } \
     && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}${WAYLAND_DISPLAY:-}" ] \
     && [ -x "$HV_CONFIG_HOME/hypr/scripts/notification-daemon.sh" ]; then
     if command -v "$BACKEND" >/dev/null 2>&1; then

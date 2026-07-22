@@ -159,7 +159,7 @@ confirm_action() {
             gum confirm --default=true "$prompt"
         elif [ -n "$strict" ]; then
             # Opt-in strict no: keep the "No" button selected so an accidental
-            # Enter never proceeds. Used only for system-altering SDDM steps.
+            # Enter never proceeds. For system-altering steps.
             gum confirm --default=false "$prompt"
         else
             gum confirm "$prompt"

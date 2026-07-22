@@ -78,7 +78,6 @@ case "$MODE" in
             "Notification backend"
             "Dependency report"
             "Deploy managed configs"
-            "Optional SDDM theme"
         )
         ;;
     "Configure only")
@@ -88,7 +87,6 @@ case "$MODE" in
             "Notification backend"
             "Dependency report"
             "Deploy managed configs"
-            "Optional SDDM theme"
         )
         ;;
     "Packages only")
@@ -232,16 +230,6 @@ if selected_contains "Deploy managed configs" "${COMPONENTS[@]}"; then
         INSTALL_OK=0
     else
         hv_reload_live_session
-    fi
-fi
-
-if selected_contains "Optional SDDM theme" "${COMPONENTS[@]}"; then
-    CURRENT=$((CURRENT + 1))
-    show_progress "$CURRENT" "$TOTAL" "Optional SDDM theme"
-    hv_section "Optional SDDM theme"
-    hv_note "SDDM changes system-wide login configuration and remains separately gated."
-    if hv_confirm_no "Run scripts/05-install-fedora-sddm.sh now?"; then
-        "$REPO/scripts/05-install-fedora-sddm.sh"
     fi
 fi
 

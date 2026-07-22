@@ -302,14 +302,6 @@ grep -q 'Qt.Key_MediaTogglePlayPause' "$REPO/config/quickshell/Lock/Lock.qml" \
     || fail "lock screen does not handle media keys without a pointer"
 grep -q 'hardware media keys' "$REPO/docs/QUICK-SETTINGS.md" \
     || fail "Quick Settings documentation omits lock-screen pointer-free media behavior"
-grep -q 'activeFocus' "$REPO/config/sddm/hyprveil/Components/SessionPicker.qml" \
-    || fail "SDDM session picker focus does not light the control"
-grep -q 'Accessible.name' "$REPO/config/sddm/hyprveil/Components/PasswordField.qml" \
-    || fail "SDDM password field does not expose an accessible name"
-grep -q 'typeof primaryScreen === "undefined" ? true : primaryScreen' "$REPO/config/sddm/hyprveil/Main.qml" \
-    || fail "SDDM greeter hides controls when primaryScreen is unavailable"
-grep -q 'sourceSize.width: root.width' "$REPO/config/sddm/hyprveil/Main.qml" \
-    || fail "SDDM backdrop is not decoded at the greeter surface size"
 python3 - <<'PY' || fail "focus accent does not meet the 3:1 UI contrast floor"
 def linear(c):
     c = c / 255

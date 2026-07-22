@@ -31,6 +31,9 @@ for name in hypr waybar swaync wlogout gtk-3.0 gtk-4.0 rofi kitty mako qt5ct qt6
     mkdir -p "$HYPRVEIL_CONFIG_HOME/$name"
     cp -a "$REPO/config/$name/." "$HYPRVEIL_CONFIG_HOME/$name/"
 done
+# starship is a top-level file, not a tree; its .in must ride along so the
+# renderer can rewrite the prompt palette the same way the tree consumers do.
+cp -a "$REPO/config/starship.toml" "$REPO/config/starship.toml.in" "$HYPRVEIL_CONFIG_HOME/"
 
 # --- mocks ---
 # `magick IMG ... histogram:info:-` in the real -format %c shape. MOCK_IMAGE
@@ -151,7 +154,12 @@ for name in lock logout reboot shutdown suspend; do
     grep -qi "3b82f6" "$C/wlogout/assets/$name-accent.svg" \
         || fail "wlogout $name icon not recolored"
 done
+# starship reads one TOML file with no include mechanism; the accent AND the
+# neutral palette are both templated in, so both have to land.
+grep -q "accent = '#3b82f6'" "$C/starship.toml" || fail "starship accent not rendered from template"
+grep -q "text = '#f5f5f7'" "$C/starship.toml" || fail "starship neutral palette not rendered from neutrals.conf"
 grep -q '@accent' "$C/mako/config" && fail "an unsubstituted placeholder survived rendering"
+grep -qE '@[a-z-]+@' "$C/starship.toml" && fail "an unsubstituted placeholder survived in starship"
 ok "set renders the accent into every include-based and templated consumer"
 
 # --------------------------------------------------------------------------
@@ -307,6 +315,30 @@ jq -e '.accent == "#abcdef"' "$HYPRVEIL_STATE_HOME/accent.json" >/dev/null \
 ok "malformed state recovers and invalid colors are rejected"
 
 # --------------------------------------------------------------------------
+# Curated presets
+# --------------------------------------------------------------------------
+listing=$("$ACCENT" preset list)
+[ -n "$listing" ] || fail "preset list printed nothing"
+grep -Fq "$(printf 'crimson\t%s' "$DEFAULT_ACCENT")" <<< "$listing" \
+    || fail "preset list is missing crimson at the designed default: $listing"
+while IFS=$'\t' read -r name hex; do
+    [ -n "$name" ] || continue
+    [[ "$hex" =~ ^#[0-9a-fA-F]{6}$ ]] || fail "preset $name has a malformed hex: $hex"
+done <<< "$listing"
+
+"$ACCENT" preset azure >/dev/null
+jq -e '.accent == "#57a4db" and .source == "preset:azure"' "$HYPRVEIL_STATE_HOME/accent.json" \
+    >/dev/null || fail "preset azure did not save the expected accent and source"
+grep -q "@define-color accent #57a4db;" "$C/waybar/accent.css" \
+    || fail "preset azure did not render into consumers"
+
+"$ACCENT" preset bogus-name >/dev/null 2>&1 && fail "an unknown preset name was accepted"
+"$ACCENT" preset >/dev/null 2>&1 && fail "preset without a name was accepted"
+ok "curated presets list the designed default, resolve by name, and reject unknown names"
+
+"$ACCENT" reset >/dev/null
+
+# --------------------------------------------------------------------------
 # Static contract: committed fragments carry the designed accent
 # --------------------------------------------------------------------------
 # An unrendered checkout has to look identical to a rendered default, or a fresh
@@ -326,5 +358,35 @@ grep -q 'accent.css' "$REPO/config/waybar/style.css" || fail "Waybar does not im
 grep -q 'accent.rasi' "$REPO/config/rofi/hyprveil.rasi" || fail "Rofi does not import accent.rasi"
 grep -q 'include accent.conf' "$REPO/config/kitty/kitty.conf" || fail "Kitty does not include accent.conf"
 ok "committed fragments carry the designed accent and every consumer imports one"
+
+# --------------------------------------------------------------------------
+# The templated palette consumers ship committed and in sync
+# --------------------------------------------------------------------------
+# starship and hyprlock used to mirror the palette by hand. Now they are
+# generated from neutrals.conf + the accent, so the committed output must carry
+# the designed accent AND its .in template must ship beside it.
+for f in config/starship.toml config/starship.toml.in config/hypr/neutrals.conf; do
+    [ -f "$REPO/$f" ] || fail "missing committed palette file: $f"
+done
+grep -qi "${DEFAULT_ACCENT#\#}" "$REPO/config/starship.toml" \
+    || fail "committed palette output does not carry the designed accent: starship.toml"
+# The neutral single source of truth has to be sourced by every consumer that
+# cannot read colors.conf directly.
+grep -q 'source = ~/.config/hypr/neutrals.conf' "$REPO/config/hypr/colors.conf" \
+    || fail "colors.conf does not source the neutral palette"
+grep -q 'source = ~/.config/hypr/neutrals.conf' "$REPO/config/hypr/hyprlock.conf" \
+    || fail "hyprlock.conf does not source the neutral palette"
+# And hyprlock must actually use the named neutral rather than a hardcoded hex.
+grep -q "color = \$bg-deep" "$REPO/config/hypr/hyprlock.conf" \
+    || fail "hyprlock.conf still hardcodes its background instead of using \$bg-deep"
+
+# A neutral edited in neutrals.conf without a following `accent.sh render` — or a
+# .in edit — leaves a stale, half-themed file. accent.sh check is the gate: it
+# renders every accent-owned consumer into a scratch copy and diffs, touching
+# nothing live.
+HYPRVEIL_CONFIG_HOME="$REPO/config" HYPRVEIL_STATE_HOME="$TMP/state-check" \
+    "$ACCENT" check >/dev/null 2>&1 \
+    || fail "committed accent-owned outputs are stale; run: accent.sh render"
+ok "starship and hyprlock track the neutral SSOT and are in sync"
 
 printf 'P6 accent smoke tests passed.\n'

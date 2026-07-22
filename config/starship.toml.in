@@ -11,13 +11,13 @@ add_newline = true
 palette = 'hyprveil'
 
 [palettes.hyprveil]
-accent = '#e14658'
-accent_hover = '#e86a79'
-text = '#f5f5f7'
-muted = '#9a9ca5'
-warning = '#e1a346'
-error = '#e5484d'
-success = '#4cae80'
+accent = '@accent@'
+accent_hover = '@accent-hover@'
+text = '@text@'
+muted = '@text-muted@'
+warning = '@warning@'
+error = '@error@'
+success = '@success@'
 
 [username]
 show_always = true

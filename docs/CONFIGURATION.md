@@ -20,11 +20,12 @@ Normally, `$XDG_STATE_HOME` is `~/.local/state`.
 | GTK and Qt | `~/.config/gtk-*`, `~/.config/qt*ct` | reopen applications |
 
 Edit the repository copy when a customization should survive a future deployment.
-The main customization points are `colors.conf`, `variables.conf`, `monitors.conf`,
-`animations.conf`, `keybindings.conf`, `autostart.conf`, Quickshell QML, and the
-fallback Waybar/SwayNC/Mako styles.
-Color values are mirrored because the applications cannot import Hyprland variables.
-Kitty tab/session helpers live in `config/kitty/hyprveil-session.sh`.
+The main customization points are `neutrals.conf`, `colors.conf`, `variables.conf`,
+`monitors.conf`, `animations.conf`, `keybindings.conf`, `autostart.conf`,
+Quickshell QML, and the fallback Waybar/SwayNC/Mako styles.
+Applications that cannot import Hyprland variables no longer mirror colors by
+hand: they are generated from the single source of truth by `accent.sh render`
+(see below). Kitty tab/session helpers live in `config/kitty/hyprveil-session.sh`.
 
 ## Tokens and accents
 
@@ -35,9 +36,27 @@ shadow, and timing values. After changing tokens, render the generated files:
 HYPRVEIL_CONFIG_HOME="$PWD/config" ./config/hypr/scripts/theme.sh render
 ```
 
-`config/hypr/colors.conf` stores the base palette. Wallpaper-derived accents are
-managed by `config/hypr/scripts/accent.sh`, which renders matching palette files
-for Quickshell, Kitty, Rofi, wlogout, GTK, Qt, SwayNC, and Mako templates.
+`config/hypr/neutrals.conf` is the single source of truth for every non-accent
+color; `colors.conf` sources it and adds the accent design defaults. Edit a
+neutral there, not in the individual consumers. Wallpaper-derived accents are
+managed by `config/hypr/scripts/accent.sh`, which renders both the accent family
+and the neutral palette into every consumer that cannot read a Hyprland variable
+— Quickshell, Kitty, Rofi, wlogout, GTK, Qt, SwayNC, Mako, **starship, and
+hyprlock** — so a palette change is one edit plus one render:
+
+```bash
+HYPRVEIL_CONFIG_HOME="$PWD/config" ./config/hypr/scripts/accent.sh render
+```
+
+`accent.sh check` renders every consumer into a scratch copy and diffs it against
+the committed output, so an edit without a following `render` fails the P6 gate
+instead of shipping a stale file.
+
+For a manual accent without a wallpaper to derive from, `accent.sh preset list`
+prints the curated set (`config/hypr/scripts/data/accent-presets.json`) and
+`accent.sh preset <name>` applies one — it renders through the same path as
+`accent.sh set`. The neutral palette never moves for a preset, only the accent
+family; see [CONTRIBUTING.md](../CONTRIBUTING.md) for how to add one.
 
 ## Per-app toolkit fixes
 

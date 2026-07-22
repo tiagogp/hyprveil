@@ -15,6 +15,7 @@ HV_LOG_PREFIX=Accent
 . "$SCRIPT_DIR/lib/render-lib.sh"
 
 STATE_FILE="$STATE_HOME/accent.json"
+PRESETS_FILE="$SCRIPT_DIR/data/accent-presets.json"
 
 # The palette's designed accent. Every template ships with this value baked in,
 # so an unrendered checkout and a freshly deployed config look identical.
@@ -32,10 +33,13 @@ Usage:
   accent.sh from-wallpaper PATH   derive the accent from an image and apply it
   accent.sh chrome PATH           re-solve the bar/dock alpha for an image
   accent.sh set HEX               apply an explicit accent (#rrggbb)
+  accent.sh preset list            list the curated accent presets
+  accent.sh preset NAME            apply a curated preset by name
   accent.sh reset                 return to the designed accent
   accent.sh extract PATH          print the accent an image would produce
   accent.sh extract-chrome PATH   print the chrome alpha an image would produce
   accent.sh render                re-render every consumer from saved state
+  accent.sh check                 verify every consumer is up to date (writes nothing)
   accent.sh current               print the saved accent state as JSON
   accent.sh auto [on|off]         follow wallpaper changes (default: on)
 
@@ -588,6 +592,7 @@ load_accent_tokens() {
     local on_chrome dim_on_chrome
     HV_TOKENS=()
     load_design_tokens || warn "rendering without design tokens"
+    load_palette || warn "rendering without the neutral palette"
     # Overrides the flat $chrome-alpha the token file carries. tokens.conf holds
     # the worst-case ceiling so that consumers with no measurement (and an
     # unrendered checkout) still get a legible bar; the solved value only ever
@@ -609,24 +614,41 @@ load_accent_tokens() {
     )
 }
 
+# Every accent-owned consumer, as `template:target` relative to CONFIG_HOME.
+# These carry an accent OR a neutral placeholder (or both), so accent.sh is their
+# single writer — render-lib's invariant is that no output has two writers. The
+# list is shared by render_templated_consumers and check_command so the renderer
+# and the staleness gate can never disagree about the set.
+#
+# Notes on the less obvious entries:
+#   - QML has no include mechanism for values, so the shell accent arrives as a
+#     generated singleton. Quickshell watches its config dir, which makes writing
+#     Accent.qml the reload as well — see reload_quickshell.
+#   - starship reads one TOML file with no include mechanism, so its palette
+#     (accent and neutrals) is templated in rather than mirrored by hand.
+#   - wlogout bakes the ring and glyph of each button into one SVG per state, so
+#     the accent variants are recolored rather than styled.
+accent_templated_consumers() {
+    cat <<'EOF'
+mako/config.in:mako/config
+quickshell/Accent.qml.in:quickshell/Accent.qml
+qt5ct/colors/hyprveil.conf.in:qt5ct/colors/hyprveil.conf
+qt6ct/colors/hyprveil.conf.in:qt6ct/colors/hyprveil.conf
+starship.toml.in:starship.toml
+wlogout/assets/src/lock-accent.svg:wlogout/assets/lock-accent.svg
+wlogout/assets/src/logout-accent.svg:wlogout/assets/logout-accent.svg
+wlogout/assets/src/reboot-accent.svg:wlogout/assets/reboot-accent.svg
+wlogout/assets/src/shutdown-accent.svg:wlogout/assets/shutdown-accent.svg
+wlogout/assets/src/suspend-accent.svg:wlogout/assets/suspend-accent.svg
+EOF
+}
+
 render_templated_consumers() {
-    local changed=0 dir name
-    render_template "$CONFIG_HOME/mako/config.in" "$CONFIG_HOME/mako/config" && changed=1
-    # QML has no include mechanism for values, so the accent arrives as a
-    # generated singleton. Quickshell watches its config directory, which makes
-    # writing this file the reload as well — see reload_quickshell.
-    render_template "$CONFIG_HOME/quickshell/Accent.qml.in" \
-        "$CONFIG_HOME/quickshell/Accent.qml" && changed=1
-    for dir in qt5ct qt6ct; do
-        render_template "$CONFIG_HOME/$dir/colors/hyprveil.conf.in" \
-            "$CONFIG_HOME/$dir/colors/hyprveil.conf" && changed=1
-    done
-    # wlogout bakes the ring and glyph of each button into one SVG per state, so
-    # the accent variants are recolored rather than styled.
-    for name in lock logout reboot shutdown suspend; do
-        render_template "$CONFIG_HOME/wlogout/assets/src/$name-accent.svg" \
-            "$CONFIG_HOME/wlogout/assets/$name-accent.svg" && changed=1
-    done
+    local template target changed=0
+    while IFS=: read -r template target; do
+        [ -n "$template" ] || continue
+        render_template "$CONFIG_HOME/$template" "$CONFIG_HOME/$target" && changed=1
+    done < <(accent_templated_consumers)
     return "$((1 - changed))"
 }
 
@@ -714,6 +736,24 @@ set_command() {
     apply_accent "$accent" manual
 }
 
+# Curated accents, kept separate from wallpaper extraction: a preset is a
+# taste choice a person makes once, not a measurement, so it is looked up by
+# name rather than derived. The neutral palette stays fixed either way — see
+# the file header — a preset only ever moves the accent family.
+preset_list_command() {
+    [ -f "$PRESETS_FILE" ] || die "missing preset list: $PRESETS_FILE"
+    jq -r '.[] | "\(.name)\t\(.hex)"' "$PRESETS_FILE"
+}
+
+preset_command() {
+    local name=${1:-} hex
+    [ -n "$name" ] || die "preset requires a name (see: accent.sh preset list)"
+    [ -f "$PRESETS_FILE" ] || die "missing preset list: $PRESETS_FILE"
+    hex=$(jq -r --arg name "$name" '.[] | select(.name == $name) | .hex' "$PRESETS_FILE")
+    [ -n "$hex" ] || die "no such preset: $name (see: accent.sh preset list)"
+    apply_accent "$hex" "preset:$name"
+}
+
 auto_command() {
     local mode=${1:-} tmp
     ensure_state || die "could not initialize accent state"
@@ -733,12 +773,52 @@ auto_command() {
     printf 'Accent: wallpaper tracking %s\n' "$mode"
 }
 
+# Renders every accent-owned consumer into a scratch copy and diffs it against
+# the committed output, touching nothing live. The counterpart to theme.sh check:
+# a template edit — or a neutral changed in neutrals.conf — without a following
+# `accent.sh render` fails here instead of shipping a stale, half-themed file.
+# Run against the repo (HYPRVEIL_CONFIG_HOME=config) by tests/p6-accent-smoke.sh.
+check_command() {
+    local template target scratch stale=0 accent hover rgb
+    accent=$(state_accent)
+    if [ "$accent" = "$DEFAULT_ACCENT" ]; then
+        hover="$DEFAULT_HOVER"
+    else
+        hover=$(shade "$accent" 0.08)
+    fi
+    rgb=$(rgb_triplet "$accent")
+    load_accent_tokens "$accent" "$hover" "$rgb" "$(state_chrome_alpha)" "$(state_chrome_band)"
+
+    scratch=$(mktemp -d "${TMPDIR:-/tmp}/hyprveil-accent-check.XXXXXX") \
+        || die "could not create a scratch directory"
+    # shellcheck disable=SC2064  # expand scratch now, not at trap time
+    trap "rm -rf '$scratch'" EXIT
+
+    while IFS=: read -r template target; do
+        [ -n "$template" ] || continue
+        [ -f "$CONFIG_HOME/$template" ] || continue
+        mkdir -p "$scratch/$(dirname "$target")"
+        render_template "$CONFIG_HOME/$template" "$scratch/$target"
+        [ -f "$CONFIG_HOME/$target" ] || continue
+        if ! cmp -s "$scratch/$target" "$CONFIG_HOME/$target"; then
+            warn "out of date: $target"
+            stale=1
+        fi
+    done < <(accent_templated_consumers)
+
+    [ "$stale" -eq 0 ] || die "run accent.sh render"
+    printf 'Accent: every consumer is current\n'
+}
+
 command=${1:-}
 shift 2>/dev/null || true
 case "$command" in
     from-wallpaper) from_wallpaper_command "$@" ;;
     chrome) chrome_command "$@" ;;
     set) set_command "$@" ;;
+    preset)
+        if [ "${1:-}" = list ]; then preset_list_command; else preset_command "$@"; fi ;;
+    check) check_command ;;
     reset) apply_accent "$DEFAULT_ACCENT" default ;;
     extract) [ -n "${1:-}" ] || die "extract requires an image path"; extract_accent "$1" ;;
     extract-chrome)

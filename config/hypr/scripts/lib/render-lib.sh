@@ -150,6 +150,32 @@ load_design_tokens() {
     done
 }
 
+# The neutral palette, the counterpart to the accent family. neutrals.conf holds
+# every non-accent color as `$name = rgba(RRGGBBAA)`; this adds, per name, the
+# forms the consumers need — `@name@` as `#rrggbb` (starship) and `@name-bare@`
+# as `rrggbb` (for composing a translucent shade, `#26@accent-bare@` style).
+# Additive on HV_TOKENS, exactly like load_design_tokens: the templates that
+# carry both an accent and a neutral placeholder are rendered by ONE writer
+# (accent.sh), which calls this after loading the tokens and the accent.
+#
+# The alpha byte in each rgba() is dropped: neutrals are the opaque design
+# colors, and every consumer that needs a translucent shade of one composes it
+# from the bare hex with its own alpha, the way the accent washes already do.
+PALETTE_FILE="${HYPRVEIL_PALETTE_FILE:-$CONFIG_HOME/hypr/neutrals.conf}"
+
+load_palette() {
+    local line name hex
+    [ -f "$PALETTE_FILE" ] || { warn "palette file not found: $PALETTE_FILE"; return 1; }
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ "$line" =~ ^\$([a-zA-Z0-9-]+)[[:space:]]*=[[:space:]]*rgba\(([0-9a-fA-F]{6})[0-9a-fA-F]{2}\) ]] || continue
+        name="${BASH_REMATCH[1]}"
+        hex="$(printf '%s' "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')"
+        HV_TOKENS["$name"]="#$hex"
+        HV_TOKENS["$name-bare"]="$hex"
+    done < "$PALETTE_FILE"
+}
+
 # Escapes a value for use as a sed replacement. Today every token is numeric or
 # a hex color so none of these characters occur — which is exactly why the
 # escaping would be forgotten the first time a token holds a font name or a path.
