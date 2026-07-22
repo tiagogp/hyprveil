@@ -20,7 +20,7 @@ hv_show_enabled_repos
 echo "== Step 0: preview the theme — installs/changes nothing =="
 echo "  sddm-greeter-qt6 --test-mode --theme \"$THEME_SRC\""
 echo "  (the installed package determines whether the binary has a qt6 suffix)"
-if hv_confirm "Run the preview now?"; then
+if hv_confirm_no "Run the preview now?"; then
     GREETER_BIN="$(command -v sddm-greeter-qt6 || command -v sddm-greeter || true)"
     if [ -n "$GREETER_BIN" ]; then
         "$GREETER_BIN" --test-mode --theme "$THEME_SRC"
@@ -67,7 +67,7 @@ echo "== Step 2: install the hyprveil theme + fonts to $THEME_DST (sudo) =="
 echo "  existing theme is timestamp-backed-up, then replaced cleanly"
 echo "  + download Geist Light/Regular into $THEME_DST/Fonts (the greeter runs as"
 echo "    the 'sddm' system user, which can't see ~/.local/share/fonts)"
-if hv_confirm "Back up and install the system theme now?"; then
+if hv_confirm_no "Back up and install the system theme now?"; then
     if [ -e "$THEME_DST" ]; then
         backup=$(hv_new_backup_dir)
         mkdir -p "$backup/system-themes"
@@ -98,7 +98,7 @@ echo "The greeter runs as the 'sddm' system user and \$HOME is 0700, so it canno
 echo "read ~/Pictures/Wallpapers directly — a blurred copy is baked into the theme"
 echo "instead. Skipping this is harmless: the greeter falls back to flat dark."
 echo "Re-run that command yourself after changing wallpaper to refresh it."
-if hv_confirm "Render the backdrop now?"; then
+if hv_confirm_no "Render the backdrop now?"; then
     "$REPO/config/hypr/scripts/sddm-backdrop.sh" render \
         || echo "Backdrop render failed — the greeter will use the flat dark background."
 fi
@@ -107,7 +107,7 @@ echo
 echo "== Step 3: point sddm at the theme — writes /etc/sddm.conf.d/hyprveil.conf (sudo) =="
 echo "  [Theme]"
 echo "  Current=hyprveil"
-if hv_confirm "Back up and write the SDDM theme selection?"; then
+if hv_confirm_no "Back up and write the SDDM theme selection?"; then
     if [ -e /etc/sddm.conf.d/hyprveil.conf ]; then
         backup=$(hv_new_backup_dir)
         mkdir -p "$backup/system-config"
@@ -125,7 +125,7 @@ echo "for ALL logins on this machine, not just Hyprland."
 echo "  sudo systemctl disable gdm.service"
 echo "  sudo systemctl enable sddm.service"
 echo "Rollback: sudo systemctl disable sddm.service && sudo systemctl enable gdm.service"
-if hv_confirm "Really replace the display manager now?"; then
+if hv_confirm_no "Really replace the display manager now?"; then
     hv_root systemctl disable gdm.service || true
     hv_root systemctl enable sddm.service
     echo "Reboot to see it live (or: sudo systemctl isolate multi-user.target && sudo systemctl isolate graphical.target)."

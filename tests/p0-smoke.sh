@@ -72,6 +72,25 @@ hv_load_fedora
 hv_check_supported_release
 ok "Fedora 44 detection and support policy"
 
+(
+    # run_with_spinner can delegate executables to gum, but sourced Bash
+    # functions must stay in the current shell context.
+    ui_has_gum() { return 0; }
+    ui_is_interactive() { return 0; }
+    gum() {
+        printf '%s\n' "$*" > "$TMP/gum-called"
+        return 99
+    }
+    # shellcheck disable=SC2329
+    spinner_function() {
+        touch "$TMP/spinner-function-ran"
+    }
+    run_with_spinner "mock function spinner" spinner_function >/dev/null 2>&1
+)
+[ -f "$TMP/spinner-function-ran" ] || fail "spinner did not run shell function"
+[ ! -f "$TMP/gum-called" ] || fail "spinner delegated a shell function to gum"
+ok "spinner runs shell functions without delegating them to gum"
+
 source=$(hv_package_source official-package)
 [ "$source" = updates ] || fail "official repo was not preferred over third-party repo: $source"
 ok "official package source preference"

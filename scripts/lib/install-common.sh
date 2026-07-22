@@ -91,6 +91,23 @@ hv_confirm() {
     [[ "$answer" = y || "$answer" = Y ]]
 }
 
+# Like hv_confirm, but strictly defaults to "no" even under gum (which otherwise
+# highlights "Yes"). Reserved for system-altering SDDM steps where an accidental
+# Enter must never proceed.
+hv_confirm_no() {
+    local prompt=$1 answer
+    if declare -F confirm_action >/dev/null 2>&1; then
+        confirm_action "$prompt" no strict
+        return $?
+    fi
+    if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
+        printf '%s %s [automatic yes]\n' "$(hv_style '1;34' AUTO)" "$prompt"
+        return 0
+    fi
+    read -r -p "$(hv_style '1;34' ASK) $prompt [y/N] " answer
+    [[ "$answer" = y || "$answer" = Y ]]
+}
+
 hv_load_fedora() {
     local os_release=${HYPRVEIL_OS_RELEASE:-/etc/os-release}
     if [ ! -r "$os_release" ]; then

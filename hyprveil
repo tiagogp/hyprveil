@@ -115,7 +115,7 @@ check_fedora() {
 }
 
 check_dependencies() {
-    local importance package command feature notification_backend required_missing=0 optional_missing=0 checked=0
+    local importance package command feature notification_backend required_missing=0 optional_missing=0 checked_count=0
     section "Dependencies"
     notification_backend=$(hv_notification_backend || true)
     while IFS='|' read -r importance package command feature; do
@@ -127,7 +127,7 @@ check_dependencies() {
                 *) continue ;;
             esac
         fi
-        checked=$((checked + 1))
+        checked_count=$((checked_count + 1))
         if installed_package_or_command "$package" "$command"; then
             continue
         fi
@@ -140,7 +140,7 @@ check_dependencies() {
     done < "$REPO/scripts/data/dependencies.tsv"
 
     if [ "$required_missing" -eq 0 ]; then
-        status_ok "$checked relevant dependencies checked; no required dependency is missing"
+        status_ok "$checked_count relevant dependencies checked; no required dependency is missing"
     fi
     if [ "$optional_missing" -gt 0 ]; then
         status_warn "$optional_missing optional dependencies are missing; optional controls may hide or degrade"

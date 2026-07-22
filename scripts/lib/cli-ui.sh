@@ -4,7 +4,10 @@
 
 if [ -z "${BASH_VERSION:-}" ]; then
     printf 'This CLI helper requires Bash.\n' >&2
-    return 2 2>/dev/null || exit 2
+    if ! return 2 2>/dev/null; then
+        # shellcheck disable=SC2317
+        exit 2
+    fi
 fi
 
 CLI_UI_TEMP_FILES=()
@@ -84,17 +87,18 @@ register_temp_dir() {
 }
 
 cleanup() {
-    local path
+    local status=$? path
     if [ "$CLI_UI_CURSOR_HIDDEN" -eq 1 ]; then
         printf '\033[?25h'
         CLI_UI_CURSOR_HIDDEN=0
     fi
-    for path in "${CLI_UI_TEMP_FILES[@]:-}"; do
+    for path in "${CLI_UI_TEMP_FILES[@]}"; do
         [ -n "$path" ] && [ -e "$path" ] && rm -f -- "$path"
     done
-    for path in "${CLI_UI_TEMP_DIRS[@]:-}"; do
+    for path in "${CLI_UI_TEMP_DIRS[@]}"; do
         [ -n "$path" ] && [ -d "$path" ] && rm -rf -- "$path"
     done
+    return "$status"
 }
 
 handle_interrupt() {
@@ -144,7 +148,7 @@ print_section() {
 }
 
 confirm_action() {
-    local prompt=$1 default=${2:-no} answer suffix
+    local prompt=$1 default=${2:-no} strict=${3:-} answer suffix
     init_cli_ui
     if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
         printf '%s %s %s\n' "$(ui_blue AUTO)" "$prompt" "$(ui_muted "[yes]")"
@@ -153,6 +157,10 @@ confirm_action() {
     if ui_has_gum && ui_is_interactive; then
         if [ "$default" = yes ]; then
             gum confirm --default=true "$prompt"
+        elif [ -n "$strict" ]; then
+            # Opt-in strict no: keep the "No" button selected so an accidental
+            # Enter never proceeds. Used only for system-altering SDDM steps.
+            gum confirm --default=false "$prompt"
         else
             gum confirm "$prompt"
         fi
@@ -238,10 +246,10 @@ fallback_select_multiple() {
     local -a options=("$@") checked=()
     local selected=0 key redraw=0 count=${#options[@]} i box
     [ "$count" -gt 0 ] || return 1
-    for _ in "${options[@]}"; do checked+=(0); done
+    for _ in "${options[@]}"; do checked+=(1); done
 
     printf '%s %s\n' "$(ui_blue "?")" "$prompt" >&2
-    printf '  %s\n' "$(ui_muted "Use arrows to move, Space to toggle, Enter to continue.")" >&2
+    printf '  %s\n' "$(ui_muted "All options start selected. Use arrows to move, Space to toggle, Enter to continue.")" >&2
     printf '\033[?25l' >&2
     CLI_UI_CURSOR_HIDDEN=1
     while true; do
@@ -265,7 +273,7 @@ fallback_select_multiple() {
                 '[B') selected=$(( (selected + 1) % count )) ;;
             esac
         elif [[ "$key" == " " ]]; then
-            checked[$selected]=$(( 1 - checked[$selected] ))
+            checked[selected]=$((1 - checked[selected]))
         elif [[ "$key" == "" ]]; then
             printf '\033[?25h' >&2
             CLI_UI_CURSOR_HIDDEN=0
@@ -286,7 +294,7 @@ select_multiple() {
         return 1
     fi
     if ui_has_gum && ui_is_interactive; then
-        gum choose --no-limit --header "$prompt" "$@"
+        gum choose --no-limit --selected '*' --header "$prompt" "$@"
         return $?
     fi
     if ui_is_interactive; then
@@ -327,13 +335,14 @@ ask_input() {
 run_with_spinner() {
     local message=$1
     shift
-    local pid spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏' i=0 char status
+    local pid spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏' i=0 char status is_shell_function=0
     init_cli_ui
     if [ "$#" -eq 0 ]; then
         print_error "No command was provided for spinner: $message"
         return 1
     fi
-    if ui_has_gum && ui_is_interactive; then
+    declare -F "$1" >/dev/null 2>&1 && is_shell_function=1
+    if [ "$is_shell_function" -eq 0 ] && ui_has_gum && ui_is_interactive; then
         gum spin --spinner minidot --title "$message" -- "$@"
         return $?
     fi
@@ -377,7 +386,8 @@ show_progress() {
 }
 
 check_dependency() {
-    local command_name=$1 install_hint=${2:-"Install $command_name and run this script again."}
+    local command_name=$1 install_hint
+    install_hint=${2:-"Install $command_name and run this script again."}
     if command -v "$command_name" >/dev/null 2>&1; then
         print_success "$command_name is available"
         return 0

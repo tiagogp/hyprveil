@@ -240,7 +240,7 @@ if selected_contains "Optional SDDM theme" "${COMPONENTS[@]}"; then
     show_progress "$CURRENT" "$TOTAL" "Optional SDDM theme"
     hv_section "Optional SDDM theme"
     hv_note "SDDM changes system-wide login configuration and remains separately gated."
-    if confirm_action "Run scripts/05-install-fedora-sddm.sh now?" no; then
+    if hv_confirm_no "Run scripts/05-install-fedora-sddm.sh now?"; then
         "$REPO/scripts/05-install-fedora-sddm.sh"
     fi
 fi
