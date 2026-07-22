@@ -121,14 +121,22 @@ monitor_connected() {
     return 1
 }
 
+# True only when the running Hyprpaper daemon is answering IPC requests. `hyprctl
+# hyprpaper --help` is static enough to print request names while the daemon is
+# still missing, so restore must probe a harmless live request before applying.
+hyprpaper_ready() {
+    hyprctl hyprpaper listloaded >/dev/null 2>&1 \
+        || hyprctl hyprpaper listactive >/dev/null 2>&1
+}
+
 # Prints Hyprpaper's request list, or fails when its IPC is not usable.
-# Current Hyprpaper prints usage on stdout but exits non-zero, and hyprctl prints
-# a connection error when the daemon is down, so readiness is decided by whether
-# the output actually advertises a wallpaper request — never by the exit status.
+# Current Hyprpaper prints usage on stdout but exits non-zero, so capability
+# detection is decided by whether the output advertises a wallpaper request.
 hyprpaper_help() {
     local help
     help=$(hyprctl hyprpaper --help 2>&1) || true
     grep -Eq '(^|[[:space:]])(preload|wallpaper|reload)([[:space:]]|$)' <<<"$help" || return 1
+    hyprpaper_ready || return 1
     printf '%s\n' "$help"
 }
 
