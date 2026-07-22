@@ -56,8 +56,7 @@ if ! valid_backend "$BACKEND"; then
         printf 'No saved notification backend; pass --backend quickshell|swaync|mako.\n' >&2
         exit 2
     fi
-    read -r -p 'Notification backend (quickshell/swaync/mako) [quickshell]: ' BACKEND
-    BACKEND=${BACKEND:-quickshell}
+    BACKEND=$(select_option "Choose notification backend" quickshell swaync mako)
 fi
 valid_backend "$BACKEND" || { printf 'Invalid notification backend: %s\n' "$BACKEND" >&2; exit 2; }
 

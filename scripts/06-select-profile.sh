@@ -100,7 +100,7 @@ if ! valid_form "$FORM_FACTOR"; then
     if valid_form "$detected" && hv_confirm "Detected form factor: $detected. Use this?"; then
         FORM_FACTOR=$detected
     else
-        read -r -p 'Form factor (desktop/laptop): ' FORM_FACTOR
+        FORM_FACTOR=$(select_option "Choose form factor" desktop laptop)
     fi
 fi
 if ! valid_gpu "$GPU"; then
@@ -112,7 +112,7 @@ if ! valid_gpu "$GPU"; then
     if valid_gpu "$detected" && hv_confirm "Detected GPU: $detected. Use this?"; then
         GPU=$detected
     else
-        read -r -p 'GPU path (intel/amd/nvidia): ' GPU
+        GPU=$(select_option "Choose GPU profile" intel amd nvidia)
     fi
 fi
 valid_form "$FORM_FACTOR" || { printf 'Invalid form factor: %s\n' "$FORM_FACTOR" >&2; exit 2; }

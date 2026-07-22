@@ -8,18 +8,29 @@ HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
 HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
 
+if [ -r "$HV_REPO/scripts/lib/cli-ui.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HV_REPO/scripts/lib/cli-ui.sh"
+fi
+
 hv_color_enabled() {
-    [ -z "${NO_COLOR:-}" ] || return 1
-    case "${HYPRVEIL_COLOR:-auto}" in
-        always) return 0 ;;
-        never) return 1 ;;
-    esac
-    [ -t 1 ] && [ "${TERM:-}" != dumb ]
+    if declare -F ui_supports_color >/dev/null 2>&1; then
+        ui_supports_color
+    else
+        [ -z "${NO_COLOR:-}" ] || return 1
+        case "${HYPRVEIL_COLOR:-auto}" in
+            always) return 0 ;;
+            never) return 1 ;;
+        esac
+        [ -t 1 ] && [ "${TERM:-}" != dumb ]
+    fi
 }
 
 hv_style() {
     local code=$1 text=$2
-    if hv_color_enabled; then
+    if declare -F ui_style >/dev/null 2>&1; then
+        ui_style "$code" "$text"
+    elif hv_color_enabled; then
         printf '\033[%sm%s\033[0m' "$code" "$text"
     else
         printf '%s' "$text"
@@ -27,25 +38,22 @@ hv_style() {
 }
 
 hv_banner() {
-    local detail=${1:-} line
+    local detail=${1:-}
+    if declare -F print_header >/dev/null 2>&1; then
+        print_header "Hyprveil" "$detail"
+        return
+    fi
+    printf '\n%s\n' "$(hv_style '1;36' "Hyprveil")"
+    [ -z "$detail" ] || printf '  %s\n' "$(hv_style '2' "$detail")"
     printf '\n'
-    printf '%s\n' "$(hv_style '2' "+-- hyprveil -------------------------------------------------------------+")"
-    while IFS= read -r line; do
-        printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '1;35' "$line")"
-    done <<'EOF'
- _   _                              _ _
-| | | |_   _ _ __  _ ____   _____ (_) |
-| |_| | | | | '_ \| '__\ \ / / _ \| | |
-|  _  | |_| | |_) | |   \ V /  __/| | |
-|_| |_|\__, | .__/|_|    \_/ \___||_|_|
-       |___/|_|
-EOF
-    [ -z "$detail" ] || printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '2' "$detail")"
-    printf '%s\n' "$(hv_style '2' "+-----------------------------------------------------------------------+")"
 }
 
 hv_section() {
     local title=$1 detail=${2:-}
+    if declare -F print_section >/dev/null 2>&1; then
+        print_section "$title" "$detail"
+        return
+    fi
     printf '\n%s %s\n' "$(hv_style '2' "::")" "$(hv_style '1;36' "$title")"
     [ -z "$detail" ] || printf '   %s\n' "$(hv_style '2' "$detail")"
 }
@@ -56,13 +64,25 @@ hv_step() {
     printf '\n%s %s\n' "$(hv_style '1;36' "[$number]")" "$(hv_style '1' "$title")"
 }
 
-hv_note() { printf '  %s %s\n' "$(hv_style '1;34' INFO)" "$*"; }
-hv_ok()   { printf '  %s   %s\n' "$(hv_style '1;32' OK)" "$*"; }
-hv_warn() { printf '  %s %s\n' "$(hv_style '1;33' WARN)" "$*" >&2; }
-hv_bad()  { printf '  %s %s\n' "$(hv_style '1;31' FAIL)" "$*" >&2; }
+hv_note() {
+    if declare -F print_info >/dev/null 2>&1; then print_info "$*"; else printf '  %s %s\n' "$(hv_style '1;34' INFO)" "$*"; fi
+}
+hv_ok() {
+    if declare -F print_success >/dev/null 2>&1; then print_success "$*"; else printf '  %s   %s\n' "$(hv_style '1;32' OK)" "$*"; fi
+}
+hv_warn() {
+    if declare -F print_warning >/dev/null 2>&1; then print_warning "$*"; else printf '  %s %s\n' "$(hv_style '1;33' WARN)" "$*" >&2; fi
+}
+hv_bad() {
+    if declare -F print_error >/dev/null 2>&1; then print_error "$*"; else printf '  %s %s\n' "$(hv_style '1;31' FAIL)" "$*" >&2; fi
+}
 
 hv_confirm() {
     local prompt=$1 answer
+    if declare -F confirm_action >/dev/null 2>&1; then
+        confirm_action "$prompt" no
+        return $?
+    fi
     if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
         printf '%s %s [automatic yes]\n' "$(hv_style '1;34' AUTO)" "$prompt"
         return 0
