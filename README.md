@@ -271,7 +271,7 @@ or SwayNC/Mako when one of those fallbacks is selected.
 Hyprland core:
 - [x] `hyprctl reload` returns no errors
 - [x] `hyprctl monitors` shows all displays at correct resolution/position/scale
-- [x] Window open/close animation is snappy (~180ms), not sluggish
+- [x] Window open/close animation is snappy (~200ms in / ~100ms out), not sluggish
 - [x] Gaps/border radius match `variables.conf` values
 
 Shell and desktop surfaces:

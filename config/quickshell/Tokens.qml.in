@@ -122,12 +122,23 @@ Singleton {
     readonly property int dur1:  @dur-1@
     readonly property int dur2:  @dur-2@
     readonly property int dur2h: @dur-2h@
+    readonly property int durModal: @dur-modal@
     readonly property int dur3:  @dur-3@
     readonly property int dur4:  @dur-4@
 
-    readonly property var easeOut:      [@ease-out-points@]
-    readonly property var easeStandard: [@ease-standard-points@]
-    readonly property var easeReduced:  [@ease-reduced-points@]
+    // Qt's easing.bezierCurve is not the four-number CSS/Hyprland cubic: it
+    // wants control points in groups of six — two handles plus the segment's
+    // endpoint — and the final point must be (1,1). tokens.conf stores the bare
+    // four Hyprland's `bezier =` needs, so the closing `, 1, 1` is appended here
+    // to make each a valid single-segment curve. Drop it and Qt rejects the
+    // list silently and animates linearly instead — no warning, no easing.
+    readonly property var easeOut:      [@ease-out-points@, 1, 1]
+    readonly property var easeModal:    [@ease-modal-points@, 1, 1]
+    readonly property var easeStandard: [@ease-standard-points@, 1, 1]
+    readonly property var easeReduced:  [@ease-reduced-points@, 1, 1]
+    // Overshoot entrance for modal dialogs; see $ease-bloom-points. The first
+    // handle's y > 1 carries a transform past its target and back.
+    readonly property var easeBloom:    [@ease-bloom-points@, 1, 1]
 
     // ---------------------------------------------------------------------
     // Neutrals — fixed by design; only the accent moves. Mirrors

@@ -106,9 +106,9 @@ Scope {
 
                 Behavior on y {
                     NumberAnimation {
-                        duration: Tokens.dur3
+                        duration: Tokens.durModal
                         easing.type: Easing.Bezier
-                        easing.bezierCurve: Tokens.easeOut
+                        easing.bezierCurve: Tokens.easeModal
                     }
                 }
             }
