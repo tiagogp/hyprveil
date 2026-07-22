@@ -14,6 +14,12 @@ Singleton {
     readonly property string clock: Qt.formatDateTime(_now, "hh:mm")
     readonly property string date: Qt.formatDateTime(_now, "dddd, MMMM d")
 
+    // The current date, exposed so the calendar can highlight today reactively.
+    // _now only re-assigns when the minute OR the day changes (see the Timer
+    // below), so a binding on this updates the moment the date rolls over rather
+    // than needing its own poll.
+    readonly property date today: _now
+
     property date _now: new Date()
 
     Timer {
