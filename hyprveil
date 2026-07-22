@@ -362,10 +362,12 @@ update() {
         hv_bad "deployment failed; see the errors above. Existing configuration was not partially replaced."
         return 1
     fi
-    [ -f "$HV_STATE_HOME/hardware-profile.conf" ] && \
+    if [ -f "$HV_STATE_HOME/hardware-profile.conf" ]; then
         "$REPO/scripts/06-select-profile.sh" --ensure >/dev/null 2>&1 || true
-    [ -f "$HV_NOTIFICATION_STATE" ] && \
+    fi
+    if [ -f "$HV_NOTIFICATION_STATE" ]; then
         "$REPO/scripts/07-select-notification-backend.sh" --ensure >/dev/null 2>&1 || true
+    fi
     # Regenerate the setup-owned files (local.conf, apps.conf, hypridle.conf)
     # that a fresh deploy just reset to their repository defaults.
     "$REPO/scripts/10-first-run-setup.sh" --ensure >/dev/null 2>&1 || true
