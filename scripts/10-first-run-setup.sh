@@ -185,7 +185,18 @@ detect_monitors() {
 detect_app() {
     local candidate
     for candidate in "$@"; do
+        # Native binary on PATH.
         command -v "$candidate" >/dev/null 2>&1 && { printf '%s\n' "$candidate"; return 0; }
+        # Flatpak application id (contains a dot, e.g. com.brave.Browser); emit a
+        # ready-to-exec launch command so the keybinding works without a wrapper.
+        case "$candidate" in
+            *.*)
+                if command -v flatpak >/dev/null 2>&1 && flatpak info "$candidate" >/dev/null 2>&1; then
+                    printf 'flatpak run %s\n' "$candidate"
+                    return 0
+                fi
+                ;;
+        esac
     done
     printf '%s\n' "$1"
 }
@@ -308,7 +319,8 @@ resolve_scalars() {
     # Apps
     local d_term d_browser d_files d_editor
     d_term=${SAVED_TERMINAL:-$(detect_app kitty alacritty foot wezterm)}
-    d_browser=${SAVED_BROWSER:-$(detect_app firefox chromium google-chrome brave-browser)}
+    d_browser=${SAVED_BROWSER:-$(detect_app firefox chromium google-chrome brave-browser \
+        org.mozilla.firefox com.brave.Browser com.google.Chrome io.gitlab.librewolf-community)}
     d_files=${SAVED_FILES:-$(detect_app nautilus thunar dolphin nemo pcmanfm)}
     d_editor=${SAVED_EDITOR:-$(detect_app code nvim vim nano)}
     if [ -n "$OPT_TERMINAL" ]; then TERMINAL=$OPT_TERMINAL
