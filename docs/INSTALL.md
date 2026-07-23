@@ -41,7 +41,7 @@ Legacy `wallpaper.jpg` files are carried forward, and the bundled fallback is
 refreshed during deployment. Wallpaper mappings, motion choice, dock pins, and
 installer choices live under `$XDG_STATE_HOME/hyprveil` and are never removed.
 The installer regenerates the active motion source from the saved choice after a
-clean config replacement. Qt, cursor, shell, and SDDM steps likewise back up an
+clean config replacement. Qt, cursor, and shell steps likewise back up an
 existing target before replacement.
 
 Select a backend explicitly with:
@@ -68,8 +68,7 @@ terminal and shell setup:
 It backs up and removes Hyprveil-managed config, Qt theme config, and optional
 user-local assets, but preserves `~/.config/kitty`, `~/.zshrc`, and the `kitty`
 and `zsh` packages. Pass `--packages` to offer removal of recorded DNF packages
-other than Kitty and zsh. Pass `--sddm` if you also installed the optional system
-login theme and want Hyprveil to restore or remove those SDDM files.
+other than Kitty and zsh.
 
 ## Recovery
 

@@ -10,7 +10,6 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 REMOVE_PACKAGES=0
 PACKAGES_CHOSEN=0
 PURGE_STATE=0
-DO_SDDM=0
 EXPORT_DIR=''
 
 usage() {
@@ -27,7 +26,6 @@ Options:
   --configs-only        Remove configs/assets only.
   --export-state DIR    Copy Hyprveil state and backups to DIR before removal.
   --purge-state         After config removal, also delete Hyprveil state/backups.
-  --sddm                Also restore/remove Hyprveil SDDM files (uses sudo).
   --yes, -y             Answer yes to prompts.
   --help, -h            Show this help.
 EOF
@@ -164,7 +162,6 @@ while [ "$#" -gt 0 ]; do
         --configs-only) REMOVE_PACKAGES=0; PACKAGES_CHOSEN=1 ;;
         --export-state) shift; EXPORT_DIR=${1:-} ;;
         --purge-state) PURGE_STATE=1 ;;
-        --sddm) DO_SDDM=1 ;;
         --yes|-y) export HYPRVEIL_ASSUME_YES=1 ;;
         --help|-h) usage; exit 0 ;;
         *) usage >&2; exit 2 ;;
@@ -194,13 +191,6 @@ fi
 HYPRVEIL_KEEP_MANAGED_NAMES=kitty hv_remove_managed_config
 remove_qt_configs
 remove_extra_user_assets
-
-if [ "$DO_SDDM" -eq 1 ]; then
-    hv_uninstall_sddm
-elif [ -e /etc/sddm.conf.d/hyprveil.conf ] || [ -e /usr/share/sddm/themes/hyprveil ]; then
-    printf 'A system SDDM theme or selection installed by Hyprveil is still present.\n'
-    printf 'Re-run with --sddm to restore or remove it (requires sudo).\n'
-fi
 
 if [ "$PACKAGES_CHOSEN" -eq 0 ] && [ -s "$HV_SOURCE_LOG" ]; then
     hv_confirm "Also remove recorded DNF packages, keeping kitty and zsh?" && REMOVE_PACKAGES=1

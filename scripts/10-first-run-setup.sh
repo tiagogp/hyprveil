@@ -19,7 +19,6 @@ HYPR_DIR="$HV_CONFIG_HOME/hypr"
 
 ENSURE=0
 PREVIEW=0
-DO_SDDM=0
 # Empty means "not passed on the command line"; the value is then taken from
 # saved state, detection, or an interactive prompt in that order.
 OPT_KB_LAYOUT=''
@@ -76,7 +75,6 @@ flag, so the flow can run unattended. Re-running is always safe.
   --form-factor desktop|laptop   Confirm the hardware profile (see 06-select-profile.sh).
   --gpu intel|amd|nvidia
   --backend quickshell|swaync|mako  Notification backend (see 07-select-notification-backend.sh).
-  --sddm                   Also run the SDDM greeter setup (05-install-fedora-sddm.sh).
 
   -h, --help               Show this help.
 EOF
@@ -103,7 +101,6 @@ while [ "$#" -gt 0 ]; do
         --form-factor) shift; OPT_FORM_FACTOR=${1:-} ;;
         --gpu) shift; OPT_GPU=${1:-} ;;
         --backend) shift; OPT_BACKEND=${1:-} ;;
-        --sddm) DO_SDDM=1 ;;
         -h|--help) usage; exit 0 ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
     esac
@@ -185,7 +182,18 @@ detect_monitors() {
 detect_app() {
     local candidate
     for candidate in "$@"; do
+        # Native binary on PATH.
         command -v "$candidate" >/dev/null 2>&1 && { printf '%s\n' "$candidate"; return 0; }
+        # Flatpak application id (contains a dot, e.g. com.brave.Browser); emit a
+        # ready-to-exec launch command so the keybinding works without a wrapper.
+        case "$candidate" in
+            *.*)
+                if command -v flatpak >/dev/null 2>&1 && flatpak info "$candidate" >/dev/null 2>&1; then
+                    printf 'flatpak run %s\n' "$candidate"
+                    return 0
+                fi
+                ;;
+        esac
     done
     printf '%s\n' "$1"
 }
@@ -308,7 +316,8 @@ resolve_scalars() {
     # Apps
     local d_term d_browser d_files d_editor
     d_term=${SAVED_TERMINAL:-$(detect_app kitty alacritty foot wezterm)}
-    d_browser=${SAVED_BROWSER:-$(detect_app firefox chromium google-chrome brave-browser)}
+    d_browser=${SAVED_BROWSER:-$(detect_app firefox chromium google-chrome brave-browser \
+        org.mozilla.firefox com.brave.Browser com.google.Chrome io.gitlab.librewolf-community)}
     d_files=${SAVED_FILES:-$(detect_app nautilus thunar dolphin nemo pcmanfm)}
     d_editor=${SAVED_EDITOR:-$(detect_app code nvim vim nano)}
     if [ -n "$OPT_TERMINAL" ]; then TERMINAL=$OPT_TERMINAL
@@ -449,7 +458,7 @@ persist_state() {
 }
 
 # ---------------------------------------------------------------------------
-# Delegated selections (profile, backend, wallpaper, accent, motion, sddm)
+# Delegated selections (profile, backend, wallpaper, accent, motion)
 # ---------------------------------------------------------------------------
 run_delegates() {
     local -a args
@@ -480,9 +489,6 @@ run_delegates() {
     fi
     if [ -n "$OPT_MOTION" ] && [ -x "$HYPR_DIR/scripts/motion-profile.sh" ]; then
         "$HYPR_DIR/scripts/motion-profile.sh" "$OPT_MOTION" || hv_warn "could not set motion profile $OPT_MOTION"
-    fi
-    if [ "$DO_SDDM" -eq 1 ]; then
-        "$REPO/scripts/05-install-fedora-sddm.sh" || hv_warn "SDDM setup did not complete"
     fi
 }
 

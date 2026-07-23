@@ -44,10 +44,6 @@ inert. Only enable a variable after confirming a specific problem and the curren
 driver/upstream recommendation; old blanket recommendations such as always setting
 `WLR_DRM_NO_ATOMIC` or `WLR_NO_HARDWARE_CURSORS` can cause new problems.
 
-The optional SDDM installer reads the saved GPU choice. It offers Fedora's X11
-greeter package for NVIDIA and the Wayland greeter package for Intel/AMD, while
-keeping every system-wide action separately confirmed.
-
 ## Manual Checks
 
 Mocked tests prove fallback behavior and profile persistence, but hardware-specific

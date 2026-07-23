@@ -28,7 +28,7 @@ Commands:
                     Options: --list, --backup <name>, --yes.
   uninstall         Back up and remove Hyprveil-owned user config after
                     confirmation. State and backups are preserved by default.
-                    Options: --export-state <dir>, --purge-state, --sddm, --yes.
+                    Options: --export-state <dir>, --purge-state, --yes.
 EOF
 }
 
@@ -115,7 +115,7 @@ check_fedora() {
 }
 
 check_dependencies() {
-    local importance package command feature notification_backend required_missing=0 optional_missing=0 checked=0
+    local importance package command feature notification_backend required_missing=0 optional_missing=0 checked_count=0
     section "Dependencies"
     notification_backend=$(hv_notification_backend || true)
     while IFS='|' read -r importance package command feature; do
@@ -127,7 +127,7 @@ check_dependencies() {
                 *) continue ;;
             esac
         fi
-        checked=$((checked + 1))
+        checked_count=$((checked_count + 1))
         if installed_package_or_command "$package" "$command"; then
             continue
         fi
@@ -140,7 +140,7 @@ check_dependencies() {
     done < "$REPO/scripts/data/dependencies.tsv"
 
     if [ "$required_missing" -eq 0 ]; then
-        status_ok "$checked relevant dependencies checked; no required dependency is missing"
+        status_ok "$checked_count relevant dependencies checked; no required dependency is missing"
     fi
     if [ "$optional_missing" -gt 0 ]; then
         status_warn "$optional_missing optional dependencies are missing; optional controls may hide or degrade"
@@ -362,10 +362,12 @@ update() {
         hv_bad "deployment failed; see the errors above. Existing configuration was not partially replaced."
         return 1
     fi
-    [ -f "$HV_STATE_HOME/hardware-profile.conf" ] && \
+    if [ -f "$HV_STATE_HOME/hardware-profile.conf" ]; then
         "$REPO/scripts/06-select-profile.sh" --ensure >/dev/null 2>&1 || true
-    [ -f "$HV_NOTIFICATION_STATE" ] && \
+    fi
+    if [ -f "$HV_NOTIFICATION_STATE" ]; then
         "$REPO/scripts/07-select-notification-backend.sh" --ensure >/dev/null 2>&1 || true
+    fi
     # Regenerate the setup-owned files (local.conf, apps.conf, hypridle.conf)
     # that a fresh deploy just reset to their repository defaults.
     "$REPO/scripts/10-first-run-setup.sh" --ensure >/dev/null 2>&1 || true
@@ -463,12 +465,11 @@ rollback() {
 }
 
 uninstall() {
-    local export_dir='' purge_state=0 do_sddm=0
+    local export_dir='' purge_state=0
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --export-state) shift; export_dir=${1:-} ;;
             --purge-state) purge_state=1 ;;
-            --sddm) do_sddm=1 ;;
             --yes|-y) export HYPRVEIL_ASSUME_YES=1 ;;
             *) usage >&2; exit 2 ;;
         esac
@@ -494,13 +495,6 @@ uninstall() {
 
     hv_remove_managed_config
 
-    if [ "$do_sddm" -eq 1 ]; then
-        uninstall_sddm
-    elif [ -e /etc/sddm.conf.d/hyprveil.conf ] || [ -e /usr/share/sddm/themes/hyprveil ]; then
-        printf 'A system SDDM theme or selection installed by Hyprveil is still present.\n'
-        printf 'Re-run with --sddm to restore the previous SDDM configuration (requires sudo).\n'
-    fi
-
     if [ "$purge_state" -eq 1 ]; then
         if hv_confirm "Permanently delete all Hyprveil state and backups under $(redact "$HV_STATE_HOME")?"; then
             rm -rf "$HV_STATE_HOME"
@@ -512,14 +506,6 @@ uninstall() {
         printf 'Preserved Hyprveil state and backups under %s.\n' "$(redact "$HV_STATE_HOME")"
     fi
     printf 'Uninstall complete. The Hyprveil repository checkout was not removed.\n'
-}
-
-# Restore the display manager's SDDM configuration to its pre-Hyprveil state.
-# The most recent backup that captured the prior theme selection or theme tree
-# is restored; otherwise the Hyprveil-added files are removed. The active
-# display manager is never switched here — that stays a deliberate manual step.
-uninstall_sddm() {
-    hv_uninstall_sddm
 }
 
 case "${1:-}" in

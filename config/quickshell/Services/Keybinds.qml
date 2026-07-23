@@ -257,7 +257,7 @@ Singleton {
 
     function _describe(dispatcher, args, vars) {
         if (dispatcher === "exec")
-            return _command(args, vars);
+            return _execDescribe(args, vars);
 
         switch (dispatcher) {
         case "killactive":     return "Close the focused window";
@@ -305,6 +305,67 @@ Singleton {
             return "the " + args.slice(8) + " workspace";
         return "workspace " + args;
     }
+
+    // $terminal, $fileManager, $browser, and $editor are defined in apps.conf,
+    // not here (see the comment at the top of keybindings.conf), so they never
+    // reach `vars` and would otherwise show up in the modal as the literal,
+    // unsubstituted variable name. Matching the variable name itself is the
+    // one place these four need special-casing.
+    function _execDescribe(args, vars) {
+        const term = args.match(/^\$terminal(?:\s+-e\s+(.+))?$/);
+        if (term)
+            return term[1] ? "Open " + term[1] + " in a terminal" : "Open terminal";
+        if (args === "$fileManager") return "Open file manager";
+        if (args === "$browser")     return "Open browser";
+        if (args === "$editor")      return "Open editor";
+        if (args === "$launcher")    return "Open app launcher";
+        if (args === "$locker")      return "Lock the screen";
+        if (args === "$powermenu")   return "Open power menu";
+
+        const cmd = root._command(args, vars);
+        for (const rule of root._execRules)
+            if (rule.re.test(cmd))
+                return rule.desc;
+
+        // No rule recognizes it: fall back to the command itself rather than
+        // a guess, so a newly added bind is still legible, just less tidy.
+        return cmd;
+    }
+
+    // Matched against the command after variable substitution, in order —
+    // first match wins, which is why the more specific screenshot/OCR combo
+    // is listed ahead of the plain region-grab it also contains as a
+    // substring. Each entry describes one exec bind in keybindings.conf; a
+    // bind added there without a matching rule here just shows its raw
+    // command (see _execDescribe), so this list can lag without breaking
+    // anything.
+    readonly property var _execRules: [
+        { re: /tesseract/,               desc: "Screenshot a region and copy its text (OCR)" },
+        { re: /grim -g.*slurp/,          desc: "Screenshot a selected region to clipboard" },
+        { re: /Screenshots.*grim/,       desc: "Screenshot the full screen to a file and clipboard" },
+        { re: /^grim - \| wl-copy$/,     desc: "Screenshot the full screen to clipboard" },
+        { re: /rofi -show window/,       desc: "Open window switcher" },
+        { re: /overview toggle/,         desc: "Toggle window overview" },
+        { re: /cheatsheet toggle/,       desc: "Toggle this shortcuts window" },
+        { re: /hyprpicker/,              desc: "Pick a color from the screen" },
+        { re: /cliphist list/,           desc: "Open clipboard history" },
+        { re: /rofimoji/,                desc: "Open emoji picker" },
+        { re: /notification-daemon\.sh toggle/, desc: "Toggle do-not-disturb" },
+        { re: /wallpaper\.sh pick/,      desc: "Pick a wallpaper" },
+        { re: /zoom\.sh -/,              desc: "Zoom out" },
+        { re: /zoom\.sh/,                desc: "Zoom in" },
+        { re: /playerctl play-pause/,    desc: "Play / pause media" },
+        { re: /playerctl next/,          desc: "Next track" },
+        { re: /playerctl previous/,      desc: "Previous track" },
+        { re: /osd-action\.sh microphone-mute/, desc: "Mute / unmute microphone" },
+        { re: /osd-action\.sh volume-mute/,     desc: "Mute / unmute volume" },
+        { re: /osd-action\.sh volume-up/,       desc: "Volume up" },
+        { re: /osd-action\.sh volume-down/,     desc: "Volume down" },
+        { re: /osd-action\.sh brightness-up/,   desc: "Brightness up" },
+        { re: /osd-action\.sh brightness-down/, desc: "Brightness down" },
+        { re: /hyprctl kill/,            desc: "Force-kill the focused window" },
+        { re: /systemctl suspend/,       desc: "Suspend the system" }
+    ]
 
     // The command as it will actually run, not a label invented for it. A
     // hand-written description is a second source of truth that goes stale the

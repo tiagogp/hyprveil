@@ -107,6 +107,19 @@ Scope {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
 
+            // The layer appears at once (noanim); the entrance runs here so the
+            // scrim and the dialog can move on their own timing instead of the
+            // compositor fading the whole surface as one block. See the
+            // hyprveil-wallpapers layer rule in hypr/window-rules.conf.
+            opacity: root.open ? 1 : 0
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Tokens.durModal
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Tokens.easeModal
+                }
+            }
+
             focus: true
             Keys.onEscapePressed: root.open = false
 
@@ -119,38 +132,41 @@ Scope {
         }
 
         Surface {
+            id: card
             anchors.centerIn: parent
             elevation: 3
             radius: Tokens.radiusSm
             border.color: Accent.accent
 
-            // The entrance lives here rather than on the layer surface, which
-            // Hyprland no longer animates (see hypr/window-rules.conf). The dialog
-            // drops in from above the centre while the scrim behind it stays
-            // put — the motion the compositor's slide was reaching for, without
-            // dragging the dim across the screen with it.
-            //
-            // Bound to root.open rather than started onCompleted: the window is
-            // only ever hidden, never rebuilt, so a one-shot entrance would
-            // play once per session instead of once per opening.
-            // A Translate rather than an anchor offset: this displaces the
-            // dialog at paint time, so the drop costs no relayout of the grid
-            // of thumbnails inside it, and `anchors.centerIn` stays the single
-            // description of where the dialog rests.
-            //
-            // Position only, deliberately no opacity of its own. The layer is
-            // already fading — a second fade here ran on a different duration
-            // and curve than the compositor's, so the dialog crossfaded against
-            // its own backdrop and the whole entrance read as muddy.
-            transform: Translate {
-                y: root.open ? 0 : -Tokens.spacing6
+            // The dialog carries its own entrance so it blooms from the centre
+            // while the scrim fades independently behind it. A full-screen layer
+            // cannot slide or fade on the compositor without dragging the dim
+            // across the desktop, so the motion lives here — the same way the
+            // sibling modals in Dock/PinPicker.qml and Panel/Cheatsheet.qml do.
+            // Opacity fades on the plain ease-out; the scale carries the
+            // overshoot so the card blooms slightly past full size and settles.
+            // Overshoot belongs on the transform, never the opacity — a fade
+            // that ran past 1 would just clip and hold a flat spot.
+            opacity: root.open ? 1 : 0
+            transform: Scale {
+                origin.x: card.width / 2
+                origin.y: card.height / 2
+                xScale: root.open ? 1 : 0.94
+                yScale: xScale
 
-                Behavior on y {
+                Behavior on xScale {
                     NumberAnimation {
-                        duration: Tokens.dur3
+                        duration: Tokens.durModal
                         easing.type: Easing.Bezier
-                        easing.bezierCurve: Tokens.easeOut
+                        easing.bezierCurve: Tokens.easeBloom
                     }
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Tokens.durModal
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Tokens.easeModal
                 }
             }
 

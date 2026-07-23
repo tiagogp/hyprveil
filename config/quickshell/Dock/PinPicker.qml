@@ -186,7 +186,7 @@ Scope {
 
                 Behavior on y {
                     NumberAnimation {
-                        duration: Tokens.dur3
+                        duration: Tokens.dur2h
                         easing.type: Easing.Bezier
                         easing.bezierCurve: Tokens.easeOut
                     }

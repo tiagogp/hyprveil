@@ -72,6 +72,25 @@ hv_load_fedora
 hv_check_supported_release
 ok "Fedora 44 detection and support policy"
 
+(
+    # run_with_spinner can delegate executables to gum, but sourced Bash
+    # functions must stay in the current shell context.
+    ui_has_gum() { return 0; }
+    ui_is_interactive() { return 0; }
+    gum() {
+        printf '%s\n' "$*" > "$TMP/gum-called"
+        return 99
+    }
+    # shellcheck disable=SC2329,SC2317
+    spinner_function() {
+        touch "$TMP/spinner-function-ran"
+    }
+    run_with_spinner "mock function spinner" spinner_function >/dev/null 2>&1
+)
+[ -f "$TMP/spinner-function-ran" ] || fail "spinner did not run shell function"
+[ ! -f "$TMP/gum-called" ] || fail "spinner delegated a shell function to gum"
+ok "spinner runs shell functions without delegating them to gum"
+
 source=$(hv_package_source official-package)
 [ "$source" = updates ] || fail "official repo was not preferred over third-party repo: $source"
 ok "official package source preference"
@@ -283,14 +302,6 @@ grep -q 'Qt.Key_MediaTogglePlayPause' "$REPO/config/quickshell/Lock/Lock.qml" \
     || fail "lock screen does not handle media keys without a pointer"
 grep -q 'hardware media keys' "$REPO/docs/QUICK-SETTINGS.md" \
     || fail "Quick Settings documentation omits lock-screen pointer-free media behavior"
-grep -q 'activeFocus' "$REPO/config/sddm/hyprveil/Components/SessionPicker.qml" \
-    || fail "SDDM session picker focus does not light the control"
-grep -q 'Accessible.name' "$REPO/config/sddm/hyprveil/Components/PasswordField.qml" \
-    || fail "SDDM password field does not expose an accessible name"
-grep -q 'typeof primaryScreen === "undefined" ? true : primaryScreen' "$REPO/config/sddm/hyprveil/Main.qml" \
-    || fail "SDDM greeter hides controls when primaryScreen is unavailable"
-grep -q 'sourceSize.width: root.width' "$REPO/config/sddm/hyprveil/Main.qml" \
-    || fail "SDDM backdrop is not decoded at the greeter surface size"
 python3 - <<'PY' || fail "focus accent does not meet the 3:1 UI contrast floor"
 def linear(c):
     c = c / 255
@@ -323,7 +334,7 @@ grep -q 'HYPRVEIL_STATE_HOME' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion service ignores the HYPRVEIL_STATE_HOME test override"
 # Every animated surface added for the desktop-polish work routes its durations
 # through the service; a raw Tokens.durN in a Behavior would ignore the profile.
-for surface in Osd/Osd Panel/AudioSlider; do
+for surface in Osd/Osd Panel/AudioSlider Overview/Overview Overview/WindowTile Bar/TrayItem; do
     grep -q 'Motion.duration(' "$REPO/config/quickshell/$surface.qml" \
         || fail "$surface animates without honoring the reduced-motion profile"
 done
@@ -333,6 +344,60 @@ grep -q 'Accessible.role: showHeader ? Accessible.Grouping' "$REPO/config/quicks
 grep -q 'Accessible.role: Accessible.StaticText' "$REPO/config/quickshell/Panel/BindRow.qml" \
     || fail "cheatsheet rows are not named for assistive tech"
 ok "reduced-motion profile and section/cheatsheet accessible names reach the QML shell"
+
+# Desktop-feature parity work (calendar, system tray, system monitors, window
+# overview). Each is wired end to end — a component that exists but is never
+# instantiated, or a keybind/IPC target with no handler, is a silent no-op — so
+# the checks pair the component with the thing that reaches it.
+
+# Calendar: the clock opens it, shell.qml instantiates the single scope, and it
+# reads the shared Time singleton rather than a clock of its own.
+grep -q 'today' "$REPO/config/quickshell/Time.qml" \
+    || fail "Time singleton does not expose today for the calendar"
+grep -q 'Time.today' "$REPO/config/quickshell/Panel/Calendar.qml" \
+    || fail "Calendar does not read today from the shared Time singleton"
+grep -q 'Calendar {' "$REPO/config/quickshell/shell.qml" \
+    || fail "shell.qml never instantiates the Calendar scope"
+grep -q 'calendar.open = !bar.calendar.open' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the bar clock does not toggle the calendar"
+
+# System tray: a StatusNotifier host in the bar, hidden when empty, with the
+# three-button contract and a menu anchor.
+grep -q 'Quickshell.Services.SystemTray' "$REPO/config/quickshell/Bar/Tray.qml" \
+    || fail "Tray does not use the SystemTray service"
+grep -q 'SystemTray.items.values.length > 0' "$REPO/config/quickshell/Bar/Tray.qml" \
+    || fail "Tray does not hide itself when nothing is registered"
+grep -q 'QsMenuAnchor' "$REPO/config/quickshell/Bar/TrayItem.qml" \
+    || fail "tray items have no context-menu anchor"
+grep -q 'Tray {' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the bar never places the system tray"
+
+# System monitors: a single procfs-reading singleton, registered, feeding a bar
+# widget that gates polling on being on screen.
+grep -q '/proc/stat' "$REPO/config/quickshell/Services/SysInfo.qml" \
+    || fail "SysInfo does not read CPU from /proc/stat"
+grep -q '/proc/meminfo' "$REPO/config/quickshell/Services/SysInfo.qml" \
+    || fail "SysInfo does not read memory from /proc/meminfo"
+grep -q '^singleton SysInfo ' "$REPO/config/quickshell/Services/qmldir" \
+    || fail "SysInfo singleton is not registered in the Services qmldir"
+grep -q 'SysInfo.watch()' "$REPO/config/quickshell/Bar/SysMonitor.qml" \
+    || fail "SysMonitor does not gate polling on being visible"
+grep -q 'SysMonitor {' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the bar never places the system monitor"
+
+# Window overview: live previews via ScreencopyView, reachable over IPC, bound
+# to a keybind, with the blur/scrim rules a full-screen modal needs.
+grep -q 'ScreencopyView' "$REPO/config/quickshell/Overview/WindowTile.qml" \
+    || fail "overview tiles do not use a live ScreencopyView preview"
+grep -q 'captureSource: root.toplevel?.wayland' "$REPO/config/quickshell/Overview/WindowTile.qml" \
+    || fail "overview preview is not bound to the toplevel wayland handle"
+grep -q 'target: "overview"' "$REPO/config/quickshell/Overview/Overview.qml" \
+    || fail "overview has no IPC target for the keybind to reach"
+grep -q 'qs ipc call overview toggle' "$REPO/config/hypr/keybindings.conf" \
+    || fail "no keybind toggles the window overview"
+grep -q 'Overview {' "$REPO/config/quickshell/shell.qml" \
+    || fail "shell.qml never instantiates the Overview scope"
+ok "calendar, system tray, system monitors, and window overview are wired end to end"
 
 
 printf 'old wallpaper\n' > "$HYPRVEIL_CONFIG_HOME/hypr/wallpaper.jpg"

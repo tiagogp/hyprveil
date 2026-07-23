@@ -8,18 +8,29 @@ HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
 HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
 
+if [ -r "$HV_REPO/scripts/lib/cli-ui.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HV_REPO/scripts/lib/cli-ui.sh"
+fi
+
 hv_color_enabled() {
-    [ -z "${NO_COLOR:-}" ] || return 1
-    case "${HYPRVEIL_COLOR:-auto}" in
-        always) return 0 ;;
-        never) return 1 ;;
-    esac
-    [ -t 1 ] && [ "${TERM:-}" != dumb ]
+    if declare -F ui_supports_color >/dev/null 2>&1; then
+        ui_supports_color
+    else
+        [ -z "${NO_COLOR:-}" ] || return 1
+        case "${HYPRVEIL_COLOR:-auto}" in
+            always) return 0 ;;
+            never) return 1 ;;
+        esac
+        [ -t 1 ] && [ "${TERM:-}" != dumb ]
+    fi
 }
 
 hv_style() {
     local code=$1 text=$2
-    if hv_color_enabled; then
+    if declare -F ui_style >/dev/null 2>&1; then
+        ui_style "$code" "$text"
+    elif hv_color_enabled; then
         printf '\033[%sm%s\033[0m' "$code" "$text"
     else
         printf '%s' "$text"
@@ -27,25 +38,22 @@ hv_style() {
 }
 
 hv_banner() {
-    local detail=${1:-} line
+    local detail=${1:-}
+    if declare -F print_header >/dev/null 2>&1; then
+        print_header "Hyprveil" "$detail"
+        return
+    fi
+    printf '\n%s\n' "$(hv_style '1;36' "Hyprveil")"
+    [ -z "$detail" ] || printf '  %s\n' "$(hv_style '2' "$detail")"
     printf '\n'
-    printf '%s\n' "$(hv_style '2' "+-- hyprveil -------------------------------------------------------------+")"
-    while IFS= read -r line; do
-        printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '1;35' "$line")"
-    done <<'EOF'
- _   _                              _ _
-| | | |_   _ _ __  _ ____   _____ (_) |
-| |_| | | | | '_ \| '__\ \ / / _ \| | |
-|  _  | |_| | |_) | |   \ V /  __/| | |
-|_| |_|\__, | .__/|_|    \_/ \___||_|_|
-       |___/|_|
-EOF
-    [ -z "$detail" ] || printf '%s %s\n' "$(hv_style '2' "|")" "$(hv_style '2' "$detail")"
-    printf '%s\n' "$(hv_style '2' "+-----------------------------------------------------------------------+")"
 }
 
 hv_section() {
     local title=$1 detail=${2:-}
+    if declare -F print_section >/dev/null 2>&1; then
+        print_section "$title" "$detail"
+        return
+    fi
     printf '\n%s %s\n' "$(hv_style '2' "::")" "$(hv_style '1;36' "$title")"
     [ -z "$detail" ] || printf '   %s\n' "$(hv_style '2' "$detail")"
 }
@@ -56,13 +64,42 @@ hv_step() {
     printf '\n%s %s\n' "$(hv_style '1;36' "[$number]")" "$(hv_style '1' "$title")"
 }
 
-hv_note() { printf '  %s %s\n' "$(hv_style '1;34' INFO)" "$*"; }
-hv_ok()   { printf '  %s   %s\n' "$(hv_style '1;32' OK)" "$*"; }
-hv_warn() { printf '  %s %s\n' "$(hv_style '1;33' WARN)" "$*" >&2; }
-hv_bad()  { printf '  %s %s\n' "$(hv_style '1;31' FAIL)" "$*" >&2; }
+hv_note() {
+    if declare -F print_info >/dev/null 2>&1; then print_info "$*"; else printf '  %s %s\n' "$(hv_style '1;34' INFO)" "$*"; fi
+}
+hv_ok() {
+    if declare -F print_success >/dev/null 2>&1; then print_success "$*"; else printf '  %s   %s\n' "$(hv_style '1;32' OK)" "$*"; fi
+}
+hv_warn() {
+    if declare -F print_warning >/dev/null 2>&1; then print_warning "$*"; else printf '  %s %s\n' "$(hv_style '1;33' WARN)" "$*" >&2; fi
+}
+hv_bad() {
+    if declare -F print_error >/dev/null 2>&1; then print_error "$*"; else printf '  %s %s\n' "$(hv_style '1;31' FAIL)" "$*" >&2; fi
+}
 
 hv_confirm() {
     local prompt=$1 answer
+    if declare -F confirm_action >/dev/null 2>&1; then
+        confirm_action "$prompt" no
+        return $?
+    fi
+    if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
+        printf '%s %s [automatic yes]\n' "$(hv_style '1;34' AUTO)" "$prompt"
+        return 0
+    fi
+    read -r -p "$(hv_style '1;34' ASK) $prompt [y/N] " answer
+    [[ "$answer" = y || "$answer" = Y ]]
+}
+
+# Like hv_confirm, but strictly defaults to "no" even under gum (which otherwise
+# highlights "Yes"). For system-altering steps where an accidental Enter must
+# never proceed.
+hv_confirm_no() {
+    local prompt=$1 answer
+    if declare -F confirm_action >/dev/null 2>&1; then
+        confirm_action "$prompt" no strict
+        return $?
+    fi
     if [ "${HYPRVEIL_ASSUME_YES:-0}" = 1 ]; then
         printf '%s %s [automatic yes]\n' "$(hv_style '1;34' AUTO)" "$prompt"
         return 0
@@ -383,7 +420,7 @@ hv_backup_item() {
 # the config tree. User wallpaper files are explicitly carried forward, while the
 # repository's bundled wallpaper is installed as an always-available fallback.
 hv_deploy_configs() {
-    local backup staged target name starship_tmp backend other
+    local backup staged target name starship_tmp backend other single
     local -a names=(hypr waybar kitty rofi wlogout gtk-3.0 gtk-4.0 quickshell fontconfig)
     # quickshell is deployed unconditionally, like waybar, and is deliberately
     # NOT in all_backends even though it is selectable in
@@ -422,11 +459,13 @@ hv_deploy_configs() {
             return 1
         fi
     done
-    if [ ! -f "$HV_REPO/config/starship.toml" ]; then
-        hv_bad "source file missing: $HV_REPO/config/starship.toml"
-        hv_bad "refusing to deploy; the existing configuration is untouched"
-        return 1
-    fi
+    for single in starship.toml starship.toml.in; do
+        if [ ! -f "$HV_REPO/config/$single" ]; then
+            hv_bad "source file missing: $HV_REPO/config/$single"
+            hv_bad "refusing to deploy; the existing configuration is untouched"
+            return 1
+        fi
+    done
 
     mkdir -p "$HV_CONFIG_HOME"
     backup=$(hv_new_backup_dir)
@@ -467,14 +506,20 @@ hv_deploy_configs() {
         fi
     done
 
-    target="$HV_CONFIG_HOME/starship.toml"
-    starship_tmp=$(mktemp "$HV_CONFIG_HOME/.hyprveil-starship.XXXXXX")
-    cp -a "$HV_REPO/config/starship.toml" "$starship_tmp"
-    if [ -e "$target" ]; then
-        mkdir -p "$backup/config"
-        cp -a "$target" "$backup/config/starship.toml"
-    fi
-    mv -f "$starship_tmp" "$target"
+    # starship.toml ships with its .in template so accent.sh render can rewrite
+    # the prompt palette on the live system, the same way every tree-based
+    # templated consumer carries its own .in. install.sh calls accent.sh render
+    # right after this deploy.
+    for single in starship.toml starship.toml.in; do
+        target="$HV_CONFIG_HOME/$single"
+        starship_tmp=$(mktemp "$HV_CONFIG_HOME/.hyprveil-${single//\//_}.XXXXXX")
+        cp -a "$HV_REPO/config/$single" "$starship_tmp"
+        if [ -e "$target" ]; then
+            mkdir -p "$backup/config"
+            cp -a "$target" "$backup/config/$single"
+        fi
+        mv -f "$starship_tmp" "$target"
+    done
     chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/hypr/scripts/lib/"*.sh \
         "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
 
@@ -576,7 +621,7 @@ hv_preview_config_changes() {
     local name target differ changed=0
     local -a names
     mapfile -t names < <(hv_managed_names)
-    names+=("starship.toml")
+    names+=("starship.toml" "starship.toml.in")
     printf 'Pending changes from %s:\n' "$HV_REPO/config"
     for name in "${names[@]}"; do
         local source="$HV_REPO/config/$name"
@@ -674,7 +719,7 @@ hv_remove_managed_config() {
     local -a names
     mapfile -t names < <(hv_managed_names)
     mapfile -t -O "${#names[@]}" names < <(hv_inactive_backend_names)
-    names+=("starship.toml")
+    names+=("starship.toml" "starship.toml.in")
     backup=$(hv_new_backup_dir)
     for name in "${names[@]}"; do
         hv_should_keep_managed_name "$name" && continue
@@ -691,37 +736,4 @@ hv_remove_managed_config() {
         rmdir "$backup" 2>/dev/null || true
         printf 'No Hyprveil-managed config trees were present to remove.\n'
     fi
-}
-
-# Restore the display manager's SDDM configuration to its pre-Hyprveil state.
-# The most recent backup that captured the prior theme selection or theme tree
-# is restored; otherwise the Hyprveil-added files are removed. The active
-# display manager is never switched here — that stays a deliberate manual step.
-hv_uninstall_sddm() {
-    local snapshot='' name summary
-    while IFS=$'\t' read -r name summary; do
-        case "$summary" in
-            *system-config*|*system-themes*) snapshot="$HV_STATE_HOME/backups/$name"; break ;;
-        esac
-    done < <(hv_list_backups)
-
-    if [ -n "$snapshot" ] && [ -e "$snapshot/system-config/hyprveil.conf" ]; then
-        printf 'Restoring previous SDDM selection from %s (sudo)\n' "$snapshot"
-        hv_root cp -a "$snapshot/system-config/hyprveil.conf" /etc/sddm.conf.d/hyprveil.conf
-    elif [ -e /etc/sddm.conf.d/hyprveil.conf ]; then
-        printf 'Removing Hyprveil SDDM selection /etc/sddm.conf.d/hyprveil.conf (sudo)\n'
-        hv_root rm -f /etc/sddm.conf.d/hyprveil.conf
-    fi
-
-    if [ -n "$snapshot" ] && [ -e "$snapshot/system-themes/hyprveil" ]; then
-        printf 'Restoring previous SDDM theme from %s (sudo)\n' "$snapshot"
-        hv_root rm -rf /usr/share/sddm/themes/hyprveil
-        hv_root cp -a "$snapshot/system-themes/hyprveil" /usr/share/sddm/themes/hyprveil
-    elif [ -e /usr/share/sddm/themes/hyprveil ]; then
-        printf 'Removing Hyprveil SDDM theme /usr/share/sddm/themes/hyprveil (sudo)\n'
-        hv_root rm -rf /usr/share/sddm/themes/hyprveil
-    fi
-    printf 'SDDM configuration restored. The active display manager was not changed;\n'
-    printf 'if Hyprveil enabled sddm, re-enable your previous manager manually, e.g.:\n'
-    printf '  sudo systemctl disable sddm.service && sudo systemctl enable gdm.service\n'
 }

@@ -103,6 +103,26 @@ printf 'ags\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
     || fail "a stale ags state file did not fall through to the default backend"
 ok "backend selection accepts quickshell, defaults to it, and ignores a stale ags choice"
 
+# A configure-only rerun should heal the common live-session failure where
+# Quickshell is still selected but the process is gone, taking the bar and dock
+# with it.
+mkdir -p "$HYPRVEIL_CONFIG_HOME/hypr/scripts"
+cp "$REPO/config/hypr/scripts/notification-daemon.sh" \
+    "$HYPRVEIL_CONFIG_HOME/hypr/scripts/notification-daemon.sh"
+chmod +x "$HYPRVEIL_CONFIG_HOME/hypr/scripts/notification-daemon.sh"
+printf 'quickshell\n' > "$HYPRVEIL_STATE_HOME/notification-backend"
+rm -f "$TMP/quickshell" "$TMP/killed"
+HYPRLAND_INSTANCE_SIGNATURE=mock "$REPO/scripts/07-select-notification-backend.sh" --ensure >/dev/null
+for _ in 1 2 3 4 5; do
+    [ -s "$TMP/quickshell" ] && break
+    sleep 0.1
+done
+grep -qx -- '--daemonize' "$TMP/quickshell" \
+    || fail "--ensure did not restart a missing selected Quickshell backend"
+grep -qx -- '-x quickshell' "$TMP/killed" \
+    || fail "--ensure restart did not stop stale quickshell processes first"
+ok "backend ensure restarts a selected but missing live Quickshell shell"
+
 # --- An unavailable shell degrades to a fallback instead of no notifications ---
 # Quickshell is selected but absent; the daemon must hand off to swaync/mako
 # rather than leaving the session with nothing serving notifications.
@@ -218,6 +238,14 @@ for _ in 1 2 3 4 5; do
 done
 [ -s "$TMP/mako" ] || fail "live reload did not start Mako"
 ok "live reload restarts only the selected notification backend"
+
+grep -q 'hv_deploy_configs' "$REPO/scripts/05-install-all.sh" \
+    || fail "legacy one-shot installer does not use managed deployment"
+grep -q 'hv_reload_live_session' "$REPO/scripts/05-install-all.sh" \
+    || fail "legacy one-shot installer does not use backend-aware live reload"
+! grep -q 'pkill waybar' "$REPO/scripts/05-install-all.sh" \
+    || fail "legacy one-shot installer still restarts Waybar directly"
+ok "legacy one-shot installer follows the Quickshell deployment path"
 
 # --- A misresolved HV_REPO must not destroy the installed configuration ---
 # Each target tree is removed immediately before its replacement is moved in, so

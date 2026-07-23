@@ -17,6 +17,7 @@ import "Panel"
 import "Lock"
 import "Services"
 import "Osd"
+import "Overview"
 
 ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
@@ -33,6 +34,7 @@ ShellRoot {
             notifications: notifs
             quickSettings: qsPanel
             wallpapers: wallpaperPicker
+            calendar: calendarPanel
         }
     }
 
@@ -76,6 +78,15 @@ ShellRoot {
     // The keybind cheatsheet, rendered from keybindings.conf itself. Reached
     // from the panel or by SUPER+slash, which goes through the same IPC.
     Cheatsheet { id: keybindSheet }
+
+    // The calendar dropdown, opened by clicking the bar clock. A single scope
+    // like the panels above so every monitor's clock toggles the same one.
+    Calendar { id: calendarPanel }
+
+    // The window overview (exposé), opened by SUPER+Tab through its IPC target.
+    // A single full-screen modal — like the cheatsheet — that reads Hyprland's
+    // toplevels directly, so it needs nothing wired in from here.
+    Overview { id: overviewPanel }
 
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.

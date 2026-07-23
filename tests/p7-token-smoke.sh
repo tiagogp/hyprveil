@@ -182,4 +182,20 @@ grep -q 'tokens.conf' "$REPO/config/hypr/hyprland.conf" \
 [ -f "$REPO/docs/CONFIGURATION.md" ] || fail "docs/CONFIGURATION.md is referenced from tokens.conf but missing"
 ok "tokens.conf is sourced by Hyprland and hyprlock, and documented"
 
+# --------------------------------------------------------------------------
+# The neutral palette shares the token grammar
+# --------------------------------------------------------------------------
+# load_palette parses neutrals.conf with the same `$name = rgba(RRGGBBAA)` regex,
+# so the grammar is asserted here the way tokens.conf's is — a malformed line
+# would be silently skipped and the neutral would fall back to the designed red.
+NEUTRALS="$REPO/config/hypr/neutrals.conf"
+[ -f "$NEUTRALS" ] || fail "missing config/hypr/neutrals.conf"
+while IFS= read -r line; do
+    [ -n "${line// /}" ] || continue
+    case "$line" in \#*|source\ *) continue ;; esac
+    [[ "$line" =~ ^\$[a-zA-Z0-9-]+[[:space:]]*=[[:space:]]*rgba\([0-9a-fA-F]{8}\)[[:space:]]*$ ]] \
+        || fail "neutrals.conf line is not \`\$name = rgba(RRGGBBAA)\`: $line"
+done < "$NEUTRALS"
+ok "every neutrals.conf line is \$name = rgba(RRGGBBAA)"
+
 printf 'P7 token smoke tests passed.\n'

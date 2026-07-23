@@ -36,6 +36,7 @@ PanelWindow {
     property var notifications: null
     property var quickSettings: null
     property var wallpapers: null
+    property var calendar: null
 
     // The bar's own fill, named because the notification badge has to punch a
     // ring of it back out of the glyph — a badge that borders in anything else
@@ -78,6 +79,18 @@ PanelWindow {
                 // `barWindow` so the hover card can place itself against the
                 // bar's real edges instead of a measured offset.
                 Media { screen: bar.screen; barWindow: bar }
+
+                // The system tray sits between the transient media controls and
+                // the fixed status glyphs: it is a variable-width list, so it
+                // grows toward Media rather than shoving the battery and clock
+                // around as icons come and go. `barWindow` lets each item anchor
+                // its context menu to the bar edge.
+                Tray { barWindow: bar }
+
+                // System load sits next to the fixed status glyphs it belongs
+                // with. It polls only while it is here (see SysInfo.watch).
+                SysMonitor {}
+
                 StatusCluster {}
 
                 // The wallpaper picker was reachable only from inside quick
@@ -194,13 +207,25 @@ PanelWindow {
                     }
                 }
 
+                // The clock is the route to the calendar dropdown — the one
+                // place a click on the time is expected to go. Tints accent
+                // while the calendar is open, the same feedback the wallpaper
+                // and notification glyphs give when their panel is showing.
                 Text {
                     renderType: Text.NativeRendering
                     text: Time.clock
                     font.family: Tokens.fontUi
                     font.pixelSize: Tokens.textSm
                     font.weight: Tokens.weightSemibold
-                    color: Tokens.text
+                    color: (bar.calendar?.open ?? false)
+                        ? Accent.accentOnChrome : Tokens.text
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (bar.calendar)
+                            bar.calendar.open = !bar.calendar.open
+                    }
                 }
 
                 BarButton {
