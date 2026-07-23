@@ -15,7 +15,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 echo "== hyprveil: full install + config =="
 echo "This will: back up existing configs, run package install stages 1-3,"
 echo "then deploy Hyprveil-managed configs into $HV_CONFIG_HOME."
-read -p "Continue? [y/N] " ans
+read -r -p "Continue? [y/N] " ans
 [[ "$ans" == "y" || "$ans" == "Y" ]] || exit 0
 
 echo
@@ -36,7 +36,7 @@ echo "########## Step 3: theming + shell env ##########"
 
 echo
 echo "########## Step 4: deploy configs into $HV_CONFIG_HOME ##########"
-read -p "Back up and replace Hyprveil-managed config trees now? [y/N] " ans2
+read -r -p "Back up and replace Hyprveil-managed config trees now? [y/N] " ans2
 if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
     hv_deploy_configs
     "$REPO/scripts/06-select-profile.sh" --ensure

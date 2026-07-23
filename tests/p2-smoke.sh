@@ -103,12 +103,50 @@ chmod +x "$TMP/dnf"
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/bin/rpm"
 chmod +x "$TMP/bin/rpm"
 rm -f "$HYPRVEIL_STATE_HOME/notification-backend" "$TMP/dnf-mutations"
+# cli-ui.sh's confirm_action only honors read answers when stdin/stderr look like
+# a real terminal (ui_is_interactive); over a plain pipe every hv_confirm would
+# silently take its "no" default instead of the scripted answer. Route the
+# installer through a pty (with TERM forced past bash's "dumb" default for a
+# termcap-less environment) so it sees a real terminal, same as an interactive run.
+# A real terminal also makes confirm_action delegate to gum if it finds one on
+# PATH, so stand in for it with a scriptable confirm that reads the same
+# answers instead of depending on (or hanging in) a host's real gum TUI.
+cat > "$TMP/bin/gum" <<'EOF'
+#!/usr/bin/env bash
+if [ "$1" = confirm ]; then
+    read -r answer || answer=
+    case "$answer" in
+        y|Y|yes|YES|Yes) exit 0 ;;
+        *) exit 1 ;;
+    esac
+fi
+exit 1
+EOF
+chmod +x "$TMP/bin/gum"
+cat > "$TMP/pty-runner.py" <<'PY'
+import os, pty, sys
+
+outfile = sys.argv[1]
+argv = sys.argv[2:]
+
+with open(outfile, "wb") as out:
+    def read(fd):
+        data = os.read(fd, 1024)
+        out.write(data)
+        out.flush()
+        return data
+    status = pty.spawn(argv, read)
+
+sys.exit(os.waitstatus_to_exitcode(status))
+PY
 # Prompts: desktop-shell(y), decline Quickshell COPR(n), decline SwayNC COPR(n),
 # accept Mako(y), then y for the remaining official groups, n for the fonts prompt.
 answers=$'y\nn\nn\ny\ny\ny\ny\ny\ny\nn\n'
 printf '%s' "$answers" | \
     HYPRVEIL_OS_RELEASE="$TMP/os-release" HYPRVEIL_DNF="$TMP/dnf" HYPRVEIL_NO_SUDO=1 \
-    "$REPO/scripts/02-install-fedora-shell.sh" > "$TMP/installer-output" 2>&1 \
+    TERM=xterm \
+    python3 "$TMP/pty-runner.py" "$TMP/installer-output" \
+        "$REPO/scripts/02-install-fedora-shell.sh" \
     || fail "shell installer failed on the notification COPR refusal path"
 [ "$(cat "$HYPRVEIL_STATE_HOME/notification-backend")" = mako ] \
     || fail "declining Quickshell and SwayNC did not select Mako"

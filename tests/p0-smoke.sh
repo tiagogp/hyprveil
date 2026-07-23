@@ -81,7 +81,7 @@ ok "Fedora 44 detection and support policy"
         printf '%s\n' "$*" > "$TMP/gum-called"
         return 99
     }
-    # shellcheck disable=SC2329
+    # shellcheck disable=SC2329,SC2317
     spinner_function() {
         touch "$TMP/spinner-function-ran"
     }
