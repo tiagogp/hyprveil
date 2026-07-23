@@ -13,7 +13,7 @@ hv_load_fedora
 hv_check_supported_release || true
 hv_show_enabled_repos
 hv_install_group optional "application theming and zsh environment" - \
-    adw-gtk3-theme qt5ct qt6ct zsh zsh-autosuggestions zsh-syntax-highlighting
+    adw-gtk3-theme qt5ct qt6ct zsh zsh-autosuggestions zsh-syntax-highlighting fzf zoxide
 
 hv_section "Starship prompt"
 hv_install_group optional "Starship prompt" - starship
@@ -98,6 +98,21 @@ if hv_confirm "Back up and install the Hyprveil zsh config?"; then
     if [ "$(basename "${SHELL:-}")" != "zsh" ]; then
         chsh -s "$(command -v zsh)" || echo "chsh failed — run manually: chsh -s $(command -v zsh)"
     fi
+fi
+
+hv_section "pokemon-colorscripts" "Optional Pokémon splash for new shells; stays off unless enabled in ~/.zshrc"
+if hv_confirm "Clone and install pokemon-colorscripts to /usr/local (needs sudo)?"; then
+    POKEMON_TMP=$(mktemp -d)
+    if git clone --depth 1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$POKEMON_TMP/pokemon-colorscripts"; then
+        if (cd "$POKEMON_TMP/pokemon-colorscripts" && hv_root sh install.sh); then
+            hv_ok "pokemon-colorscripts installed. It stays silent until you set HYPRVEIL_POKEMON_SHELL=true near the bottom of ~/.zshrc"
+        else
+            hv_warn "pokemon-colorscripts install.sh failed; see output above"
+        fi
+    else
+        echo "Clone failed — see https://gitlab.com/phoneybadger/pokemon-colorscripts"
+    fi
+    rm -rf "$POKEMON_TMP"
 fi
 
 echo

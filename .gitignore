@@ -1,0 +1,3 @@
+# Manually cloned for local testing of the optional install step below;
+# it carries its own .git and must never be staged as a nested repo.
+/pokemon-colorscripts/

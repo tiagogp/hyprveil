@@ -61,7 +61,7 @@ known_uninstall_package() {
         waybar|rofi-wayland|wlogout|gnome-control-center|fira-code-fonts|papirus-icon-theme|\
         quickshell|SwayNotificationCenter|mako|hyprlock|hypridle|hyprpaper|hyprpicker|\
         bluez|blueman|grim|slurp|cliphist|wl-clipboard|playerctl|brightnessctl|btop|rofimoji|tesseract|ImageMagick|\
-        adw-gtk3-theme|qt5ct|qt6ct|zsh-autosuggestions|zsh-syntax-highlighting|starship)
+        adw-gtk3-theme|qt5ct|qt6ct|zsh-autosuggestions|zsh-syntax-highlighting|starship|fzf|zoxide)
             return 0
             ;;
         *) return 1 ;;
@@ -91,6 +91,19 @@ remove_extra_user_assets() {
         printf 'Backed up removed user assets to %s\n' "$(redact "$backup")"
     else
         rmdir "$backup" 2>/dev/null || true
+    fi
+}
+
+remove_pokemon_colorscripts() {
+    local -a paths=(/usr/local/opt/pokemon-colorscripts /usr/local/bin/pokemon-colorscripts)
+    local path present=0
+    for path in "${paths[@]}"; do
+        [ -e "$path" ] && present=1
+    done
+    [ "$present" -eq 1 ] || return 0
+    if hv_confirm "Remove pokemon-colorscripts from /usr/local (needs sudo)?"; then
+        hv_root rm -rf "${paths[@]}"
+        printf 'Removed pokemon-colorscripts.\n'
     fi
 }
 
@@ -191,6 +204,7 @@ fi
 HYPRVEIL_KEEP_MANAGED_NAMES=kitty hv_remove_managed_config
 remove_qt_configs
 remove_extra_user_assets
+remove_pokemon_colorscripts
 
 if [ "$PACKAGES_CHOSEN" -eq 0 ] && [ -s "$HV_SOURCE_LOG" ]; then
     hv_confirm "Also remove recorded DNF packages, keeping kitty and zsh?" && REMOVE_PACKAGES=1

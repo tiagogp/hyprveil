@@ -39,3 +39,12 @@ fi
     source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 command -v starship >/dev/null && eval "$(starship init zsh)"
+command -v fzf >/dev/null && eval "$(fzf --zsh)"
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+
+# Pokémon splash on new shells — opt-in, off by default. Flip to true to enable
+# (needs pokemon-colorscripts installed; scripts/04-install-fedora-theming.sh offers it).
+HYPRVEIL_POKEMON_SHELL=false
+if [ "$HYPRVEIL_POKEMON_SHELL" = true ] && command -v pokemon-colorscripts >/dev/null; then
+    pokemon-colorscripts --no-title -r
+fi
