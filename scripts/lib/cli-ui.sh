@@ -32,7 +32,9 @@ detect_terminal() {
     fi
 
     [ -t 0 ] && [ -t 2 ] && [ "${TERM:-}" != dumb ] && CLI_UI_INTERACTIVE=1
-    command -v gum >/dev/null 2>&1 && CLI_UI_HAS_GUM=1
+    if command -v gum >/dev/null 2>&1; then
+        CLI_UI_HAS_GUM=1
+    fi
 }
 
 ui_supports_color() {
