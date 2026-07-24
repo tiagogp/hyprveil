@@ -94,7 +94,7 @@ Scope {
         ColumnLayout {
             id: stack
             width: parent.width
-            spacing: Tokens.spacing2h
+            spacing: Tokens.spacing3
 
             Repeater {
                 model: root.popupModel
@@ -122,6 +122,11 @@ Scope {
 
                     MouseArea {
                         anchors.fill: parent
+                        // Behind the card's own content: without this, this
+                        // area — declared after RowLayout and so stacked on
+                        // top by default — swallows every click before it
+                        // reaches the action buttons or the close button.
+                        z: -1
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         // Middle dismisses outright; any other click only hides
                         // the popup and leaves the notification in history. That

@@ -108,7 +108,7 @@ Section {
 
     ColumnLayout {
         Layout.fillWidth: true
-        spacing: Tokens.spacing2
+        spacing: Tokens.spacing3
         visible: root.items.length > 0
 
         Repeater {
