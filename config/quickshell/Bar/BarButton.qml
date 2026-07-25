@@ -5,6 +5,7 @@
 // is a MouseArea, so a control with three actions is one item.
 import QtQuick
 import ".."
+import "../Services"
 
 Item {
     id: root
@@ -41,16 +42,16 @@ Item {
 
         Behavior on color {
             ColorAnimation {
-                duration: Tokens.dur1
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur1)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeStandard
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: Tokens.dur1
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur1)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeOut
             }
         }

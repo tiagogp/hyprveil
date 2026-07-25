@@ -56,12 +56,14 @@ Edit `config/hypr/keybindings.conf` directly. The on-screen cheatsheet
 ## Screenshots
 
 The README's Screenshots section references `docs/images/desktop.png`,
-`launcher.png`, `lock.png`, `notification.png`, `power-menu.png`. If you're
-contributing a set:
+`desktop-accent.png`, `launcher.png`, `wallpaper-picker.png`, and
+`cheatsheet.png`. Still missing a lock screen, a notification, and a power
+menu shot — those are welcome additions. If you're contributing a set:
 
-- Capture at the same resolution for all five (a full-screen shot, not a
-  cropped window) with the default wallpaper and default (`crimson`) accent
-  unless you're specifically illustrating theming.
+- Capture at the same resolution for all shots (a full-screen shot, not a
+  cropped window) with the default wallpaper and default (`crimson`) accent,
+  unless you're specifically illustrating theming (as `desktop-accent.png`
+  does).
 - Hide the cursor and any personal window content (browser tabs, file names).
 - PNG, no compression artifacts from re-encoding through a lossy step.
 

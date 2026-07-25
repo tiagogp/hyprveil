@@ -123,6 +123,10 @@ Scope {
                     Layout.fillWidth: true
                     visible: !root.notificationsOnly
                 }
+                NightLightSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
+                }
                 PowerProfileSection {
                     Layout.fillWidth: true
                     visible: !root.notificationsOnly
@@ -137,6 +141,10 @@ Scope {
                     // The panel header already reads "Notifications" in this
                     // mode; showing both stacked the same word twice.
                     showHeader: !root.notificationsOnly
+                }
+                AccentSection {
+                    Layout.fillWidth: true
+                    visible: !root.notificationsOnly
                 }
 
                 // Opens the shell's own picker.

@@ -25,6 +25,36 @@ Before config deployment, `scripts/09-dependency-report.sh --preflight` lists
 required, optional, installed, available, and unavailable dependencies. A missing
 required dependency blocks the copy; missing optional dependencies do not.
 
+## Validation checklist
+
+After installing and running `./hyprveil setup`, confirm the theme applied correctly:
+
+Shell:
+- [x] **Bar**: is accent-tinted; active window border is the accent, inactive `#2A2D35`
+- [x] **Dock**: centered pill at the bottom; pinned icons launch apps; running apps
+      appear right of the divider with a red-tinted ring on the focused one
+- [x] `SUPER+Return` opens a translucent blurred Kitty with Fira Code
+- [x] **Launcher**: `SUPER+Space` opens the centered 480px rofi panel; selected row
+      has the red-tinted background
+- [x] **Notification**: `notify-send "Build complete" "aurora compiled successfully"`
+      shows a glass card top-right; `notify-send -u critical` gets the red border
+- [x] **Lock**: `SUPER+L` shows big thin clock, avatar ring, pill password field
+- [x] **Power**: `SUPER+Escape` shows the five-button row with Shutdown in red
+
+Application theming:
+- [x] Cursor is Bibata (black, rounded) everywhere, including over app windows
+- [x] GTK app (e.g. nautilus): dark surfaces, **red** selection/accent instead of
+      blue, red folder icons, Geist as UI font
+- [x] Qt app (e.g. pavucontrol if Qt, or run `qt6ct` itself): dark Fusion palette
+      with red highlight — open qt6ct and check the preview
+- [x] New Kitty window drops you in zsh with the Starship prompt: red directory,
+      red `❯`, git branch shown inside a repo
+- [x] Typing shows gray ghost autosuggestions; invalid commands render red
+      (syntax highlighting)
+
+(Substitute your own accent color where "red" appears above if you changed the
+default — see [CONFIGURATION.md](CONFIGURATION.md) for accent presets.)
+
 ## Safe reruns
 
 Hyprveil owns these targets: `hypr`, `quickshell`, `waybar`, `kitty`, `rofi`,

@@ -138,6 +138,11 @@ printf 'cursor\n' > "$HOME/.local/share/icons/Bibata-Modern-Classic/cursor.theme
 printf 'font\n' > "$HOME/.local/share/fonts/geist/Geist.ttf"
 printf 'font\n' > "$HOME/.local/share/fonts/nerd-symbols/Symbols.ttf"
 printf 'helper\n' > "$HOME/.local/bin/papirus-folders"
+mkdir -p "$TMP/opt/pokemon-colorscripts"
+printf 'pokemon\n' > "$TMP/opt/pokemon-colorscripts/pokemon-colorscripts"
+printf '#!/usr/bin/env bash\n' > "$TMP/bin/pokemon-colorscripts"
+chmod +x "$TMP/bin/pokemon-colorscripts"
+export HYPRVEIL_POKEMON_ROOT="$TMP"
 cat > "$HYPRVEIL_STATE_HOME/package-sources.tsv" <<'EOF'
 hyprland	fedora	Hyprland compositor
 kitty	fedora	core desktop utilities
@@ -158,13 +163,15 @@ export HYPRVEIL_DNF="$TMP/bin/dnf"
 [ ! -e "$HYPRVEIL_CONFIG_HOME/hypr" ] || fail "scripts/uninstall.sh left hypr config"
 [ ! -e "$HYPRVEIL_CONFIG_HOME/qt5ct" ] || fail "scripts/uninstall.sh left qt5ct config"
 [ ! -e "$HOME/.local/share/icons/Bibata-Modern-Classic" ] || fail "scripts/uninstall.sh left Bibata asset"
+[ ! -e "$TMP/opt/pokemon-colorscripts" ] || fail "scripts/uninstall.sh left pokemon-colorscripts opt dir"
+[ ! -e "$TMP/bin/pokemon-colorscripts" ] || fail "scripts/uninstall.sh left pokemon-colorscripts binary"
 grep -q 'hyprland' "$TMP/dnf-remove" || fail "scripts/uninstall.sh did not remove recorded Hyprland package"
 grep -q 'quickshell' "$TMP/dnf-remove" || fail "scripts/uninstall.sh did not remove recorded Quickshell package"
 ! grep -q 'kitty' "$TMP/dnf-remove" || fail "scripts/uninstall.sh tried to remove kitty"
 ! grep -q 'zsh' "$TMP/dnf-remove" || fail "scripts/uninstall.sh tried to remove zsh"
 ! grep -q 'unknown-extra' "$TMP/dnf-remove" || fail "scripts/uninstall.sh removed an unknown package"
-unset HYPRVEIL_DNF
-ok "scripts/uninstall.sh preserves Kitty and zsh while removing other owned config and recorded packages"
+unset HYPRVEIL_DNF HYPRVEIL_POKEMON_ROOT
+ok "scripts/uninstall.sh preserves Kitty and zsh while removing other owned config, pokemon-colorscripts, and recorded packages"
 
 # --- uninstall --purge-state removes state after a second confirmation -------
 # Re-deploy so there is something to remove, then purge.

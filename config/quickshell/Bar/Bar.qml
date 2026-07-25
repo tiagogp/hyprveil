@@ -41,7 +41,7 @@ PanelWindow {
     // The bar's own fill, named because the notification badge has to punch a
     // ring of it back out of the glyph — a badge that borders in anything else
     // reads as a second, floating shape.
-    readonly property color chromeTint: "#14161a"
+    readonly property color chromeTint: Tokens.chromeTint
 
     anchors { top: true; left: true; right: true }
     margins { top: Tokens.spacing2h; left: Tokens.spacing2h; right: Tokens.spacing2h }

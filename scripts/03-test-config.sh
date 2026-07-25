@@ -61,7 +61,7 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          waybar/scripts/battery.sh waybar/scripts/bluetooth.sh waybar/scripts/media.sh \
          waybar/scripts/notification.sh waybar/accent.css \
          kitty/kitty.conf kitty/accent.conf kitty/hyprveil-session.sh \
-         rofi/config.rasi rofi/hyprveil.rasi rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
+         rofi/config.rasi rofi/hyprveil.rasi rofi/hyprveil.rasi.in rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
          swaync/style.css.in wlogout/style.css.in quickshell/Tokens.qml.in quickshell/Tokens.qml \
          wlogout/layout wlogout/style.css wlogout/accent.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
@@ -111,7 +111,7 @@ done < <(find "$REPO/scripts" "$REPO/tests" "$CONF" -type f -name '*.sh' -print 
 # hyprlock stays required even under Quickshell: it is the lock fallback that
 # hypr/scripts/lock.sh drops to whenever the shell cannot be confirmed.
 NEEDED="hyprctl kitty rofi hyprlock hypridle hyprpaper wlogout jq flock gio gtk-launch"
-OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager gnome-control-center hyprpicker rofimoji tesseract brightnessctl wf-recorder nautilus firefox code btop zsh starship qt6ct gsettings"
+OPTIONAL="grim slurp wl-copy cliphist playerctl bluetoothctl blueman-manager gnome-control-center hyprpicker rofimoji tesseract brightnessctl wf-recorder hyprsunset nautilus firefox code btop zsh starship qt6ct gsettings"
 notification_backend=$(hv_notification_backend || true)
 case "$notification_backend" in
     quickshell) NEEDED="$NEEDED quickshell qs" ;;

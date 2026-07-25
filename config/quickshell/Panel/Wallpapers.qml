@@ -14,6 +14,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Services"
 
 Scope {
     id: root
@@ -114,8 +115,8 @@ Scope {
             opacity: root.open ? 1 : 0
             Behavior on opacity {
                 NumberAnimation {
-                    duration: Tokens.durModal
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.durModal)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeModal
                 }
             }
@@ -156,16 +157,16 @@ Scope {
 
                 Behavior on xScale {
                     NumberAnimation {
-                        duration: Tokens.durModal
-                        easing.type: Easing.Bezier
+                        duration: Motion.duration(Tokens.durModal)
+                        easing.type: Easing.BezierSpline
                         easing.bezierCurve: Tokens.easeBloom
                     }
                 }
             }
             Behavior on opacity {
                 NumberAnimation {
-                    duration: Tokens.durModal
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.durModal)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeModal
                 }
             }

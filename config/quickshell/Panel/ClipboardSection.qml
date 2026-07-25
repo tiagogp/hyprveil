@@ -278,7 +278,7 @@ Section {
                         right: parent.right
                         top: parent.top
                         bottom: parent.bottom
-                        rightMargin: Tokens.spacing7
+                        rightMargin: Tokens.spacing6 + Tokens.spacing1
                     }
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor

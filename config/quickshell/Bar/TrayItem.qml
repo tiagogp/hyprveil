@@ -49,7 +49,7 @@ Item {
         Behavior on opacity {
             NumberAnimation {
                 duration: Motion.duration(Tokens.dur1)
-                easing.type: Easing.Bezier
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeStandard
             }
         }

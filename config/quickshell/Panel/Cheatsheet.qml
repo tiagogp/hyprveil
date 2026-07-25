@@ -106,8 +106,8 @@ Scope {
 
                 Behavior on y {
                     NumberAnimation {
-                        duration: Tokens.durModal
-                        easing.type: Easing.Bezier
+                        duration: Motion.duration(Tokens.durModal)
+                        easing.type: Easing.BezierSpline
                         easing.bezierCurve: Tokens.easeModal
                     }
                 }

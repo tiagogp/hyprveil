@@ -27,6 +27,7 @@ optional|cliphist|cliphist|clipboard history picker and panel
 optional|wl-clipboard|wl-copy|Wayland clipboard writes
 optional|playerctl|playerctl|media keybinds (the bar uses MPRIS directly)
 optional|wf-recorder|wf-recorder|screen recording helper
+optional|hyprsunset|hyprsunset|night light / warm color temperature
 optional|rofimoji|rofimoji|emoji picker
 optional|tesseract|tesseract|screen OCR
 optional|ImageMagick|magick|wallpaper accent extraction

@@ -25,6 +25,7 @@ import Quickshell.Services.Mpris
 import Quickshell.Services.UPower
 import Quickshell.Bluetooth
 import ".."
+import "../Services"
 
 Scope {
     id: root
@@ -257,7 +258,7 @@ Scope {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: Tokens.dur4
+                            duration: Motion.duration(Tokens.dur4)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Tokens.easeOut
                         }
@@ -339,7 +340,7 @@ Scope {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: Tokens.dur3
+                            duration: Motion.duration(Tokens.dur3)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Tokens.easeOut
                         }
@@ -347,7 +348,7 @@ Scope {
 
                     Behavior on scale {
                         NumberAnimation {
-                            duration: Tokens.dur4
+                            duration: Motion.duration(Tokens.dur4)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Tokens.easeOut
                         }
@@ -426,8 +427,8 @@ Scope {
                             : Qt.rgba(1, 1, 1, 0.12)
                         clip: true
 
-                        Behavior on border.color { ColorAnimation { duration: Tokens.dur2 } }
-                        Behavior on color { ColorAnimation { duration: Tokens.dur2 } }
+                        Behavior on border.color { ColorAnimation { duration: Motion.duration(Tokens.dur2) } }
+                        Behavior on color { ColorAnimation { duration: Motion.duration(Tokens.dur2) } }
 
                         // Shaken through a Translate rather than by animating x:
                         // the pill's x belongs to the ColumnLayout, and writing
@@ -604,7 +605,7 @@ Scope {
 
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: Tokens.dur2
+                                duration: Motion.duration(Tokens.dur2)
                                 easing.type: Easing.BezierSpline
                                 easing.bezierCurve: Tokens.easeOut
                             }
@@ -648,7 +649,7 @@ Scope {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: Tokens.dur3
+                            duration: Motion.duration(Tokens.dur3)
                             easing.type: Easing.BezierSpline
                             easing.bezierCurve: Tokens.easeOut
                         }
@@ -779,7 +780,7 @@ Scope {
                                         opacity: parent.available ? 1 : 0.4
 
                                         Behavior on color {
-                                            ColorAnimation { duration: Tokens.dur1 }
+                                            ColorAnimation { duration: Motion.duration(Tokens.dur1) }
                                         }
                                     }
 

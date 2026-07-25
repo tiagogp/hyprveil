@@ -154,4 +154,11 @@ Singleton {
     readonly property color warning:  "#e1a346"
     readonly property color error:    "#e5484d"
     readonly property color success:  "#4cae80"
+
+    // Chrome-specific tints/states, mirroring neutrals.conf's $chrome-tint /
+    // $chrome-tint-media / $state-hover-surface. Previously hardcoded per
+    // literal in Bar.qml/Dock.qml/Media.qml/DockTile.qml.
+    readonly property color chromeTint:       "#14161a"
+    readonly property color chromeTintMedia:  "#151817"
+    readonly property color stateHoverSurface: "#23262e"
 }

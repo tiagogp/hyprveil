@@ -348,6 +348,7 @@ Singleton {
         { re: /overview toggle/,         desc: "Toggle window overview" },
         { re: /cheatsheet toggle/,       desc: "Toggle this shortcuts window" },
         { re: /hyprpicker/,              desc: "Pick a color from the screen" },
+        { re: /record\.sh/,              desc: "Start / stop screen recording" },
         { re: /cliphist list/,           desc: "Open clipboard history" },
         { re: /rofimoji/,                desc: "Open emoji picker" },
         { re: /notification-daemon\.sh toggle/, desc: "Toggle do-not-disturb" },

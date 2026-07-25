@@ -62,8 +62,8 @@ Item {
     // holding a button down.
     Behavior on dragOffset {
         NumberAnimation {
-            duration: Tokens.dur1
-            easing.type: Easing.Bezier
+            duration: Motion.duration(Tokens.dur1)
+            easing.type: Easing.BezierSpline
             easing.bezierCurve: Tokens.easeOut
         }
     }
@@ -86,8 +86,8 @@ Item {
 
     Behavior on scale {
         NumberAnimation {
-            duration: Tokens.dur2h
-            easing.type: Easing.Bezier
+            duration: Motion.duration(Tokens.dur2h)
+            easing.type: Easing.BezierSpline
             easing.bezierCurve: Tokens.easeOut
         }
     }
@@ -103,15 +103,15 @@ Item {
         anchors.fill: parent
         radius: Tokens.radiusSm
         color: tile.active ? Accent.accentSoft
-             : mouse.containsMouse ? "#23262e"
-             : "#1c1f26"
+             : mouse.containsMouse ? Tokens.stateHoverSurface
+             : Tokens.elevated
         border.width: tile.active ? 1 : 0
         border.color: Accent.accentOnChrome
 
         Behavior on color {
             ColorAnimation {
-                duration: Tokens.dur1
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur1)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeStandard
             }
         }
@@ -168,16 +168,16 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: Tokens.dur2
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur2)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeStandard
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: Tokens.dur2h
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur2h)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeOut
             }
         }

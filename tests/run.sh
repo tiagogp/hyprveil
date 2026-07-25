@@ -151,7 +151,8 @@ ok "Markdown files have valid local links and formatting"
 for test in tests/p0-smoke.sh tests/p1-smoke.sh tests/p2-smoke.sh \
             tests/p3-smoke.sh tests/p4-nested-smoke.sh tests/p5-smoke.sh \
             tests/p6-accent-smoke.sh tests/p7-token-smoke.sh tests/p8-lock-smoke.sh \
-            tests/p9-maintenance-smoke.sh tests/p10-setup-smoke.sh; do
+            tests/p9-maintenance-smoke.sh tests/p10-setup-smoke.sh \
+            tests/p11-palette-drift-smoke.sh; do
     printf '\n== %s ==\n' "$test"
     "$test"
 done

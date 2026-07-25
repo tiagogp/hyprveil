@@ -95,7 +95,8 @@ remove_extra_user_assets() {
 }
 
 remove_pokemon_colorscripts() {
-    local -a paths=(/usr/local/opt/pokemon-colorscripts /usr/local/bin/pokemon-colorscripts)
+    local root="${HYPRVEIL_POKEMON_ROOT:-/usr/local}"
+    local -a paths=("$root/opt/pokemon-colorscripts" "$root/bin/pokemon-colorscripts")
     local path present=0
     for path in "${paths[@]}"; do
         [ -e "$path" ] && present=1

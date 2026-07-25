@@ -7,6 +7,10 @@
 # unattended (or be scripted in CI). Monitor, keyboard, and app choices are
 # regenerated from saved state after every deploy via `--ensure`, so they
 # survive `hyprveil update`.
+#
+# No -e: interactive/report steps below need to collect and surface failures
+# rather than abort the whole flow at the first one, so -e is deliberately
+# left off here too.
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"

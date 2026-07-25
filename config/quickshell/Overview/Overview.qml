@@ -99,7 +99,7 @@ Scope {
                 Behavior on y {
                     NumberAnimation {
                         duration: Motion.duration(Tokens.durModal)
-                        easing.type: Easing.Bezier
+                        easing.type: Easing.BezierSpline
                         easing.bezierCurve: Tokens.easeModal
                     }
                 }
@@ -107,7 +107,7 @@ Scope {
             Behavior on opacity {
                 NumberAnimation {
                     duration: Motion.duration(Tokens.dur2h)
-                    easing.type: Easing.Bezier
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeStandard
                 }
             }

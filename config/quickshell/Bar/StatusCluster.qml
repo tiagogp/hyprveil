@@ -82,6 +82,23 @@ RowLayout {
         onMiddleClicked: if (sink?.audio) sink.audio.muted = !sink.audio.muted
     }
 
+    // --- Microphone ---
+    // A one-tap mute toggle: previously only reachable via the Audio input
+    // device list in Quick Settings, several clicks away from the bar.
+    BarButton {
+        readonly property var source: Pipewire.defaultAudioSource
+        readonly property bool muted: source?.audio?.muted ?? false
+
+        visible: source !== null
+        glyph: muted ? "\u{f036d}" : "\u{f036c}"
+        glyphColor: muted ? Tokens.warning : Tokens.muted
+        tooltip: source
+            ? `${source.description}: ${muted ? "Muted" : "Unmuted"}`
+            : "No audio source"
+        onClicked: if (source?.audio) source.audio.muted = !source.audio.muted
+        onMiddleClicked: cluster.openSettings("sound")
+    }
+
     // --- Battery ---
     RowLayout {
         readonly property var bat: UPower.displayDevice

@@ -24,11 +24,16 @@ Scope {
     readonly property string title: {
         if (kind === "brightness") return "Brightness";
         if (kind === "microphone") return "Microphone";
+        if (kind === "recording") return "Recording";
         return "Volume";
     }
+    // For "recording", `muted` is reused with the same polarity it has for
+    // volume/mic (true = the thing just turned off): record.sh calls
+    // `show recording 0 false` on start and `show recording 0 true` on stop.
     readonly property string glyph: {
         if (kind === "brightness") return "\u{f00e0}";
         if (kind === "microphone") return muted ? "\u{f036d}" : "\u{f036c}";
+        if (kind === "recording") return muted ? "\u{f04db}" : "\u{f0130}";
         if (muted) return "\u{f075f}";
         if (percent > 50) return "\u{f057e}";
         if (percent > 0) return "\u{f0580}";

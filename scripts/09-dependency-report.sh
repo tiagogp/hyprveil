@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Report Fedora, package sources, and required/optional runtime dependencies.
+# No -e: this script accumulates every missing dependency into one report
+# instead of aborting at the first miss, so -e is deliberately left off.
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"

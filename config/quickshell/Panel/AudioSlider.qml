@@ -44,7 +44,7 @@ Item {
             Behavior on width {
                 NumberAnimation {
                     duration: Motion.duration(Tokens.dur1)
-                    easing.type: Easing.Bezier
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeStandard
                 }
             }
@@ -65,7 +65,7 @@ Item {
             Behavior on x {
                 NumberAnimation {
                     duration: Motion.duration(Tokens.dur1)
-                    easing.type: Easing.Bezier
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeStandard
                 }
             }

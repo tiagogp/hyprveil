@@ -55,8 +55,8 @@ RowLayout {
                 // part of the pill that snapped while the fill and border faded.
                 Behavior on color {
                     ColorAnimation {
-                        duration: Tokens.dur1
-                        easing.type: Easing.Bezier
+                        duration: Motion.duration(Tokens.dur1)
+                        easing.type: Easing.BezierSpline
                         easing.bezierCurve: Tokens.easeStandard
                     }
                 }
@@ -70,16 +70,16 @@ RowLayout {
 
             Behavior on color {
                 ColorAnimation {
-                    duration: Tokens.dur1
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.dur1)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeStandard
                 }
             }
 
             Behavior on border.color {
                 ColorAnimation {
-                    duration: Tokens.dur1
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.dur1)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeStandard
                 }
             }

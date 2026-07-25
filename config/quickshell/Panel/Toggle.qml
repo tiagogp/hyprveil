@@ -5,6 +5,7 @@
 // swaync/style.css.in. Sizes that describe a control's shape are not layout.
 import QtQuick
 import ".."
+import "../Services"
 
 Rectangle {
     id: root
@@ -28,8 +29,8 @@ Rectangle {
 
     Behavior on color {
         ColorAnimation {
-            duration: Tokens.dur2
-            easing.type: Easing.Bezier
+            duration: Motion.duration(Tokens.dur2)
+            easing.type: Easing.BezierSpline
             easing.bezierCurve: Tokens.easeStandard
         }
     }
@@ -44,8 +45,8 @@ Rectangle {
 
         Behavior on x {
             NumberAnimation {
-                duration: Tokens.dur2
-                easing.type: Easing.Bezier
+                duration: Motion.duration(Tokens.dur2)
+                easing.type: Easing.BezierSpline
                 easing.bezierCurve: Tokens.easeStandard
             }
         }

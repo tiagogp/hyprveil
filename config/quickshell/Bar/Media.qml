@@ -10,6 +10,7 @@ import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Wayland
 import ".."
+import "../Services"
 
 RowLayout {
     id: root
@@ -184,7 +185,7 @@ RowLayout {
         // the gap closes it out from under the cursor.
         readonly property int bridge: Tokens.spacing2
 
-        readonly property int barTop: Tokens.spacing
+        readonly property int barTop: Tokens.spacing2h
         readonly property int barBottom: barTop + (root.barWindow?.height ?? 44)
 
         screen: root.screen
@@ -217,7 +218,7 @@ RowLayout {
             implicitHeight: content.implicitHeight + Tokens.spacing3 * 2
             elevation: 3
             radius: Tokens.radiusLg
-            tint: "#151817"
+            tint: Tokens.chromeTintMedia
 
             // Drops out from behind the bar. At `bridge` the card's top edge is
             // level with the window's, which is the bar's bottom edge — so the
@@ -234,16 +235,16 @@ RowLayout {
             Behavior on opacity {
                 enabled: root.active
                 NumberAnimation {
-                    duration: Tokens.dur2h
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.dur2h)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeOut
                 }
             }
 
             Behavior on anchors.bottomMargin {
                 NumberAnimation {
-                    duration: Tokens.dur2h
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.dur2h)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeOut
                 }
             }
@@ -411,8 +412,8 @@ RowLayout {
 
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: Tokens.dur1
-                                    easing.type: Easing.Bezier
+                                    duration: Motion.duration(Tokens.dur1)
+                                    easing.type: Easing.BezierSpline
                                     easing.bezierCurve: Tokens.easeStandard
                                 }
                             }
@@ -494,16 +495,16 @@ RowLayout {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: Tokens.dur1
-                                easing.type: Easing.Bezier
+                                duration: Motion.duration(Tokens.dur1)
+                                easing.type: Easing.BezierSpline
                                 easing.bezierCurve: Tokens.easeStandard
                             }
                         }
 
                         Behavior on scale {
                             NumberAnimation {
-                                duration: Tokens.dur1
-                                easing.type: Easing.Bezier
+                                duration: Motion.duration(Tokens.dur1)
+                                easing.type: Easing.BezierSpline
                                 easing.bezierCurve: Tokens.easeOut
                             }
                         }

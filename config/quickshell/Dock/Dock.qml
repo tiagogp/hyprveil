@@ -127,7 +127,7 @@ PanelWindow {
         implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
         elevation: 2
         alphaOverride: Accent.chromeAlpha
-        tint: "#14161a"
+        tint: Tokens.chromeTint
         radius: Tokens.radiusLg
 
         RowLayout {
@@ -263,8 +263,8 @@ PanelWindow {
 
             Behavior on x {
                 NumberAnimation {
-                    duration: Tokens.dur2
-                    easing.type: Easing.Bezier
+                    duration: Motion.duration(Tokens.dur2)
+                    easing.type: Easing.BezierSpline
                     easing.bezierCurve: Tokens.easeOut
                 }
             }

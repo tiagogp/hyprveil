@@ -48,6 +48,7 @@ token_consumers() {
 quickshell/Tokens.qml.in:quickshell/Tokens.qml
 wlogout/style.css.in:wlogout/style.css
 swaync/style.css.in:swaync/style.css
+rofi/hyprveil.rasi.in:rofi/hyprveil.rasi
 EOF
 }
 

@@ -8,7 +8,7 @@
    background alpha below come from tokens.conf, not a bespoke literal. */
 
 * {
-    bg:          rgba(22, 24, 29, 62%);
+    bg:          rgba(22, 24, 29, @rofi-bg-alpha@%);
     bg-row:      rgba(28, 31, 38, 100%);
     text:        #F5F5F7;
     muted:       #9A9CA5;
@@ -25,7 +25,7 @@ window {
     background-color: @bg;
     border: 1px;
     border-color: @hairline;
-    border-radius: 18px;
+    border-radius: @radius-lg-px@;
     location: center;
 }
 
@@ -68,7 +68,7 @@ listview {
 element {
     padding: 12px 12px;
     spacing: 12px;
-    border-radius: 10px;
+    border-radius: @radius-sm-px@;
 }
 
 element selected.normal,
