@@ -97,7 +97,7 @@ write_if_changed() {
     if [ -f "$target" ] && [ "$(cat "$target")" = "$content" ]; then
         return 1
     fi
-    printf '%s\n' "$content" > "$target"
+    printf '%s\n' "$content" > "$target" || die "could not write $target"
     return 0
 }
 

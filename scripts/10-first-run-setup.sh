@@ -69,8 +69,8 @@ flag, so the flow can run unattended. Re-running is always safe.
   --editor CMD
 
   --idle-lock SECONDS      Idle timers. 0 disables that listener. Keep
-  --idle-dpms SECONDS      lock < dpms < suspend. Defaults: 600 / 900 / 1800.
-  --idle-suspend SECONDS
+  --idle-dpms SECONDS      lock < dpms < suspend. Defaults: 600 / 900 / 1800,
+  --idle-suspend SECONDS   or 300 / 480 / 900 when a battery is detected.
 
   --wallpaper PATH         Set the fallback wallpaper for every monitor.
   --accent auto|#RRGGBB    Follow the wallpaper (auto) or pin an explicit accent.
@@ -122,9 +122,32 @@ SAVED_TERMINAL=''
 SAVED_BROWSER=''
 SAVED_FILES=''
 SAVED_EDITOR=''
-SAVED_IDLE_LOCK='600'
-SAVED_IDLE_DPMS='900'
-SAVED_IDLE_SUSPEND='1800'
+
+# Same battery-presence signal 06-select-profile.sh uses to auto-detect a
+# laptop. Duplicated rather than shared because it is a one-line check and the
+# two scripts pick unrelated things — profile selection is explicit and
+# persistent, this only seeds the idle-timer starting point below, and any
+# saved or flag-passed value always overrides it regardless of hardware.
+detect_has_battery() {
+    shopt -s nullglob
+    local batteries=("${HYPRVEIL_SYSFS_ROOT:-/sys}"/class/power_supply/BAT*)
+    shopt -u nullglob
+    [ "${#batteries[@]}" -gt 0 ]
+}
+
+# An idle laptop is usually running on battery, so the never-configured
+# starting point is shorter than a desktop's; a prior `hyprveil setup` run
+# (loaded by load_saved below) or an explicit --idle-* flag always wins over
+# this default.
+if detect_has_battery; then
+    SAVED_IDLE_LOCK='300'
+    SAVED_IDLE_DPMS='480'
+    SAVED_IDLE_SUSPEND='900'
+else
+    SAVED_IDLE_LOCK='600'
+    SAVED_IDLE_DPMS='900'
+    SAVED_IDLE_SUSPEND='1800'
+fi
 
 load_saved() {
     [ -r "$SETUP_STATE" ] || return 0

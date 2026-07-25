@@ -47,9 +47,17 @@ fi
 hv_section "Papirus red folder accent" "Uses papirus-folders and sudo to edit /usr/share/icons"
 if hv_confirm "Install and apply the Papirus red folder helper?"; then
     mkdir -p "$HOME/.local/bin"
+    # Pinned to a reviewed commit (v1.14.0, 2025-05-28) instead of the mutable
+    # master branch, and checksummed before it is ever executed — this script
+    # runs with sudo below. To take a newer release: review the diff at
+    # https://github.com/PapirusDevelopmentTeam/papirus-folders/compare/<this sha>...master,
+    # then update both papirus_sha and papirus_sha256 together.
+    papirus_sha=0f838ee5679229e3a3e97e3b333c222c9e9615b4
+    papirus_sha256=b30a6848a00690302accffc050549218b0b114d3178b28bd3a16891817821b06
     papirus_tmp=$(mktemp "${TMPDIR:-/tmp}/papirus-folders.XXXXXX")
-    if curl -fL "https://raw.githubusercontent.com/PapirusDevelopmentTeam/papirus-folders/master/papirus-folders" \
-            -o "$papirus_tmp"; then
+    if curl -fL "https://raw.githubusercontent.com/PapirusDevelopmentTeam/papirus-folders/$papirus_sha/papirus-folders" \
+            -o "$papirus_tmp" \
+        && printf '%s  %s\n' "$papirus_sha256" "$papirus_tmp" | sha256sum -c - >/dev/null 2>&1; then
         if [ -e "$HOME/.local/bin/papirus-folders" ]; then
             backup=$(hv_new_backup_dir)
             hv_backup_item "$HOME/.local/bin/papirus-folders" "$backup/bin"
@@ -60,7 +68,8 @@ if hv_confirm "Install and apply the Papirus red folder helper?"; then
             || echo "papirus-folders failed — folders stay blue, everything else still works"
     else
         rm -f "$papirus_tmp"
-        echo "Download failed — see https://github.com/PapirusDevelopmentTeam/papirus-folders"
+        hv_warn "papirus-folders download failed or did not match the pinned checksum; nothing was run as root"
+        echo "Get it yourself from https://github.com/PapirusDevelopmentTeam/papirus-folders"
     fi
 fi
 
@@ -102,15 +111,25 @@ fi
 
 hv_section "pokemon-colorscripts" "Optional Pokémon splash for new shells; stays off unless enabled in ~/.zshrc"
 if hv_confirm "Clone and install pokemon-colorscripts to /usr/local (needs sudo)?"; then
+    # Pinned to a reviewed commit on the default branch (this project has no
+    # tagged releases to pin to instead) rather than whatever HEAD currently
+    # is — install.sh runs with sudo below, so the checkout is fixed to a
+    # known commit before it is ever handed to root. To take a newer commit:
+    # review the diff at
+    # https://gitlab.com/phoneybadger/pokemon-colorscripts/-/compare/<this sha>...main,
+    # then update POKEMON_SHA.
+    POKEMON_SHA=5802ff67520be2ff6117a0abc78a08501f6252ad
     POKEMON_TMP=$(mktemp -d)
-    if git clone --depth 1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$POKEMON_TMP/pokemon-colorscripts"; then
+    if git clone -q https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$POKEMON_TMP/pokemon-colorscripts" \
+        && git -C "$POKEMON_TMP/pokemon-colorscripts" checkout -q "$POKEMON_SHA"; then
         if (cd "$POKEMON_TMP/pokemon-colorscripts" && hv_root sh install.sh); then
             hv_ok "pokemon-colorscripts installed. It stays silent until you set HYPRVEIL_POKEMON_SHELL=true near the bottom of ~/.zshrc"
         else
             hv_warn "pokemon-colorscripts install.sh failed; see output above"
         fi
     else
-        echo "Clone failed — see https://gitlab.com/phoneybadger/pokemon-colorscripts"
+        hv_warn "pokemon-colorscripts clone failed or the pinned commit is unavailable; nothing was run as root"
+        echo "See https://gitlab.com/phoneybadger/pokemon-colorscripts"
     fi
     rm -rf "$POKEMON_TMP"
 fi

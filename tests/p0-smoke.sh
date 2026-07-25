@@ -60,8 +60,8 @@ exit 0
 EOF
 chmod +x "$TMP/bin/Hyprland"
 for command in kitty polkit-mate-authentication-agent-1 xdg-desktop-portal-hyprland \
-               rofi notify-send quickshell hyprlock hypridle hyprpaper wlogout \
-               gio gtk-launch; do
+               xdg-desktop-portal-gtk rofi notify-send quickshell hyprlock hypridle \
+               hyprpaper wlogout gio gtk-launch; do
     ln -s Hyprland "$TMP/bin/$command"
 done
 

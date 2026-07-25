@@ -145,4 +145,49 @@ grep -q 'monitor = DP-1, 2560x1440@144, 0x0, 1' "$FRESH/config/hypr/local.conf" 
     || fail "unattended first run did not adopt detected monitors"
 ok "unattended first run detects and adopts connected monitors"
 
+# --- idle-timer defaults follow battery presence when nothing overrides them -
+DESKTOP_SYS="$TMP/sys-no-battery"
+mkdir -p "$DESKTOP_SYS/class/power_supply"
+LAPTOP_SYS="$TMP/sys-battery"
+mkdir -p "$LAPTOP_SYS/class/power_supply/BAT0"
+
+NOBAT="$TMP/nobat"
+mkdir -p "$NOBAT/state" "$NOBAT/config"
+cp -a "$REPO/config/hypr" "$NOBAT/config/hypr"
+printf 'quickshell\n' > "$NOBAT/state/notification-backend"
+printf 'form_factor=desktop\ngpu=intel\n' > "$NOBAT/state/hardware-profile.conf"
+HYPRVEIL_STATE_HOME="$NOBAT/state" HYPRVEIL_CONFIG_HOME="$NOBAT/config" \
+    HYPRVEIL_SYSFS_ROOT="$DESKTOP_SYS" \
+    "$REPO/hyprveil" setup --yes >/dev/null
+grep -q 'timeout = 600' "$NOBAT/config/hypr/hypridle.conf" \
+    || fail "no-battery default did not keep the desktop lock timeout"
+grep -q 'timeout = 1800' "$NOBAT/config/hypr/hypridle.conf" \
+    || fail "no-battery default did not keep the desktop suspend timeout"
+
+BAT="$TMP/bat"
+mkdir -p "$BAT/state" "$BAT/config"
+cp -a "$REPO/config/hypr" "$BAT/config/hypr"
+printf 'quickshell\n' > "$BAT/state/notification-backend"
+printf 'form_factor=laptop\ngpu=intel\n' > "$BAT/state/hardware-profile.conf"
+HYPRVEIL_STATE_HOME="$BAT/state" HYPRVEIL_CONFIG_HOME="$BAT/config" \
+    HYPRVEIL_SYSFS_ROOT="$LAPTOP_SYS" \
+    "$REPO/hyprveil" setup --yes >/dev/null
+grep -q 'timeout = 300' "$BAT/config/hypr/hypridle.conf" \
+    || fail "battery-detected default did not shorten the lock timeout"
+grep -q 'timeout = 900' "$BAT/config/hypr/hypridle.conf" \
+    || fail "battery-detected default did not shorten the suspend timeout"
+
+# An explicit flag still wins over the battery-detected default.
+BATFLAG="$TMP/batflag"
+mkdir -p "$BATFLAG/state" "$BATFLAG/config"
+cp -a "$REPO/config/hypr" "$BATFLAG/config/hypr"
+printf 'quickshell\n' > "$BATFLAG/state/notification-backend"
+printf 'form_factor=laptop\ngpu=intel\n' > "$BATFLAG/state/hardware-profile.conf"
+HYPRVEIL_STATE_HOME="$BATFLAG/state" HYPRVEIL_CONFIG_HOME="$BATFLAG/config" \
+    HYPRVEIL_SYSFS_ROOT="$LAPTOP_SYS" \
+    "$REPO/hyprveil" setup --yes --idle-lock 1200 >/dev/null
+grep -q 'timeout = 1200' "$BATFLAG/config/hypr/hypridle.conf" \
+    || fail "explicit --idle-lock did not override the battery-detected default"
+ok "idle-timer defaults shorten when a battery is detected, and flags still override them"
+
 printf '\nP10 first-run setup smoke tests passed.\n'

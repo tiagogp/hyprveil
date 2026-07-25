@@ -98,7 +98,9 @@ The docs are intentionally small:
 - [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md): panel controls and cheatsheet.
 - [docs/RECOVERY.md](docs/RECOVERY.md): rollback and component recovery.
 
-Licensing lives in [LICENSE](LICENSE).
+Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md); see
+[docs/TEMPLATE.md](docs/TEMPLATE.md#versioning-and-updates) for how a
+customized fork pulls those changes in. Licensing lives in [LICENSE](LICENSE).
 
 ## Test before use
 

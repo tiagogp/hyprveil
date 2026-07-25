@@ -3,6 +3,7 @@ required|hyprland|Hyprland|Hyprland session
 required|kitty|kitty|terminal
 required|mate-polkit|polkit-mate-authentication-agent-1|authentication agent
 required|xdg-desktop-portal-hyprland|xdg-desktop-portal-hyprland|desktop portal
+required|xdg-desktop-portal-gtk|xdg-desktop-portal-gtk|GTK file-picker portal backend (xdg-desktop-portal-hyprland does not implement FileChooser itself)
 optional|waybar|waybar|legacy bar; the shell draws its own
 required|rofi-wayland|rofi|application launcher
 required|libnotify|notify-send|desktop notifications from scripts and the Bluetooth watcher

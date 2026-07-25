@@ -15,3 +15,38 @@ jobs:
           sudo apt-get install -y jq shellcheck gawk
       - name: Run P0-P10 quality gate
         run: ./tests/run.sh --require-shellcheck
+
+  # The job above mocks every dnf/repoquery call, so the actual command syntax
+  # in scripts/lib/install-common.sh (hv_load_fedora, hv_show_enabled_repos,
+  # hv_package_source, hv_enable_copr) never runs against a real dnf. This job
+  # exercises those same functions for real inside a disposable Fedora
+  # container — it installs nothing on the runner itself and never touches the
+  # managed config trees, only the read-only detection/probe path plus a COPR
+  # enable (against the container's own throwaway dnf state, not the runner).
+  # Bump the image tag alongside support/fedora-releases.conf.
+  fedora-dnf-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe real dnf/repoquery/copr paths inside Fedora 44
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo fedora:44 bash -c '
+            set -uo pipefail
+            dnf install -y dnf5-plugins >/dev/null
+            # shellcheck disable=SC1091
+            . scripts/lib/install-common.sh
+
+            hv_load_fedora || { echo "hv_load_fedora did not recognize this Fedora container" >&2; exit 1; }
+            echo "Detected: $HV_OS_NAME"
+
+            hv_show_enabled_repos || { echo "hv_show_enabled_repos failed against real dnf" >&2; exit 1; }
+
+            # hyprlock/hypridle/hyprpaper are not in official Fedora repos yet,
+            # matching what a real install of this COPR-fallback path enables.
+            HYPRVEIL_ASSUME_YES=1 hv_enable_copr solopasha/hyprland "CI probe" \
+                || { echo "hv_enable_copr failed against real dnf" >&2; exit 1; }
+
+            echo
+            echo "-- dependency report (informational: some optional packages will be genuinely unavailable in a bare container) --"
+            HYPRVEIL_STATE_HOME=/tmp/hv-state ./scripts/09-dependency-report.sh || true
+          '

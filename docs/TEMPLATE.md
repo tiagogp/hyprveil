@@ -146,6 +146,38 @@ dock pins, wallpaper mappings, motion profile, Kitty session snapshots, and
 installer backups. See [CONFIGURATION.md](CONFIGURATION.md#state-inventory) for
 the full inventory.
 
+## Versioning and updates
+
+Two different things are called "update" here, and they don't overlap:
+
+- **`hyprveil update`** redeploys *this checkout's* `config/` tree into
+  `~/.config`, backing up and re-syncing whatever has drifted (see
+  [INSTALL.md](INSTALL.md)). It never touches git or fetches anything — it is
+  a local sync, not a way to pull new Hyprveil changes.
+- **Pulling new Hyprveil changes into a customized fork** is a git operation
+  you do yourself, on the repository, before `hyprveil update` ever runs. If
+  you forked or cloned Hyprveil and have been editing tracked files directly
+  (as this doc recommends), bring in upstream changes with a normal git
+  merge or rebase:
+
+  ```bash
+  git remote add upstream https://github.com/tiagogp/hyprveil.git   # once
+  git fetch upstream
+  git merge upstream/main            # or: git rebase upstream/main
+  ./tests/run.sh                     # confirm the merge still passes the gate
+  ./hyprveil update                  # deploy the merged config
+  ```
+
+  Conflicts land on whatever you've customized — keybindings, tokens, GTK/Qt
+  templates — the same as any other git merge. There is no separate
+  override layer to keep them out of the diff; see "What to edit" above for
+  why that's the deliberate tradeoff.
+
+[CHANGELOG.md](../CHANGELOG.md) lists notable changes under `[Unreleased]`
+until the project starts cutting tagged releases, at which point it follows
+[Semantic Versioning](https://semver.org/) and this section will document
+what a version bump implies for a customized fork.
+
 ## Where to look next
 
 - [INSTALL.md](INSTALL.md): install behavior, reruns, backups, and uninstall.
