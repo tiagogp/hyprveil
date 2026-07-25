@@ -10,17 +10,17 @@ Run the non-session test gate; it needs no Wayland session, no root, and no
 real `~/.config`:
 
 ```bash
-./tests/run.sh                    # bash -n, JSON/JSONC checks, executable bits, P0-P10
+./tests/run.sh                    # bash -n, JSON/JSONC checks, executable bits, P0-P12
 ./tests/run.sh --require-shellcheck  # fail instead of warn if ShellCheck is missing
 ```
 
-`tests/p0-smoke.sh` through `tests/p10-setup-smoke.sh` each cover one area
-(detection/reruns, notification backends, wallpaper/motion, nested sessions,
-Quickshell, accent rendering, design tokens, lock fallback, maintenance
-commands, first-run setup — see the file headers). A new test slots in as
-`p11-*-smoke.sh`, sourced the same way: sandbox `HOME` and the XDG state/config
-vars under a `mktemp -d`, mock any external binary, and never touch the real
-user environment.
+`tests/p0-smoke.sh` through `tests/p12-brightness-ramp-smoke.sh` each cover one
+area (detection/reruns, notification backends, wallpaper/motion, nested
+sessions, Quickshell, accent rendering, design tokens, lock fallback,
+maintenance commands, first-run setup, palette drift, brightness ramp — see the
+file headers). A new test slots in as `p13-*-smoke.sh`, sourced the same way:
+sandbox `HOME` and the XDG state/config vars under a `mktemp -d`, mock any
+external binary, and never touch the real user environment.
 
 ## The "no output has two writers" rule
 
@@ -43,7 +43,7 @@ Presets live in `config/hypr/scripts/data/accent-presets.json`, a flat
 `preset list` / `preset <name>` subcommands in `accent.sh` and the P6 test
 that validates the list's shape need no other changes. Keep new presets
 inside the same legibility band the wallpaper-extraction path enforces
-(saturation 0.45-0.85, lightness 0.52-0.68 in `score_histogram()` in
+(OKLCH chroma 0.08-0.30, lightness 0.52-0.68 in `score_histogram()` in
 `accent.sh`) so they read consistently against the dark neutrals. The
 neutral palette itself is fixed by design and out of scope for a preset —
 see the comment at the top of `accent.sh`.

@@ -423,8 +423,8 @@ emit_hypridle_conf() {
 
 general {
     lock_cmd = pidof hyprlock || ~/.config/hypr/scripts/lock.sh
-    before_sleep_cmd = ~/.config/hypr/scripts/lock.sh
-    after_sleep_cmd = hyprctl dispatch dpms on
+    before_sleep_cmd = ~/.config/hypr/scripts/lock.sh; ~/.config/hypr/scripts/hardware-action.sh brightness-save
+    after_sleep_cmd = ~/.config/hypr/scripts/hardware-action.sh brightness-restore; hyprctl dispatch dpms on
 }
 EOF
     if [ "$IDLE_LOCK" -gt 0 ]; then

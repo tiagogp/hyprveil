@@ -111,7 +111,7 @@ Run the deterministic non-session gate from the repo root:
 ```
 
 It checks Bash syntax, ShellCheck when available, JSON/JSONC parsing, executable
-bits, Markdown links, and the mocked P0-P10 smoke suites. Use
+bits, Markdown links, and the mocked P0-P12 smoke suites. Use
 `./tests/run.sh --require-shellcheck` when ShellCheck should be enforced instead
 of treated as optional.
 

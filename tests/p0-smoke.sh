@@ -422,6 +422,13 @@ battery_output=$(HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" "$REPO/config/waybar/scrip
 printf '%s' "$battery_output" | grep -q '"text":""' || fail "battery module did not hide without a battery"
 ok "absent brightness and battery hardware is handled safely"
 
+HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" HYPRVEIL_STATE_HOME="$TMP/empty-bstate" \
+    "$REPO/config/hypr/scripts/hardware-action.sh" brightness-save
+[ ! -e "$TMP/empty-bstate/brightness" ] || fail "brightness-save wrote state without backlight hardware"
+HYPRVEIL_SYSFS_ROOT="$TMP/empty-sys" HYPRVEIL_STATE_HOME="$TMP/empty-bstate" \
+    "$REPO/config/hypr/scripts/hardware-action.sh" brightness-restore
+ok "brightness save/restore are safe no-ops without backlight hardware"
+
 cat > "$TMP/bin/wpctl" <<'EOF'
 #!/usr/bin/env bash
 printf 'wpctl %s\n' "$*" >> "${MOCK_DNF_ROOT:?}/osd-actions"

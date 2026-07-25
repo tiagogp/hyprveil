@@ -25,46 +25,96 @@ warn() { printf '%s: %s\n' "$HV_LOG_PREFIX" "$*" >&2; }
 # Color math
 # --------------------------------------------------------------------------
 
-# Shifts lightness by a signed percentage, holding hue and saturation. Used for
-# the hover shade and the lock screen's dim fill.
+# Shared OKLCH conversion primitives (Björn Ottosson's OKLab, standard M1/M2
+# matrices). Used everywhere hue/chroma/lightness need to move independently
+# without HSL's perceptual unevenness — HSL lightening shifts perceived hue
+# and chroma unevenly across the color wheel, which shows up as the same
+# numeric delta looking like a bigger jump on some hues than others. OKLCH's
+# axes are perceptually uniform, so one delta means the same thing everywhere.
+#
+# Spliced into a caller's own awk script (accent.sh's score_histogram does
+# this too), the same way accent.sh's CHROME_AWK_LIB is shared.
+OKLCH_AWK_LIB='
+    function srgb_lin(c) {
+        c /= 255
+        return (c <= 0.04045) ? c / 12.92 : ((c + 0.055) / 1.055) ^ 2.4
+    }
+    function lin_srgb(c) {
+        c = (c <= 0.0031308) ? c * 12.92 : 1.055 * (c ^ (1/2.4)) - 0.055
+        if (c < 0) c = 0
+        if (c > 1) c = 1
+        return c * 255
+    }
+    # Guards the fractional exponent below zero: LMS values can round to a
+    # hair under 0 for near-black or edge-of-gamut colors, and x^(1/3) on a
+    # negative base is undefined in awk (real domain only).
+    function cbrt(x) { return (x < 0) ? -((-x) ^ (1/3)) : x ^ (1/3) }
+
+    # Sets globals OKL, OKC, OKH (radians) from 8-bit sRGB channels.
+    function rgb2oklch(r, g, b,   R, G, B, l, m, s, l_, m_, s_, La, aa, bb) {
+        R = srgb_lin(r); G = srgb_lin(g); B = srgb_lin(b)
+        l = 0.4122214708*R + 0.5363325363*G + 0.0514459929*B
+        m = 0.2119034982*R + 0.6806995451*G + 0.1073969566*B
+        s = 0.0883024619*R + 0.2817188376*G + 0.6299787005*B
+        l_ = cbrt(l); m_ = cbrt(m); s_ = cbrt(s)
+        La = 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_
+        aa = 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_
+        bb = 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_
+        OKL = La; OKC = sqrt(aa*aa + bb*bb); OKH = atan2(bb, aa)
+    }
+
+    # Sets globals RL, GL, BL: unclamped LINEAR sRGB for an OKLCH triple.
+    # Split out so the gamut check and oklch2hex share one transform.
+    function oklch2rgb_lin(L, C, H,   aa, bb, l_, m_, s_, l, m, s) {
+        aa = C * cos(H); bb = C * sin(H)
+        l_ = L + 0.3963377774*aa + 0.2158037573*bb
+        m_ = L - 0.1055613458*aa - 0.0638541728*bb
+        s_ = L - 0.0894841775*aa - 1.2914855480*bb
+        l = l_*l_*l_; m = m_*m_*m_; s = s_*s_*s_
+        RL = 4.0767416621*l - 3.3077115913*m + 0.2309699292*s
+        GL = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s
+        BL = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s
+    }
+    function ok_in_gamut(   eps) {
+        eps = 1e-4
+        return (RL >= -eps && RL <= 1+eps && GL >= -eps && GL <= 1+eps && BL >= -eps && BL <= 1+eps)
+    }
+
+    # Prints "rrggbb" for an OKLCH triple. If it falls outside sRGB,
+    # binary-searches (12 iterations, 2^-12 precision) the largest in-gamut
+    # chroma at the SAME L and H, so an over-lightened saturated color
+    # desaturates gracefully at the gamut edge instead of the hue shift a
+    # naive per-channel clamp would cause.
+    function oklch2hex(L, C, H,   lo, hi, mid, i) {
+        oklch2rgb_lin(L, C, H)
+        if (!ok_in_gamut()) {
+            lo = 0; hi = C
+            for (i = 0; i < 12; i++) {
+                mid = (lo + hi) / 2
+                oklch2rgb_lin(L, mid, H)
+                if (ok_in_gamut()) lo = mid; else hi = mid
+            }
+            oklch2rgb_lin(L, lo, H)
+        }
+        return sprintf("%02x%02x%02x", lin_srgb(RL)+0.5, lin_srgb(GL)+0.5, lin_srgb(BL)+0.5)
+    }
+'
+
+# Shifts lightness by a signed amount in OKLCH, holding hue and chroma. Used
+# for the hover shade and the lock screen's dim fill.
 shade() {
     local hex=$1 delta=$2
-    printf '%s %s\n' "${hex#\#}" "$delta" | awk '
-        function max3(a, b, c) { return (a > b ? (a > c ? a : c) : (b > c ? b : c)) }
-        function min3(a, b, c) { return (a < b ? (a < c ? a : c) : (b < c ? b : c)) }
-        function hue2rgb(p, q, t) {
-            if (t < 0) t += 1
-            if (t > 1) t -= 1
-            if (t < 1/6) return p + (q - p) * 6 * t
-            if (t < 1/2) return q
-            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
-            return p
-        }
+    printf '%s %s\n' "${hex#\#}" "$delta" | awk "$OKLCH_AWK_LIB"'
         {
             hex = $1; delta = $2 + 0
-            r = strtonum("0x" substr(hex, 1, 2)) / 255
-            g = strtonum("0x" substr(hex, 3, 2)) / 255
-            b = strtonum("0x" substr(hex, 5, 2)) / 255
-            mx = max3(r, g, b); mn = min3(r, g, b); d = mx - mn
-            L = (mx + mn) / 2
-            if (d == 0) { H = 0; S = 0 }
-            else {
-                S = (L > 0.5) ? d / (2 - mx - mn) : d / (mx + mn)
-                if (mx == r)      H = (g - b) / d + (g < b ? 6 : 0)
-                else if (mx == g) H = (b - r) / d + 2
-                else              H = (r - g) / d + 4
-                H /= 6
-            }
-            L += delta
+            r = strtonum("0x" substr(hex, 1, 2))
+            g = strtonum("0x" substr(hex, 3, 2))
+            b = strtonum("0x" substr(hex, 5, 2))
+            rgb2oklch(r, g, b)
+            L = OKL + delta
             if (L < 0) L = 0
             if (L > 1) L = 1
-            if (S == 0) { r = g = b = L }
-            else {
-                q = (L < 0.5) ? L * (1 + S) : L + S - L * S
-                p = 2 * L - q
-                r = hue2rgb(p, q, H + 1/3); g = hue2rgb(p, q, H); b = hue2rgb(p, q, H - 1/3)
-            }
-            printf "#%02x%02x%02x\n", r * 255 + 0.5, g * 255 + 0.5, b * 255 + 0.5
+            printf "#%s\n", oklch2hex(L, OKC, OKH)
         }
     '
 }

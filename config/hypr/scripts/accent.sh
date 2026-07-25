@@ -87,46 +87,18 @@ histogram() {
 #
 # A wallpaper's *dominant* color is almost always a desaturated background that
 # would vanish against the dark neutrals, so frequency alone is the wrong
-# signal. Colors are scored on saturation and mid-range lightness first and
+# signal. Colors are scored on chroma and mid-range lightness first and
 # pixel share only as a tie-breaker, then the winner is pushed into a band that
 # is guaranteed to stay legible on #0f1115. A greyscale image therefore still
 # yields a usable (if muted) accent rather than an invisible near-black.
+#
+# Scored in OKLCH rather than HSL: OKLCH's chroma and lightness are
+# perceptually uniform across hues, where HSL's are not (HSL saturation
+# explodes near black and white — a near-white cream scores 0.92 and a
+# near-black scores 0.87 — which is exactly the kind of artifact that would
+# hand the accent to a washed-out sky or shadow).
 score_histogram() {
-    awk '
-        function max3(a, b, c) { return (a > b ? (a > c ? a : c) : (b > c ? b : c)) }
-        function min3(a, b, c) { return (a < b ? (a < c ? a : c) : (b < c ? b : c)) }
-
-        function rgb2hsl(r, g, b,   mx, mn, d) {
-            r /= 255; g /= 255; b /= 255
-            mx = max3(r, g, b); mn = min3(r, g, b); d = mx - mn
-            L = (mx + mn) / 2
-            if (d == 0) { H = 0; S = 0; return }
-            S = (L > 0.5) ? d / (2 - mx - mn) : d / (mx + mn)
-            if (mx == r)      H = (g - b) / d + (g < b ? 6 : 0)
-            else if (mx == g) H = (b - r) / d + 2
-            else              H = (r - g) / d + 4
-            H /= 6
-        }
-
-        function hue2rgb(p, q, t) {
-            if (t < 0) t += 1
-            if (t > 1) t -= 1
-            if (t < 1/6) return p + (q - p) * 6 * t
-            if (t < 1/2) return q
-            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
-            return p
-        }
-
-        function hsl2hex(h, s, l,   q, p, r, g, b) {
-            if (s == 0) { r = g = b = l }
-            else {
-                q = (l < 0.5) ? l * (1 + s) : l + s - l * s
-                p = 2 * l - q
-                r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3)
-            }
-            return sprintf("%02x%02x%02x", r * 255 + 0.5, g * 255 + 0.5, b * 255 + 0.5)
-        }
-
+    awk "$OKLCH_AWK_LIB"'
         {
             n++
             count[n] = $1 + 0
@@ -134,13 +106,8 @@ score_histogram() {
             r = strtonum("0x" substr(hex, 1, 2))
             g = strtonum("0x" substr(hex, 3, 2))
             b = strtonum("0x" substr(hex, 5, 2))
-            rgb2hsl(r, g, b)
-            hh[n] = H; ss[n] = S; ll[n] = L
-            # Chroma, not HSL saturation, is what "colorful" means here. HSL
-            # saturation explodes near black and white — a near-white cream
-            # scores 0.92 and a near-black scores 0.87 — so ranking by it hands
-            # the accent to washed-out sky and shadow. Chroma stays honest.
-            cc[n] = max3(r, g, b) / 255 - min3(r, g, b) / 255
+            rgb2oklch(r, g, b)
+            okh[n] = OKH; okc[n] = OKC; okl[n] = OKL
             total += count[n]
         }
 
@@ -151,7 +118,7 @@ score_histogram() {
                 # Lightness is scored as distance from 0.55: dark colors
                 # disappear into the surfaces, near-white ones collide with
                 # $text.
-                light_fit = 1 - (ll[i] - 0.55 < 0 ? 0.55 - ll[i] : ll[i] - 0.55) / 0.55
+                light_fit = 1 - (okl[i] - 0.55 < 0 ? 0.55 - okl[i] : okl[i] - 0.55) / 0.55
                 if (light_fit < 0) light_fit = 0
 
                 # Chroma leads, but pixel share has to appear or a stray vivid
@@ -159,37 +126,39 @@ score_histogram() {
                 # The fractional exponent damps share so a large flat wash
                 # still loses to a genuinely vivid region of moderate size.
                 share = count[i] / total
-                score = (cc[i] ^ 2) * light_fit * (share ^ 0.35)
+                score = (okc[i] ^ 2) * light_fit * (share ^ 0.35)
 
                 if (score > best_score) {
-                    best_score = score; best_h = hh[i]; best_s = ss[i]; best_l = ll[i]
+                    best_score = score; best_h = okh[i]; best_c = okc[i]; best_l = okl[i]
                 }
                 # Tracked so a colorless image can be recognized as such below,
                 # rather than silently amplified into an invented hue.
-                if (cc[i] > top_chroma) {
-                    top_chroma = cc[i]; top_h = hh[i]; top_s = ss[i]; top_l = ll[i]
+                if (okc[i] > top_chroma) {
+                    top_chroma = okc[i]; top_h = okh[i]; top_c = okc[i]; top_l = okl[i]
                 }
             }
 
             # A greyscale or near-greyscale wallpaper carries no hue worth
             # trusting — what little it has is compression noise. Amplifying
-            # that to meet the saturation floor would pick a color at random
-            # and change it on re-encode, so the designed accent is kept.
-            if (top_chroma < 0.10) { exit 2 }
+            # that to meet the chroma floor would pick a color at random and
+            # change it on re-encode, so the designed accent is kept. 0.03 is
+            # the OKLCH-chroma equivalent of the old HSL-hack floor of 0.10.
+            if (top_chroma < 0.03) { exit 2 }
 
             h = best_score > 0 ? best_h : top_h
-            s = best_score > 0 ? best_s : top_s
+            c = best_score > 0 ? best_c : top_c
             l = best_score > 0 ? best_l : top_l
 
             # Legibility band on the dark neutrals: a muted wallpaper still has
             # to produce an accent that reads against #0f1115 without competing
-            # with $text.
-            if (s < 0.45) s = 0.45
-            if (s > 0.85) s = 0.85
+            # with $text. Chroma tops out around 0.32 for in-gamut sRGB, so
+            # 0.08-0.30 is "not washed out, not neon" in OKLCH units.
+            if (c < 0.08) c = 0.08
+            if (c > 0.30) c = 0.30
             if (l < 0.52) l = 0.52
             if (l > 0.68) l = 0.68
 
-            printf "#%s\n", hsl2hex(h, s, l)
+            printf "#%s\n", oklch2hex(l, c, h)
         }
     '
 }
@@ -312,7 +281,7 @@ chrome_ratio_for() {
     '
 }
 
-# Lightens a colour in HSL until it clears $CHROME_GLYPH_RATIO on the solved
+# Lightens a colour in OKLCH until it clears $CHROME_GLYPH_RATIO on the solved
 # chrome fill, and prints the result.
 #
 # This is the lever that keeps chrome glassy. The accent and $text-dim are the

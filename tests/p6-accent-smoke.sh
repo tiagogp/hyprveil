@@ -101,7 +101,7 @@ vivid=$(MOCK_IMAGE=vivid "$ACCENT" extract "$image")
 [[ "$vivid" =~ ^#[0-9a-f]{6}$ ]] || fail "extract did not print a normalized hex: $vivid"
 [ "$vivid" != "$DEFAULT_ACCENT" ] || fail "a vivid wallpaper did not move the accent"
 # The blue region must win over the dark majority, and the result must land in
-# the legibility band the scorer clamps to (S 0.45-0.85, L 0.52-0.68).
+# the legibility band the scorer clamps to (OKLCH C 0.08-0.30, L 0.52-0.68).
 read -r r g b <<< "$(printf '%d %d %d\n' "0x${vivid:1:2}" "0x${vivid:3:2}" "0x${vivid:5:2}")"
 if [ "$b" -le "$r" ] || [ "$b" -le "$g" ]; then
     fail "extract did not pick the vivid blue region: $vivid"

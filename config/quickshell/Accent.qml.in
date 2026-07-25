@@ -23,8 +23,8 @@ Singleton {
     readonly property color accentSoft: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
 
     // Foreground for text and glyphs sitting ON the accent. Fixed, not derived:
-    // the accent is clamped to a legibility band (S 0.45-0.85, L 0.52-0.68) that
-    // is guaranteed to carry this neutral.
+    // the accent is clamped to a legibility band (OKLCH C 0.08-0.30, L 0.52-0.68)
+    // that is guaranteed to carry this neutral.
     readonly property color accentFg: "#f5f5f7"
 
     // How opaque the bar and dock have to be on THIS wallpaper.
