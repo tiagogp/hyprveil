@@ -42,9 +42,9 @@ Singleton {
     // ---------------------------------------------------------------------
     // Type
     // ---------------------------------------------------------------------
-    readonly property string fontUi:      "Geist"
+    readonly property string fontUi:      "JetBrains Mono"
     readonly property string fontUiIcons: "Symbols Nerd Font"
-    readonly property string fontMono:    "Fira Code"
+    readonly property string fontMono:    "IBM Plex Mono"
 
     readonly property int text2xs: 11
     readonly property int textXs:  12
@@ -84,23 +84,23 @@ Singleton {
 
     readonly property real elev1Alpha:       0.92
     readonly property real elev1Border:      0.08
-    readonly property int  elev1ShadowY:     1
-    readonly property int  elev1ShadowBlur:  2
+    readonly property int  elev1ShadowY:     8
+    readonly property int  elev1ShadowBlur:  30
     readonly property real elev1ShadowAlpha: 0.35
 
     readonly property real elev2Alpha:       0.96
     readonly property real elev2Border:      0.14
-    readonly property int  elev2ShadowY:     4
-    readonly property int  elev2ShadowBlur:  12
+    readonly property int  elev2ShadowY:     12
+    readonly property int  elev2ShadowBlur:  40
     readonly property real elev2ShadowAlpha: 0.45
 
     readonly property real elev3Alpha:       0.96
     readonly property real elev3Border:      0.16
-    readonly property int  elev3ShadowY:     8
-    readonly property int  elev3ShadowBlur:  24
+    readonly property int  elev3ShadowY:     20
+    readonly property int  elev3ShadowBlur:  60
     readonly property real elev3ShadowAlpha: 0.55
 
-    readonly property int blurSize:   8
+    readonly property int blurSize:   6
     readonly property int blurPasses: 2
 
     // The bar and dock only, and the WORST CASE for them: what a pure white
@@ -144,21 +144,24 @@ Singleton {
     // Neutrals — fixed by design; only the accent moves. Mirrors
     // hypr/colors.conf, which QML cannot read.
     // ---------------------------------------------------------------------
-    readonly property color base:     "#0f1115"
-    readonly property color surface:  "#16181d"
-    readonly property color elevated: "#1c1f26"
-    readonly property color text:     "#f5f5f7"
-    readonly property color muted:    "#9a9ca5"
-    readonly property color dim:      "#6b6e78"
-    readonly property color hairline: "#2a2d35"
-    readonly property color warning:  "#e1a346"
-    readonly property color error:    "#e5484d"
-    readonly property color success:  "#4cae80"
+    readonly property color base:     "#09090b"
+    readonly property color surface:  "#121216"
+    readonly property color elevated: "#18181c"
+    readonly property color text:     "#c4c0b6"
+    readonly property color muted:    "#96969e"
+    // The mockup's own muted (#6E6E76), one tier below `muted`: not held to
+    // the 4.5:1 body-text floor because nothing here draws a paragraph in it —
+    // see neutrals.conf.
+    readonly property color dim:      "#6e6e76"
+    readonly property color hairline: "#2a2a31"
+    readonly property color warning:  "#c29a5e"
+    readonly property color error:    "#c4574a"
+    readonly property color success:  "#7fb89f"
 
     // Chrome-specific tints/states, mirroring neutrals.conf's $chrome-tint /
     // $chrome-tint-media / $state-hover-surface. Previously hardcoded per
     // literal in Bar.qml/Dock.qml/Media.qml/DockTile.qml.
-    readonly property color chromeTint:       "#14161a"
-    readonly property color chromeTintMedia:  "#151817"
-    readonly property color stateHoverSurface: "#23262e"
+    readonly property color chromeTint:       "#101013"
+    readonly property color chromeTintMedia:  "#121215"
+    readonly property color stateHoverSurface: "#232328"
 }

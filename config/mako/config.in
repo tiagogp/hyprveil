@@ -19,8 +19,8 @@ margin=5
 padding=@space-4@
 anchor=top-right
 
-background-color=#16181D99
-text-color=#F5F5F7
+background-color=#12121699
+text-color=#c4c0b6
 border-color=#FFFFFF1A
 border-size=1
 border-radius=@radius-md@
@@ -34,7 +34,7 @@ max-visible=4
 layer=overlay
 
 # title bold, body muted — mako styles via markup on format
-format=<b>%s</b>\n<span color="#9A9CA5">%b</span>
+format=<b>%s</b>\n<span color="#96969e">%b</span>
 
 [urgency=critical]
 border-color=@accent-upper@
@@ -42,14 +42,14 @@ default-timeout=0
 
 # faded, lower-elevation treatment — mirrors the mockup's older/read card
 [urgency=low]
-background-color=#16181D73
+background-color=#12121673
 border-color=#FFFFFF0F
-text-color=#9A9CA5
+text-color=#96969e
 
 [expiring=true]
-background-color=#16181D73
+background-color=#12121673
 border-color=#FFFFFF0F
-text-color=#9A9CA5
+text-color=#96969e
 
 # The fallback Waybar right-click toggles this persistent-for-the-session mode.
 [mode=do-not-disturb]

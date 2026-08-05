@@ -4,21 +4,21 @@
  * accent.css is generated from the wallpaper — see docs/CONFIGURATION.md. */
 @import url("accent.css");
 
-@define-color window_bg_color #0F1115;
-@define-color window_fg_color #F5F5F7;
-@define-color view_bg_color #16181D;
-@define-color view_fg_color #F5F5F7;
-@define-color headerbar_bg_color #16181D;
-@define-color headerbar_fg_color #F5F5F7;
-@define-color sidebar_bg_color #16181D;
-@define-color sidebar_fg_color #F5F5F7;
-@define-color card_bg_color #1C1F26;
-@define-color card_fg_color #F5F5F7;
-@define-color popover_bg_color #1C1F26;
-@define-color popover_fg_color #F5F5F7;
-@define-color dialog_bg_color #1C1F26;
-@define-color dialog_fg_color #F5F5F7;
+@define-color window_bg_color #09090b;
+@define-color window_fg_color #c4c0b6;
+@define-color view_bg_color #121216;
+@define-color view_fg_color #c4c0b6;
+@define-color headerbar_bg_color #121216;
+@define-color headerbar_fg_color #c4c0b6;
+@define-color sidebar_bg_color #121216;
+@define-color sidebar_fg_color #c4c0b6;
+@define-color card_bg_color #18181c;
+@define-color card_fg_color #c4c0b6;
+@define-color popover_bg_color #18181c;
+@define-color popover_fg_color #c4c0b6;
+@define-color dialog_bg_color #18181c;
+@define-color dialog_fg_color #c4c0b6;
 
-@define-color warning_bg_color #E1A346;
-@define-color error_bg_color #E5484D;
-@define-color success_bg_color #4CAE80;
+@define-color warning_bg_color #c29a5e;
+@define-color error_bg_color #c4574a;
+@define-color success_bg_color #7fb89f;

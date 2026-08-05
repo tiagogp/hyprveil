@@ -28,7 +28,9 @@ PanelWindow {
     property var pinPicker: null
 
     anchors.bottom: true
-    margins.bottom: Tokens.spacing1h
+    // Rev 02 floats the dock further off the bottom edge (frame 2a/2c) —
+    // spacing3 is the closest step on the closed scale to the mockup's 14px.
+    margins.bottom: Tokens.spacing3
     implicitHeight: 44 + Tokens.spacing5
     implicitWidth: row.implicitWidth + Tokens.spacing6
     color: "transparent"

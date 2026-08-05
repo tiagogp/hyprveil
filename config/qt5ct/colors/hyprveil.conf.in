@@ -3,6 +3,6 @@
 ; Text, BrightText, ButtonText, Base, Window, Shadow, Highlight, HighlightedText,
 ; Link, LinkVisited, AlternateBase, NoRole, ToolTipBase, ToolTipText, PlaceholderText
 [ColorScheme]
-active_colors=#fff5f5f7, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #fff5f5f7, #ffffffff, #fff5f5f7, #ff16181d, #ff0f1115, #ff000000, #ff@accent-bare@, #fff5f5f7, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #fff5f5f7, #ff9a9ca5
-disabled_colors=#ff6b6e78, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #ff6b6e78, #ffffffff, #ff6b6e78, #ff16181d, #ff0f1115, #ff000000, #ff2a2d35, #ff9a9ca5, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #ff9a9ca5, #ff6b6e78
-inactive_colors=#fff5f5f7, #ff1c1f26, #ff2a2d35, #ff22252c, #ff0a0c0f, #ff16181d, #fff5f5f7, #ffffffff, #fff5f5f7, #ff16181d, #ff0f1115, #ff000000, #ff@accent-bare@, #fff5f5f7, #ff@accent-bare@, #ff@accent-hover-bare@, #ff1c1f26, #ff000000, #ff1c1f26, #fff5f5f7, #ff9a9ca5
+active_colors=#ffc4c0b6, #ff18181c, #ff2a2a31, #ff22222a, #ff0a0a0c, #ff121216, #ffc4c0b6, #ffffffff, #ffc4c0b6, #ff121216, #ff09090b, #ff000000, #ff@accent-bare@, #ffc4c0b6, #ff@accent-bare@, #ff@accent-hover-bare@, #ff18181c, #ff000000, #ff18181c, #ffc4c0b6, #ff96969e
+disabled_colors=#ff6e6e76, #ff18181c, #ff2a2a31, #ff22222a, #ff0a0a0c, #ff121216, #ff6e6e76, #ffffffff, #ff6e6e76, #ff121216, #ff09090b, #ff000000, #ff2a2a31, #ff96969e, #ff@accent-bare@, #ff@accent-hover-bare@, #ff18181c, #ff000000, #ff18181c, #ff96969e, #ff6e6e76
+inactive_colors=#ffc4c0b6, #ff18181c, #ff2a2a31, #ff22222a, #ff0a0a0c, #ff121216, #ffc4c0b6, #ffffffff, #ffc4c0b6, #ff121216, #ff09090b, #ff000000, #ff@accent-bare@, #ffc4c0b6, #ff@accent-bare@, #ff@accent-hover-bare@, #ff18181c, #ff000000, #ff18181c, #ffc4c0b6, #ff96969e

@@ -4,7 +4,7 @@
 
    Each button's ring + icon glyph are baked into ONE svg per button per state
    (assets/<name>-default.svg / -accent.svg), built from the design mockup's
-   own icon paths, colored explicitly (#F5F5F7 default / the accent).
+   own icon paths, colored explicitly (#C4C0B6 default / the accent).
    The accent variants are regenerated from assets/src/ by hypr/scripts/accent.sh
    whenever the wallpaper accent changes — edit assets/src/, never assets/.
    Two reasons this isn't done as CSS border + system icon PNGs:
@@ -73,7 +73,7 @@ button {
   min-height: @icon-ring-px@;
   padding: 0;
   background-color: transparent;
-  color: #9a9ca5;
+  color: #96969e;
   border: none;
   border-radius: 0;
   margin: 0;

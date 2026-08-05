@@ -8,11 +8,11 @@
    background alpha below come from tokens.conf, not a bespoke literal. */
 
 * {
-    bg:          rgba(22, 24, 29, @rofi-bg-alpha@%);
-    bg-row:      rgba(28, 31, 38, 100%);
-    text:        #F5F5F7;
-    muted:       #9A9CA5;
-    dim:         #6B6E78;
+    bg:          rgba(18, 18, 22, @rofi-bg-alpha@%);
+    bg-row:      rgba(24, 24, 28, 100%);
+    text:        #c4c0b6;
+    muted:       #96969e;
+    dim:         #6e6e76;
     hairline:    rgba(255, 255, 255, 10%);
     hairline-2:  rgba(255, 255, 255, 6%);
 
@@ -50,7 +50,7 @@ textbox-prompt-icon {
 }
 
 entry {
-    font: "Geist 15";
+    font: "@font-ui@ 15";
     placeholder: "Search";
     placeholder-color: @dim;
     text-color: @text;

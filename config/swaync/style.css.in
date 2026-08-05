@@ -8,14 +8,14 @@
    at-name-at placeholders coexist safely because a substitution needs the
    closing delimiter, which a GTK color reference never has. */
 @import url("accent.css");
-@define-color bg rgba(15, 17, 21, @elev-0-alpha@);
-@define-color surface rgba(22, 24, 29, @elev-0-alpha@);
-@define-color elevated rgba(28, 31, 38, @elev-2-alpha@);
-@define-color text #f5f5f7;
-@define-color muted #9a9ca5;
-@define-color dim #6b6e78;
+@define-color bg rgba(9, 9, 11, @elev-0-alpha@);
+@define-color surface rgba(18, 18, 22, @elev-0-alpha@);
+@define-color elevated rgba(24, 24, 28, @elev-2-alpha@);
+@define-color text #c4c0b6;
+@define-color muted #96969e;
+@define-color dim #6e6e76;
 @define-color border rgba(255, 255, 255, @elev-0-border@);
-@define-color warning #e1a346;
+@define-color warning #c29a5e;
 
 * {
   font-family: "@font-ui@", "@font-ui-icons@", sans-serif;

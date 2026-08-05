@@ -1,6 +1,6 @@
 // GENERATED from Accent.qml.in by hypr/scripts/accent.sh — do not edit.
 // The accent is derived from the wallpaper; change the wallpaper, not this file.
-// `accent.sh reset` restores the designed red. See docs/CONFIGURATION.md.
+// `accent.sh reset` restores the designed amber. See docs/CONFIGURATION.md.
 //
 // Quickshell watches its config directory and reloads when a file changes, so
 // writing this file IS the reload — there is no push step, and none of the
@@ -13,8 +13,8 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    readonly property color accent:      "#e14658"
-    readonly property color accentHover: "#e86a79"
+    readonly property color accent:      "#ad7300"
+    readonly property color accentHover: "#c78b2e"
 
     // The soft fill behind active chips and selected rows. Kept as one property
     // rather than an alpha applied at each call site, because the design uses a
@@ -53,6 +53,6 @@ Singleton {
     //
     // Over a dark wallpaper these come back unchanged — the lift is zero when
     // the contrast is already free.
-    readonly property color accentOnChrome: "#e14658"
-    readonly property color dimOnChrome:    "#6b6e78"
+    readonly property color accentOnChrome: "#ad7300"
+    readonly property color dimOnChrome:    "#6e6e76"
 }

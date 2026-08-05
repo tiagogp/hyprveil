@@ -1,6 +1,6 @@
 // GENERATED from Accent.qml.in by hypr/scripts/accent.sh — do not edit.
 // The accent is derived from the wallpaper; change the wallpaper, not this file.
-// `accent.sh reset` restores the designed red. See docs/CONFIGURATION.md.
+// `accent.sh reset` restores the designed amber. See docs/CONFIGURATION.md.
 //
 // Quickshell watches its config directory and reloads when a file changes, so
 // writing this file IS the reload — there is no push step, and none of the

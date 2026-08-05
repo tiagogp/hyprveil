@@ -21,6 +21,13 @@ if command -v gsettings >/dev/null; then
     gsettings set org.gnome.desktop.interface font-name 'Geist 11'
     gsettings set org.gnome.desktop.interface document-font-name 'Geist 11'
     gsettings set org.gnome.desktop.interface monospace-font-name 'Fira Code 11'
+    # GTK4/libadwaita apps read antialiasing/hinting from here on Wayland, not
+    # from settings.ini's gtk-xft-* keys — those only cover GTK3/Xft. Without
+    # this, the session default (grayscale) wins and text loses the subpixel
+    # rendering fontconfig/fonts.conf sets up everywhere else. Keep in sync
+    # with that file's rgba/hintstyle values.
+    gsettings set org.gnome.desktop.interface font-antialiasing 'rgba'
+    gsettings set org.gnome.desktop.interface font-hinting 'slight'
 fi
 
 # apply the cursor to already-running Hyprland (env vars only cover new clients)

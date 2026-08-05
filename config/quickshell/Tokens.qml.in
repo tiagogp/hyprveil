@@ -144,21 +144,24 @@ Singleton {
     // Neutrals — fixed by design; only the accent moves. Mirrors
     // hypr/colors.conf, which QML cannot read.
     // ---------------------------------------------------------------------
-    readonly property color base:     "#0f1115"
-    readonly property color surface:  "#16181d"
-    readonly property color elevated: "#1c1f26"
-    readonly property color text:     "#f5f5f7"
-    readonly property color muted:    "#9a9ca5"
-    readonly property color dim:      "#6b6e78"
-    readonly property color hairline: "#2a2d35"
-    readonly property color warning:  "#e1a346"
-    readonly property color error:    "#e5484d"
-    readonly property color success:  "#4cae80"
+    readonly property color base:     "#09090b"
+    readonly property color surface:  "#121216"
+    readonly property color elevated: "#18181c"
+    readonly property color text:     "#c4c0b6"
+    readonly property color muted:    "#96969e"
+    // The mockup's own muted (#6E6E76), one tier below `muted`: not held to
+    // the 4.5:1 body-text floor because nothing here draws a paragraph in it —
+    // see neutrals.conf.
+    readonly property color dim:      "#6e6e76"
+    readonly property color hairline: "#2a2a31"
+    readonly property color warning:  "#c29a5e"
+    readonly property color error:    "#c4574a"
+    readonly property color success:  "#7fb89f"
 
     // Chrome-specific tints/states, mirroring neutrals.conf's $chrome-tint /
     // $chrome-tint-media / $state-hover-surface. Previously hardcoded per
     // literal in Bar.qml/Dock.qml/Media.qml/DockTile.qml.
-    readonly property color chromeTint:       "#14161a"
-    readonly property color chromeTintMedia:  "#151817"
-    readonly property color stateHoverSurface: "#23262e"
+    readonly property color chromeTint:       "#101013"
+    readonly property color chromeTintMedia:  "#121215"
+    readonly property color stateHoverSurface: "#232328"
 }

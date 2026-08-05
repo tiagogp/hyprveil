@@ -57,7 +57,9 @@ Scope {
             height: parent.height
             anchors.horizontalCenter: parent.horizontalCenter
             radius: Tokens.radiusLg
-            elevation: 3
+            // Rev 02 groups every floating widget on one shadow tier — see
+            // MediaCard.qml.
+            elevation: 2
 
             // The overlay takes no keyboard focus, but an orca-style reader can
             // still voice a live region: name it "Volume 40 percent" / "Muted"

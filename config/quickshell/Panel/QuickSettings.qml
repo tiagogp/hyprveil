@@ -72,7 +72,9 @@ Scope {
 
         Surface {
             anchors.fill: parent
-            elevation: 0
+            // Rev 02 draws quick settings with the same shadow as every other
+            // floating widget (frame 2g) rather than sitting flat.
+            elevation: 2
             radius: Tokens.radiusLg
 
             focus: true

@@ -30,7 +30,10 @@ Surface {
     implicitWidth: 340
     implicitHeight: layout.implicitHeight + Tokens.spacing4 * 2
 
-    elevation: popup ? 3 : 1
+    // Rev 02 groups every floating widget on one shadow tier — see
+    // MediaCard.qml. History cards stay at tier 1: they sit inside a panel
+    // that already carries its own elevation.
+    elevation: popup ? 2 : 1
     radius: Tokens.radiusMd
     // Critical borrows the accent border rather than inventing a red: the
     // palette has exactly one attention color and two would compete.
@@ -53,7 +56,7 @@ Surface {
             implicitWidth: 36
             implicitHeight: 36
             radius: Tokens.radiusSm
-            color: card.critical || card.popup ? Accent.accentSoft : "#1c1f26"
+            color: card.critical || card.popup ? Accent.accentSoft : Tokens.elevated
             border.width: card.critical || card.popup ? 1 : 0
             border.color: Accent.accent
 

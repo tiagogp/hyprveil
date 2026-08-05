@@ -33,6 +33,13 @@ Singleton {
     property int memUsedMb: 0
     property int memTotalMb: 0
 
+    // Rolling CPU samples for the bar's sparkline (rev 02, frame 2a/2b). Capped
+    // at historyLength and reassigned rather than pushed-in-place: a `var`
+    // array only notifies bindings on assignment, and the sparkline's Canvas
+    // has to repaint on every tick.
+    readonly property int historyLength: 20
+    property var cpuHistory: []
+
     // NaN until a usable thermal zone is found — hasTemperature gates the glyph
     // so a machine without one shows CPU and RAM alone rather than "0°".
     property real temperature: NaN
@@ -71,6 +78,7 @@ Singleton {
             const dTotal = total - root._prevCpu.total;
             const dIdle = idle - root._prevCpu.idle;
             root.cpu = dTotal > 0 ? Math.max(0, Math.min(1, 1 - dIdle / dTotal)) : 0;
+            root.cpuHistory = root.cpuHistory.concat([root.cpu]).slice(-root.historyLength);
         }
         root._prevCpu = { total: total, idle: idle };
     }

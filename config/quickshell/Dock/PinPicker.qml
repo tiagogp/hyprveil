@@ -289,7 +289,7 @@ Scope {
                             height: 36
                             radius: Tokens.radiusSm
                             activeFocusOnTab: true
-                            color: chipMouse.containsMouse || activeFocus ? "#23262e" : "#1c1f26"
+                            color: chipMouse.containsMouse || activeFocus ? Tokens.stateHoverSurface : Tokens.elevated
                             border.width: activeFocus ? 1 : 0
                             border.color: Accent.accent
                             Accessible.role: Accessible.Button
@@ -430,7 +430,7 @@ Scope {
                         radius: Tokens.radiusSm
                         activeFocusOnTab: available
                         color: (rowMouse.containsMouse || activeFocus) && available
-                             ? "#23262e" : "transparent"
+                             ? Tokens.stateHoverSurface : "transparent"
                         border.width: activeFocus ? 1 : 0
                         border.color: Accent.accent
                         opacity: available ? 1.0 : 0.4

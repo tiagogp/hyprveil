@@ -1,7 +1,7 @@
 /* Palette mirror of hypr/colors.conf — keep the neutrals in sync manually
    (waybar can't read it).
-   bg #0F1115 · surface #16181D · elevated #1C1F26 · text #F5F5F7 · muted #9A9CA5
-   dim #6B6E78 · border #2A2D35 · warn #E1A346 · error #E5484D
+   bg #09090B · surface #121216 · elevated #18181C · text #c4c0b6 · muted #96969e
+   dim #6e6e76 · border #2a2a31 · warn #c29a5e · error #c4574a
 
    The accent is generated from the wallpaper — never hardcode it here.
    accent.css defines @accent / @accent-hover / @accent-soft. See docs/CONFIGURATION.md. */
@@ -19,7 +19,7 @@ window#waybar {
   background: rgba(20, 22, 27, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  color: #f5f5f7;
+  color: #c4c0b6;
 }
 
 /* left: workspace squares */
@@ -35,7 +35,7 @@ window#waybar {
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: #6b6e78;
+  color: #6e6e76;
   font-size: 11px;
   font-weight: 600;
   transition: all 150ms ease;
@@ -48,18 +48,18 @@ window#waybar {
 }
 
 #workspaces button.urgent {
-  border-color: #e1a346;
-  color: #e1a346;
+  border-color: #c29a5e;
+  color: #c29a5e;
 }
 
 #workspaces button:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #9a9ca5;
+  color: #96969e;
 }
 
 /* center: window title */
 #window {
-  color: #9a9ca5;
+  color: #96969e;
   font-weight: 500;
 }
 
@@ -69,7 +69,7 @@ window#waybar {
 #custom-bluetooth,
 #custom-battery,
 #custom-notifications {
-  color: #9a9ca5;
+  color: #96969e;
   padding: 0 8px;
 }
 
@@ -81,7 +81,7 @@ window#waybar {
 #custom-media-label,
 #custom-media-toggle,
 #custom-media-next {
-  color: #9a9ca5;
+  color: #96969e;
   background: rgba(255, 255, 255, 0.04);
   padding: 0 7px;
 }
@@ -92,7 +92,7 @@ window#waybar {
 }
 
 #custom-media-label {
-  color: #f5f5f7;
+  color: #c4c0b6;
   font-size: 12px;
   padding-left: 6px;
   padding-right: 10px;
@@ -111,7 +111,7 @@ window#waybar {
 }
 
 #custom-bluetooth.disabled {
-  color: #6b6e78;
+  color: #6e6e76;
 }
 
 #custom-notifications.notification {
@@ -120,26 +120,26 @@ window#waybar {
 
 #custom-notifications.dnd-notification,
 #custom-notifications.dnd-none {
-  color: #6b6e78;
+  color: #6e6e76;
 }
 
 #custom-notifications.inhibited-notification,
 #custom-notifications.inhibited-none,
 #custom-notifications.dnd-inhibited-notification,
 #custom-notifications.dnd-inhibited-none {
-  color: #e1a346;
+  color: #c29a5e;
 }
 
 #custom-battery.warning {
-  color: #e1a346;
+  color: #c29a5e;
 }
 
 #custom-battery.critical {
-  color: #e5484d;
+  color: #c4574a;
 }
 
 #clock {
-  color: #f5f5f7;
+  color: #c4c0b6;
   font-weight: 600;
   padding: 0 8px;
   margin-right: 6px;
@@ -184,13 +184,13 @@ window#waybar.dock .modules-center {
   margin: 4px 3px;
   border-radius: 11px;
   border: 1px solid transparent;
-  background: #1c1f26;
+  background: #18181c;
   transition: all 150ms ease;
 }
 
 #custom-launcher:hover {
-  color: #f5f5f7;
-  background: #23262e;
+  color: #c4c0b6;
+  background: #232328;
 }
 
 /* dock slots — scripts/dock.sh's custom/dock-<N> pool (pinned apps, then
@@ -204,26 +204,26 @@ window#waybar.dock .modules-center {
   margin: 4px 3px;
   border-radius: 11px;
   border: 1px solid transparent;
-  background: #1c1f26;
-  color: #9a9ca5;
+  background: #18181c;
+  color: #96969e;
   font-size: 18px;
   transition: all 150ms ease;
 }
 
 .dock-btn:hover {
-  color: #f5f5f7;
-  background: #23262e;
+  color: #c4c0b6;
+  background: #232328;
 }
 
 /* pinned but not currently running — dimmed, like a closed dock icon */
 .dock-btn.pinned:not(.running) {
-  color: #6b6e78;
+  color: #6e6e76;
 }
 
 .dock-btn.active {
   background: rgba(225, 70, 88, 0.15);
   border-color: @accent;
-  color: #f5f5f7;
+  color: #c4c0b6;
 }
 
 /* apps with a real (colored) icon file — scripts/dock.sh sends a blank

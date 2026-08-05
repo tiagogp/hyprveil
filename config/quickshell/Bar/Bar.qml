@@ -28,8 +28,12 @@ PanelWindow {
     readonly property bool compact: displayMode === "compact"
     readonly property bool showMediaLabel: displayMode !== "compact"
 
+    // Rev 02's detached-chrome geometry: inset 12 on the sides, 10 off the top
+    // — an asymmetric margin rather than the uniform 10 every edge used before,
+    // so the bar reads as floating clear of the corner rather than centred in
+    // a padding box.
     anchors { top: true; left: true; right: true }
-    margins { top: Tokens.spacing2h; left: Tokens.spacing2h; right: Tokens.spacing2h }
+    margins { top: Tokens.spacing2h; left: Tokens.spacing3; right: Tokens.spacing3 }
 
     implicitHeight: 44
     color: "transparent"
@@ -111,6 +115,12 @@ PanelWindow {
                         text: "\u{f00ed}"
                         size: Tokens.iconSm
                         color: centerButton.active ? Accent.accentOnChrome : Tokens.dim
+
+                        // The glyph's ink sits a couple of px below the
+                        // Nerd Font's own vertical center, so AlignVCenter
+                        // reads as low next to the date text; nudge it up
+                        // to match dateTime's optical center.
+                        transform: Translate { y: -2 }
 
                         Behavior on color {
                             ColorAnimation {

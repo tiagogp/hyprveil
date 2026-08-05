@@ -301,7 +301,7 @@ Scope {
                             anchors.margins: Tokens.spacing2
                             radius: Tokens.radiusSm
                             activeFocusOnTab: true
-                            color: "#1c1f26"
+                            color: Tokens.elevated
                             antialiasing: true
                             property int imageInset: Tokens.spacing1
                             // The staged tile carries a heavier border than a

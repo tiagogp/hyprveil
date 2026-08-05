@@ -20,8 +20,8 @@ mkdir -p "$HOME" "$HYPRVEIL_STATE_HOME" "$TMP/bin"
 export PATH="$TMP/bin:$PATH"
 
 ACCENT="$REPO/config/hypr/scripts/accent.sh"
-DEFAULT_ACCENT="#e14658"
-DEFAULT_HOVER="#e86a79"
+DEFAULT_ACCENT="#ad7300"
+DEFAULT_HOVER="#c78b2e"
 
 # The real config tree, so rendering writes into the same layout it does on a
 # deployed system: write_if_changed skips any target whose directory is absent,
@@ -106,7 +106,7 @@ read -r r g b <<< "$(printf '%d %d %d\n' "0x${vivid:1:2}" "0x${vivid:3:2}" "0x${
 if [ "$b" -le "$r" ] || [ "$b" -le "$g" ]; then
     fail "extract did not pick the vivid blue region: $vivid"
 fi
-[ "$((r + g + b))" -gt 200 ] || fail "extracted accent is too dark to read on #0f1115: $vivid"
+[ "$((r + g + b))" -gt 200 ] || fail "extracted accent is too dark to read on #09090b: $vivid"
 
 grey=$(MOCK_IMAGE=grey "$ACCENT" extract "$image" 2> "$TMP/grey-warning")
 [ "$grey" = "$DEFAULT_ACCENT" ] \
@@ -157,7 +157,7 @@ done
 # starship reads one TOML file with no include mechanism; the accent AND the
 # neutral palette are both templated in, so both have to land.
 grep -q "accent = '#3b82f6'" "$C/starship.toml" || fail "starship accent not rendered from template"
-grep -q "text = '#f5f5f7'" "$C/starship.toml" || fail "starship neutral palette not rendered from neutrals.conf"
+grep -q "text = '#c4c0b6'" "$C/starship.toml" || fail "starship neutral palette not rendered from neutrals.conf"
 grep -q '@accent' "$C/mako/config" && fail "an unsubstituted placeholder survived rendering"
 grep -qE '@[a-z-]+@' "$C/starship.toml" && fail "an unsubstituted placeholder survived in starship"
 ok "set renders the accent into every include-based and templated consumer"
@@ -183,7 +183,7 @@ ok "applying an accent reloads every live component"
 # --------------------------------------------------------------------------
 "$ACCENT" set '#3B82F6' >/dev/null
 # hv_deploy_configs replaces each managed tree wholesale, restoring the
-# default-red copies committed to the repo. `render` is what puts the derived
+# default-amber copies committed to the repo. `render` is what puts the derived
 # accent back, and install.sh has to call it.
 for name in waybar rofi kitty hypr; do
     cp -a "$REPO/config/$name/." "$HYPRVEIL_CONFIG_HOME/$name/"
@@ -195,7 +195,7 @@ grep -q "@define-color accent $accent;" "$C/waybar/accent.css" \
 grep -q "accent.sh\" render\|accent.sh render" "$REPO/install.sh" \
     || fail "install.sh does not re-render the accent after replacing the config trees"
 # Every .in template must be deployed alongside its output, or that consumer
-# silently keeps the designed red: render_template returns early when the
+# silently keeps the designed amber: render_template returns early when the
 # template is absent. The Qt palettes are installed by the theming stage rather
 # than hv_deploy_configs, so they need their own check.
 grep -q 'hyprveil.conf.in' "$REPO/scripts/04-install-fedora-theming.sh" \
@@ -282,7 +282,7 @@ grep -q 'ACCENT_HELPER" chrome' "$C/hypr/scripts/wallpaper.sh" \
 "$ACCENT" auto on >/dev/null
 
 # A state file predating chromeAlpha is not corrupt — it must keep its accent
-# and pick up the default, not be reset to red.
+# and pick up the default, not be reset to amber.
 jq 'del(.chromeAlpha)' "$HYPRVEIL_STATE_HOME/accent.json" > "$TMP/legacy.json"
 jq --arg a '#3b82f6' '.accent = $a' "$TMP/legacy.json" > "$HYPRVEIL_STATE_HOME/accent.json"
 "$ACCENT" render >/dev/null
@@ -319,8 +319,8 @@ ok "malformed state recovers and invalid colors are rejected"
 # --------------------------------------------------------------------------
 listing=$("$ACCENT" preset list)
 [ -n "$listing" ] || fail "preset list printed nothing"
-grep -Fq "$(printf 'crimson\t%s' "$DEFAULT_ACCENT")" <<< "$listing" \
-    || fail "preset list is missing crimson at the designed default: $listing"
+grep -Fq "$(printf 'amber\t%s' "$DEFAULT_ACCENT")" <<< "$listing" \
+    || fail "preset list is missing amber at the designed default: $listing"
 while IFS=$'\t' read -r name hex; do
     [ -n "$name" ] || continue
     [[ "$hex" =~ ^#[0-9a-fA-F]{6}$ ]] || fail "preset $name has a malformed hex: $hex"

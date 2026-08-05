@@ -34,7 +34,12 @@ RowLayout {
             implicitWidth: active ? 36 : 28
             implicitHeight: showIcon ? 34 : 28
             radius: Tokens.radiusPill
-            color: active ? Accent.accentSoft : "transparent"
+            // Three states, not two: active carries the amber wash, an
+            // occupied-but-inactive workspace gets a faint white fill so it
+            // reads as "something is here" without competing with the active
+            // pill, and a genuinely empty one carries no fill at all.
+            color: active ? Accent.accentSoft
+                 : occupied ? Qt.rgba(1, 1, 1, 0.03) : "transparent"
             // Width stays 1 and the COLOUR carries the state, because
             // border.width is an int that snaps and would pop the outline in
             // while the fill and the active pill's width were still moving.

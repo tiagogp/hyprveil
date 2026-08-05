@@ -68,21 +68,13 @@ Item {
         }
     }
 
-    // The dock lift. Scale rather than position so the tile grows about its own
-    // centre and its neighbours do not reflow — a dock that shuffles sideways on
-    // hover makes the next tile a moving target. Press dips below rest so a
-    // click reads as landing, and because the dip is shorter than the lift it
-    // still feels like a button rather than a bounce.
-    //
-    // 1.08 is deliberately restrained: the tile is 44px, so this is a ~3.5px
-    // gain, enough to register in peripheral vision without the icon softening.
-    //
-    // A lifted tile goes further than hover and, unlike a press, does not dip:
-    // the whole point of the long press is that the tile has left the row and is
-    // now attached to the pointer, so it must not read as "still being clicked".
-    scale: tile.dragging ? 1.16
-         : mouse.pressed ? 0.96
-         : mouse.containsMouse ? 1.08 : 1.0
+    // Rev 02 drops hover/press magnification outright ("tiles never scale on
+    // hover... fill + border lighten only", frame 2c) — the Rectangle below
+    // already carries that via Tokens.stateHoverSurface. Scale survives for
+    // exactly one case: a tile picked up for reordering has genuinely left the
+    // row and is now attached to the pointer, which is a different signal than
+    // hover and reads as "this is being dragged", not "this is magnified".
+    scale: tile.dragging ? 1.16 : 1.0
 
     Behavior on scale {
         NumberAnimation {

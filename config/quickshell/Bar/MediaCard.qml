@@ -57,7 +57,10 @@ PopupWindow {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         implicitHeight: content.implicitHeight + Tokens.spacing3 * 2
-        elevation: 3
+        // Rev 02 groups every floating widget — media, OSD, notifications,
+        // the calendar and quick-settings dropdowns — on the same shadow
+        // tier; tier 3 is reserved for the lock screen's single card.
+        elevation: 2
         radius: Tokens.radiusLg
         tint: Tokens.chromeTintMedia
         opacity: root.open ? 1 : 0

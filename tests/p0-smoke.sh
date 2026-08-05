@@ -316,8 +316,8 @@ def contrast(a, b):
     hi, lo = sorted((luminance(a), luminance(b)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
 
-accent = "#e14658"
-surfaces = ["#0d0e11", "#15171b", "#1c1f26", "#23262e"]
+accent = "#ad7300"
+surfaces = ["#09090b", "#121216", "#18181c", "#232328"]
 assert min(contrast(accent, surface) for surface in surfaces) >= 3.0
 PY
 ok "Quick Settings, modal, dock-picker, and lock controls expose keyboard/accessibility wiring"
@@ -556,7 +556,7 @@ cat > "$HYPRVEIL_STATE_HOME/wallpapers.json" <<EOF
 {"version":1,"fallback":{"path":"$HYPRVEIL_CONFIG_HOME/hypr/wallpaper-default.jpg","fit":"cover"},"monitors":{}}
 EOF
 cat > "$HYPRVEIL_STATE_HOME/accent.json" <<'EOF'
-{"version":1,"accent":"#e14658","source":"default","auto":true,"chromeAlpha":"0.87"}
+{"version":1,"accent":"#ad7300","source":"default","auto":true,"chromeAlpha":"0.87"}
 EOF
 doctor=$("$REPO/hyprveil" doctor)
 printf '%s' "$doctor" | grep -q 'Fedora Linux 44 (Mock) is supported' || fail "doctor omitted Fedora support"

@@ -19,8 +19,11 @@ PRESETS_FILE="$SCRIPT_DIR/data/accent-presets.json"
 
 # The palette's designed accent. Every template ships with this value baked in,
 # so an unrendered checkout and a freshly deployed config look identical.
-DEFAULT_ACCENT="#e14658"
-DEFAULT_HOVER="#e86a79"
+#
+# Rev 02 ("MU-TH-UR // floating HUD") amber, darkened from the mockup's literal
+# #D99A3A to clear the 3.0:1 accent-on-chrome floor — see colors.conf.
+DEFAULT_ACCENT="#ad7300"
+DEFAULT_HOVER="#c78b2e"
 
 # The safe end of the adaptive chrome range, used before any wallpaper has been
 # measured. Deliberately the opaque end: an unrendered checkout shows a bar that
@@ -44,7 +47,7 @@ Usage:
   accent.sh auto [on|off]         follow wallpaper changes (default: on)
 
 `chrome` measures the wallpaper where the bar sits and picks the glassiest alpha
-that keeps muted text at 3.0:1, so a dark wallpaper gets a near-invisible bar.
+that keeps muted text at 4.5:1, so a dark wallpaper gets a near-invisible bar.
 Unlike the accent it is legibility rather than taste, so `auto off` does not
 disable it. See docs/CONFIGURATION.md.
 
@@ -89,7 +92,7 @@ histogram() {
 # would vanish against the dark neutrals, so frequency alone is the wrong
 # signal. Colors are scored on chroma and mid-range lightness first and
 # pixel share only as a tie-breaker, then the winner is pushed into a band that
-# is guaranteed to stay legible on #0f1115. A greyscale image therefore still
+# is guaranteed to stay legible on #09090b. A greyscale image therefore still
 # yields a usable (if muted) accent rather than an invisible near-black.
 #
 # Scored in OKLCH rather than HSL: OKLCH's chroma and lightness are
@@ -150,7 +153,7 @@ score_histogram() {
             l = best_score > 0 ? best_l : top_l
 
             # Legibility band on the dark neutrals: a muted wallpaper still has
-            # to produce an accent that reads against #0f1115 without competing
+            # to produce an accent that reads against #09090b without competing
             # with $text. Chroma tops out around 0.32 for in-gamut sRGB, so
             # 0.08-0.30 is "not washed out, not neon" in OKLCH units.
             if (c < 0.08) c = 0.08
@@ -176,9 +179,9 @@ score_histogram() {
 # CHROME_DIM is $text-dim, the faintest GLYPH chrome draws. It is darker than
 # muted and is NOT allowed to set the alpha: solving the bar opaque enough to
 # carry dim as text would cost every wallpaper a solid slab.
-CHROME_FG="9a9ca5"
-CHROME_DIM="6b6e78"
-CHROME_TINT="14161a"
+CHROME_FG="96969e"
+CHROME_DIM="6e6e76"
+CHROME_TINT="101013"
 
 # Text below 18.66px regular is held to 4.5:1 (WCAG SC 1.4.3). The bar's title
 # and clock are 13px, so this is the floor the alpha solves against.

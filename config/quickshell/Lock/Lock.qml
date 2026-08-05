@@ -68,7 +68,7 @@ Scope {
 
         surface: WlSessionLockSurface {
             id: lockSurface
-            color: "#0d0e11"
+            color: "#060607"
 
             // Authentication state lives on the surface so a multi-monitor lock
             // gets one context per surface rather than a shared one that two

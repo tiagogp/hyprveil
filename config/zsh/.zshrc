@@ -32,7 +32,7 @@ alias ip='ip -color=auto'
 # Fedora plugin paths (dnf: zsh-autosuggestions zsh-syntax-highlighting)
 if [ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
     source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6B6E78'   # dimmed ghost text, palette gray
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6e6e76'   # dimmed ghost text, palette gray
 fi
 # syntax highlighting must be sourced after every other plugin
 [ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && \
