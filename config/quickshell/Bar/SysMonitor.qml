@@ -15,14 +15,54 @@ RowLayout {
     id: root
 
     spacing: Tokens.spacing3
+    property bool watching: false
+    property bool compact: false
 
-    // The poll loop idles unless something is watching; the monitor is that
-    // something for as long as it exists in the bar.
-    Component.onCompleted: SysInfo.watch()
-    Component.onDestruction: SysInfo.unwatch()
+    function syncWatch(): void {
+        if (visible && !watching) {
+            SysInfo.watch();
+            watching = true;
+        } else if (!visible && watching) {
+            SysInfo.unwatch();
+            watching = false;
+        }
+    }
+
+    // Responsive layouts keep this component instantiated while hiding it, so
+    // visibility — not object lifetime — owns the poll subscription.
+    Component.onCompleted: syncWatch()
+    onVisibleChanged: syncWatch()
+    Component.onDestruction: if (watching) SysInfo.unwatch()
+
+    // At the lower edge of the full breakpoint all three values remain visible,
+    // but share one compact readout so the right island cannot cross the stable
+    // center island.
+    RowLayout {
+        visible: root.compact
+        spacing: Tokens.spacing1h
+
+        Glyph {
+            text: "\u{f035b}"
+            size: Tokens.iconSm
+            color: SysInfo.cpu > 0.9 || SysInfo.memory > 0.9
+                ? Tokens.warning : Tokens.muted
+        }
+
+        Text {
+            text: `${Math.round(SysInfo.cpu * 100)}% · `
+                + `${Math.round(SysInfo.memory * 100)}%`
+                + (SysInfo.hasTemperature
+                    ? ` · ${Math.round(SysInfo.temperature)}°` : "")
+            font.family: Tokens.fontUi
+            font.pixelSize: Tokens.textXs
+            color: Tokens.muted
+            renderType: Text.NativeRendering
+        }
+    }
 
     // CPU
     RowLayout {
+        visible: !root.compact
         spacing: Tokens.spacing1
 
         Glyph {
@@ -42,6 +82,7 @@ RowLayout {
 
     // Memory
     RowLayout {
+        visible: !root.compact
         spacing: Tokens.spacing1
 
         Glyph {
@@ -63,7 +104,7 @@ RowLayout {
     // battery group hides itself on a desktop rather than showing a dead 0.
     RowLayout {
         spacing: Tokens.spacing1
-        visible: SysInfo.hasTemperature
+        visible: !root.compact && SysInfo.hasTemperature
 
         Glyph {
             text: "\u{f050f}" // md-thermometer

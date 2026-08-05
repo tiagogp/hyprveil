@@ -257,5 +257,7 @@ Item {
         }
     }
 
-    // See BarButton: tooltips wait on a PopupWindow-based implementation.
+    // The dock keeps its label property independent from the bar's anchored
+    // tooltip component; dock labels will use the same PopupWindow pattern when
+    // they are surfaced.
 }

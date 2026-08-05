@@ -27,15 +27,15 @@ RowLayout {
             // and every workspace rendered as unoccupied.
             readonly property bool occupied: (ws?.toplevels?.values?.length ?? 0) > 0
 
-            implicitWidth: Tokens.spacing5
-            implicitHeight: Tokens.spacing5
-            radius: Tokens.radiusXs
+            implicitWidth: active ? 36 : 28
+            implicitHeight: 28
+            radius: Tokens.radiusPill
             color: active ? Accent.accentSoft : "transparent"
             // Width stays 1 and the COLOUR carries the state, because
             // border.width is an int that snaps and would pop the outline in
-            // while the fill was still fading. The pill is a fixed
-            // spacing5 square and a Rectangle draws its border inside, so a
-            // permanent 1px border costs no layout.
+            // while the fill and the active pill's width were still moving.
+            // Rectangle draws the permanent border inside, so it costs no
+            // layout when the pill expands from 28 to 36px.
             border.width: 1
             border.color: active ? Accent.accentOnChrome : "transparent"
 
@@ -66,6 +66,17 @@ RowLayout {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hyprland.dispatch("workspace " + pill.wsId)
+            }
+
+            Accessible.role: Accessible.Button
+            Accessible.name: `Workspace ${wsId}${active ? ", active" : ""}`
+
+            Behavior on implicitWidth {
+                NumberAnimation {
+                    duration: Motion.duration(Tokens.dur2h)
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Tokens.easeOut
+                }
             }
 
             Behavior on color {

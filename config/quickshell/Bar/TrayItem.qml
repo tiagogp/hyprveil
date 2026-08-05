@@ -6,11 +6,12 @@
 // which is how tray-based volume and brightness applets expect to be driven.
 //
 // The icon is imagery, not a Nerd Font glyph, so hover feedback is opacity
-// rather than the colour lift a BarButton uses: a third-party icon has no
+// rather than the colour lift a BarAction uses: a third-party icon has no
 // token colour to shift to.
 import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
+import Quickshell.Widgets
 import "../Services"
 import ".."
 
@@ -18,13 +19,17 @@ Item {
     id: root
 
     property var item: null
-    property var barWindow: null
+    // The item may live directly in the bar or inside the collapsed tray
+    // PopupWindow. Menus must anchor to whichever window actually hosts it.
+    property var hostWindow: null
 
-    implicitWidth: Tokens.iconLg
-    implicitHeight: Tokens.iconLg
+    implicitWidth: Tokens.iconHit
+    implicitHeight: Tokens.iconHit
+    Accessible.role: Accessible.Button
+    Accessible.name: root.item?.tooltipTitle || root.item?.title || "Tray item"
 
     function openMenu(): void {
-        if (!(root.item?.hasMenu ?? false) || !root.barWindow) return;
+        if (!(root.item?.hasMenu ?? false) || !root.hostWindow) return;
         // Scene coordinates equal the layer surface's own coordinates, so this
         // maps the icon's bottom edge straight into the window rect the anchor
         // wants — no hand-measured offset that drifts as the bar's contents
@@ -34,16 +39,11 @@ Item {
         menuAnchor.open();
     }
 
-    Image {
+    IconImage {
         id: icon
         anchors.centerIn: parent
         source: root.item?.icon ?? ""
-        width: Tokens.iconSm
-        height: Tokens.iconSm
-        sourceSize.width: Tokens.iconSm * 2
-        sourceSize.height: Tokens.iconSm * 2
-        fillMode: Image.PreserveAspectFit
-        smooth: true
+        implicitSize: Tokens.iconSm
         opacity: mouse.containsMouse ? 1 : 0.82
 
         Behavior on opacity {
@@ -84,6 +84,16 @@ Item {
     QsMenuAnchor {
         id: menuAnchor
         menu: root.item?.menu ?? null
-        anchor.window: root.barWindow
+        anchor.window: root.hostWindow
+    }
+
+    BarTooltip {
+        target: root
+        text: {
+            const title = root.item?.tooltipTitle || root.item?.title || "";
+            const detail = root.item?.tooltipDescription || "";
+            return detail === "" ? title : title + " — " + detail;
+        }
+        requested: mouse.containsMouse
     }
 }

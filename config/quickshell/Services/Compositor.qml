@@ -24,6 +24,22 @@ import Quickshell.Hyprland
 Singleton {
     id: root
 
+    // The current toplevel, guarded against Hyprland's stale activeToplevel
+    // value after switching to or emptying a workspace.
+    readonly property var activeWindow: {
+        const active = Hyprland.activeToplevel;
+        if (active?.workspace?.id === root.focusedWorkspaceId)
+            return active;
+        return Hyprland.toplevels.values.find(
+            w => w.workspace?.id === root.focusedWorkspaceId) ?? null;
+    }
+    readonly property string activeAppId:
+        (root.activeWindow?.lastIpcObject?.class ?? "").toLowerCase()
+    readonly property string activeDesktopId:
+        root.activeAppId === "" ? "" : root.activeAppId + ".desktop"
+    readonly property string activeIconSource: root.activeAppId === "" ? ""
+        : Icons.resolve(undefined, root.activeDesktopId, root.activeAppId, true)
+
     // Prefer Hyprland's own focus once events have set it; derive it from the
     // active window until then. Both track correctly after the first change, so
     // this is a cold-start bridge rather than a permanent workaround.
@@ -41,8 +57,8 @@ Singleton {
     // stale-activeToplevel case is exactly the one that was showing "hyprveil"
     // over a workspace full of windows.
     readonly property string activeTitle: {
-        const t = Hyprland.activeToplevel;
-        if (t && t.workspace?.id === root.focusedWorkspaceId && t.title !== "")
+        const t = root.activeWindow;
+        if (t && t.title !== "")
             return root.displayTitle(t.title);
         for (const w of Hyprland.toplevels.values) {
             if (w.workspace?.id !== root.focusedWorkspaceId) continue;

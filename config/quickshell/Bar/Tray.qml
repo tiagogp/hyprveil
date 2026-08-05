@@ -1,14 +1,4 @@
-// The system tray.
-//
-// The one thing StatusCluster could never be: it shows fixed glyphs for four
-// known services, but a tray is whatever happens to be running — Telegram,
-// nm-applet, a sync client — so it has to be a list driven by the model, not a
-// hand-placed row. Waybar could not render this at all, which is why apps that
-// only surface through a tray icon were simply invisible under the old bar.
-//
-// SystemTray.items is a StatusNotifierItem host; nothing here polls. The row
-// disappears when nothing is registered rather than holding an empty gap, the
-// same way the battery group in StatusCluster hides on a desktop.
+// StatusNotifier host with an inline wide mode and an anchored compact drawer.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -18,21 +8,72 @@ import ".."
 RowLayout {
     id: root
 
-    // The bar window, so each item's context menu can anchor to the bar's own
-    // geometry rather than a measured offset — passed down from Bar.qml the same
-    // way Media receives it.
-    property var barWindow: null
+    property var hostWindow: null
+    property bool collapsed: false
+    property bool drawerOpen: false
+    readonly property int count: SystemTray.items.values.length
 
     spacing: Tokens.spacing3
-    visible: SystemTray.items.values.length > 0
+    visible: count > 0
 
-    Repeater {
-        model: SystemTray.items
+    RowLayout {
+        visible: !root.collapsed
+        spacing: Tokens.spacing3
 
-        TrayItem {
-            required property var modelData
-            item: modelData
-            barWindow: root.barWindow
+        Repeater {
+            model: SystemTray.items
+
+            TrayItem {
+                required property var modelData
+                item: modelData
+                hostWindow: root.hostWindow
+            }
+        }
+    }
+
+    BarAction {
+        id: drawerAction
+        visible: root.collapsed
+        glyph: "\u{f0417}"
+        tooltip: root.count === 1 ? "1 tray item" : `${root.count} tray items`
+        active: root.drawerOpen
+        onClicked: root.drawerOpen = !root.drawerOpen
+    }
+
+    PopupWindow {
+        id: drawer
+        anchor.item: drawerAction
+        anchor.edges: Edges.Bottom
+        anchor.gravity: Edges.Bottom
+        anchor.adjustment: PopupAdjustment.All
+        anchor.margins.bottom: Tokens.spacing2
+        implicitWidth: drawerRow.implicitWidth + Tokens.spacing3 * 2
+        implicitHeight: 44 + Tokens.spacing2 * 2
+        color: "transparent"
+        grabFocus: true
+        visible: root.collapsed && root.drawerOpen && root.count > 0
+        onVisibleChanged: if (!visible) root.drawerOpen = false
+
+        Surface {
+            anchors.fill: parent
+            elevation: 2
+            radius: Tokens.radiusMd
+
+            RowLayout {
+                id: drawerRow
+                anchors.centerIn: parent
+                spacing: Tokens.spacing2
+
+                Repeater {
+                    model: SystemTray.items
+
+                    TrayItem {
+                        required property var modelData
+                        item: modelData
+                        hostWindow: drawer
+                    }
+                }
+            }
         }
     }
 }

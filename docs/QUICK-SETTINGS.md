@@ -44,11 +44,31 @@ otherwise live in separate places or external apps:
   the glyph promised. Clicking it while the full panel is open switches the view
   rather than closing, so the bell never needs two clicks. Right-click toggles
   do-not-disturb without opening anything.
-- Click the Bluetooth, network, or volume glyph in the bar to open the matching
-  `gnome-control-center` page (`bluetooth`, `wifi`, `sound`). These were
-  `blueman-manager`, `nm-connection-editor`, and `pavucontrol` — three unrelated
-  GTK3 dialogs, so three adjacent bar icons opened three different-looking
-  windows.
+- Click the Bluetooth, network, or volume action in the bar to open that section
+  inside Hyprveil's own panel. Clicking the same active action closes it; clicking
+  another switches sections in place. Contextual views include an **All
+  settings…** route back to the complete stack. The Audio section still links to
+  GNOME sound settings for advanced routing the shell does not own.
+
+## Three-island bar
+
+The top bar is one transparent layer-shell reservation with three independently
+sized glass islands: workspaces and the active app on the left, a stable
+date/clock in the real screen center, and media/status/actions on the right. A
+Quickshell `Region` mask makes the gaps click-through rather than invisible
+input blockers.
+
+The layout responds to each monitor's logical width. At 1600px and wider it
+shows the active title, media label, system monitors, and tray icons inline when
+they fit; larger trays use the drawer so they cannot cross the center island. From
+1280–1599px it collapses media and the tray and hides system-monitor detail.
+Below 1280px it keeps workspaces, a shorter date/clock, and essential status
+actions. Hidden wallpaper, Bluetooth, and system detail remain available from
+Quick Settings.
+
+Bar actions share a 40px hit target, hover/pressed states, accessible names, and
+layer-shell-safe anchored tooltips. Media detail and a compact tray drawer use
+the same anchored-popup behavior, including edge adjustment.
 
 When the notification backend is SwayNC or Mako instead of Quickshell, the panel
 is inactive and `SUPER+N` falls back to that backend's own control centre.
@@ -63,6 +83,9 @@ plain `quickshell` with no `-c`):
 |---|---|
 | `shell.qml` | Entry point; instantiates the bar and dock per monitor, plus the notification server, panel, lock, and Bluetooth watcher. |
 | `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
+| `Bar/Bar.qml` / `BarIsland.qml` | Responsive three-island composition and shared adaptive glass wrapper. |
+| `Bar/BarAction.qml` / `BarTooltip.qml` | Shared action states, accessibility, and anchored tooltips. |
+| `Bar/Media.qml` / `MediaCard.qml` | Compact media chip and its artwork, timeline, seek, and transport popup. |
 | `Panel/WifiSection.qml` / `BluetoothSection.qml` / `AudioSection.qml` / `PowerProfileSection.qml` / `ClipboardSection.qml` / `NotificationSection.qml` | The sections. |
 | `Panel/Section.qml` / `Toggle.qml` / `Segmented.qml` | Shared section chrome, the switch, and the segmented control. |
 | `Panel/Wallpapers.qml` | Modal thumbnail grid; renders `wallpaper.sh list`, stages a choice, and calls `wallpaper.sh apply` on **Apply**. |
@@ -73,7 +96,8 @@ plain `quickshell` with no `-c`):
 | `Osd/Osd.qml` | Coalesced volume, microphone mute, and brightness overlay driven by hardware-key helper calls. |
 | `Services/Keybinds.qml` | Parses `hypr/keybindings.conf` into sections, groups, and binds. The only thing that knows the bind syntax. |
 | `Lock/Lock.qml` | The session lock — see [RECOVERY.md](RECOVERY.md). |
-| `Bar/` / `Dock/` | Bar modules and the dock. |
+| `Bar/Tray.qml` / `TrayItem.qml` | Inline system tray or compact popup drawer with anchored native menus. |
+| `Dock/` | Application dock. |
 | `Dock/PinPicker.qml` | Modal pin picker; renders `dock-manager.sh entries`, stages a list, and calls `dock-manager.sh set` on **Apply**. |
 | `Services/Pins.qml` / `BluetoothWatch.qml` | Dock pin state and Bluetooth notifications. |
 | `Services/Icons.qml` | The icon fallback chain, shared by the dock tiles and the pin picker. |
