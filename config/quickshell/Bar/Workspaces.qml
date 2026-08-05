@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Widgets
 import ".."
 import "../Services"
 
@@ -26,9 +27,12 @@ RowLayout {
             // empty on these objects, so reading .windows off it always gave 0
             // and every workspace rendered as unoccupied.
             readonly property bool occupied: (ws?.toplevels?.values?.length ?? 0) > 0
+            readonly property string iconSource:
+                Compositor.iconSourceForWorkspace(wsId)
+            readonly property bool showIcon: iconSource !== ""
 
             implicitWidth: active ? 36 : 28
-            implicitHeight: 28
+            implicitHeight: showIcon ? 34 : 28
             radius: Tokens.radiusPill
             color: active ? Accent.accentSoft : "transparent"
             // Width stays 1 and the COLOUR carries the state, because
@@ -39,25 +43,47 @@ RowLayout {
             border.width: 1
             border.color: active ? Accent.accentOnChrome : "transparent"
 
-            Text {
-                renderType: Text.NativeRendering
+            ColumnLayout {
                 anchors.centerIn: parent
-                text: pill.wsId
-                font.family: Tokens.fontUi
-                font.pixelSize: Tokens.text2xs
-                font.weight: pill.active ? Tokens.weightBold : Tokens.weightSemibold
-                color: pill.active ? Accent.accentOnChrome
-                     : pill.occupied ? Tokens.muted
-                     : Accent.dimOnChrome
+                spacing: -Tokens.spacingHair
 
-                // The label crosses three colours (dim -> muted -> accent) as a
-                // workspace fills and focuses. Left unanimated it was the one
-                // part of the pill that snapped while the fill and border faded.
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Motion.duration(Tokens.dur1)
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: Tokens.easeStandard
+                IconImage {
+                    visible: pill.showIcon
+                    source: pill.iconSource
+                    implicitSize: 12
+                    opacity: pill.active ? 1.0 : 0.34
+                    Layout.alignment: Qt.AlignHCenter
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.duration(Tokens.dur1)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Tokens.easeStandard
+                        }
+                    }
+                }
+
+                Text {
+                    renderType: Text.NativeRendering
+                    Layout.alignment: Qt.AlignHCenter
+                    text: pill.wsId
+                    font.family: Tokens.fontUi
+                    font.pixelSize: pill.showIcon ? 10 : Tokens.text2xs
+                    font.weight: pill.active ? Tokens.weightBold : Tokens.weightSemibold
+                    color: pill.active ? Accent.accentOnChrome
+                         : pill.occupied ? Tokens.muted
+                         : Accent.dimOnChrome
+
+                    // The label crosses three colours (dim -> muted -> accent)
+                    // as a workspace fills and focuses. Left unanimated it was
+                    // the one part of the pill that snapped while the fill and
+                    // border faded.
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.duration(Tokens.dur1)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Tokens.easeStandard
+                        }
                     }
                 }
             }

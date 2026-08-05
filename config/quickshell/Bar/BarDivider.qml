@@ -1,4 +1,4 @@
-// Quiet separation between related controls inside a bar island.
+// Quiet separation between related controls inside the bar.
 import QtQuick
 import ".."
 

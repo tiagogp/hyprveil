@@ -18,6 +18,11 @@ Item {
     property color glyphColor: Tokens.muted
     property bool active: false
     property bool accentOnHover: false
+    // "ghost" (default) is the chrome-wide transparent/hover-tint button.
+    // "primary" is a solid accent-filled circle for the one action per
+    // surface that should read as the main call to action (media transport).
+    property string variant: "ghost"
+    readonly property bool primary: root.variant === "primary"
     readonly property bool hovered: mouse.containsMouse
 
     signal clicked()
@@ -34,10 +39,12 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: Tokens.radiusSm
-        color: root.active ? Accent.accentSoft
-            : mouse.containsMouse ? Tokens.stateHoverSurface : "transparent"
-        border.width: root.active ? 1 : 0
+        radius: root.primary ? Tokens.radiusPill : Tokens.radiusSm
+        color: root.primary
+            ? (mouse.containsMouse ? Accent.accentHover : Accent.accent)
+            : root.active ? Accent.accentSoft
+                : mouse.containsMouse ? Tokens.stateHoverSurface : "transparent"
+        border.width: (!root.primary && root.active) ? 1 : 0
         border.color: Accent.accentOnChrome
 
         Behavior on color {
@@ -65,9 +72,10 @@ Item {
             visible: root.iconSource === "" && root.glyph !== ""
             text: root.glyph
             size: Tokens.iconSm
-            color: mouse.containsMouse
-                ? (root.accentOnHover ? Accent.accentOnChrome : Tokens.text)
-                : root.active ? Accent.accentOnChrome : root.glyphColor
+            color: root.primary ? Accent.accentFg
+                : mouse.containsMouse
+                    ? (root.accentOnHover ? Accent.accentOnChrome : Tokens.text)
+                    : root.active ? Accent.accentOnChrome : root.glyphColor
 
             Behavior on color {
                 ColorAnimation {

@@ -362,19 +362,19 @@ grep -q 'Calendar {' "$REPO/config/quickshell/shell.qml" \
 grep -q 'calendar.open = !bar.calendar.open' "$REPO/config/quickshell/Bar/Bar.qml" \
     || fail "the bar clock does not toggle the calendar"
 
-# Three-island bar: reusable surfaces/actions, click-through gaps, stable center
-# clock, and explicit responsive classes. The old manual title/media offsets
-# must not creep back in.
+# Single-surface bar: reusable actions, click-through outer margins, stable
+# center clock, and explicit responsive classes. The old manual title/media
+# offsets must not creep back in.
 for component in BarIsland BarAction BarDivider BarTooltip MediaCard; do
     [ -f "$REPO/config/quickshell/Bar/$component.qml" ] \
         || fail "missing reusable bar component: $component"
 done
-[ "$(grep -c 'BarIsland {' "$REPO/config/quickshell/Bar/Bar.qml")" -eq 3 ] \
-    || fail "the top bar is not composed from exactly three islands"
+[ "$(grep -c 'id: barSurface' "$REPO/config/quickshell/Bar/Bar.qml")" -eq 1 ] \
+    || fail "the top bar does not expose one glass surface"
 grep -q 'mask: Region {' "$REPO/config/quickshell/Bar/Bar.qml" \
-    || fail "transparent gaps in the bar do not have a click-through mask"
-[ "$(grep -c 'Region { item:' "$REPO/config/quickshell/Bar/Bar.qml")" -eq 2 ] \
-    || fail "the bar mask does not combine all three island regions"
+    || fail "outer bar margins do not have a click-through mask"
+grep -q 'item: barSurface' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the bar mask is not bound to the single surface"
 grep -q 'monitorWidth >= 1600' "$REPO/config/quickshell/Bar/Bar.qml" \
     || fail "the full bar breakpoint is missing"
 grep -q 'monitorWidth >= 1280' "$REPO/config/quickshell/Bar/Bar.qml" \
@@ -383,10 +383,10 @@ for mode in full standard compact; do
     grep -q "\"$mode\"" "$REPO/config/quickshell/Bar/Bar.qml" \
         || fail "the bar has no $mode responsive mode"
 done
-grep -q 'interactive: true' "$REPO/config/quickshell/Bar/Bar.qml" \
-    || fail "the complete center island is not clickable"
-grep -q 'active: bar.calendar?.open' "$REPO/config/quickshell/Bar/Bar.qml" \
-    || fail "the center island does not show the calendar's active state"
+grep -q 'Accessible.name: "Open calendar, " + dateTime.text' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the center clock click target is not exposed as an accessible button"
+grep -q 'readonly property bool active: bar.calendar?.open' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the center clock does not show the calendar's active state"
 grep -q 'SystemClock {' "$REPO/config/quickshell/Time.qml" \
     || fail "Time does not use Quickshell's minute-aligned SystemClock"
 grep -q 'precision: SystemClock.Minutes' "$REPO/config/quickshell/Time.qml" \
@@ -414,7 +414,15 @@ grep -q 'activeAppId' "$REPO/config/quickshell/Services/Compositor.qml" \
     || fail "the compositor service does not expose active-app identity"
 grep -q 'activeIconSource' "$REPO/config/quickshell/Services/Compositor.qml" \
     || fail "the compositor service does not expose the active-app icon"
-ok "three-island bar uses reusable, responsive, anchored Quickshell primitives"
+grep -q 'iconSourceForWorkspace' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "the compositor service does not expose workspace app icons"
+grep -q 'Pins.desktopIdForApp(appId)' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "workspace icons do not reuse pinned desktop ids"
+grep -q 'function desktopIdForApp(appId: string)' "$REPO/config/quickshell/Services/Pins.qml" \
+    || fail "pin state does not expose desktop ids by app class"
+grep -q 'opacity: pill.active ? 1.0 : 0.34' "$REPO/config/quickshell/Bar/Workspaces.qml" \
+    || fail "inactive workspace app icons are not visually muted"
+ok "single bar uses reusable, responsive, anchored Quickshell primitives"
 
 # Contextual status routing keeps the bar inside Hyprveil's own visual system.
 grep -q 'function toggleSection(section: string)' \

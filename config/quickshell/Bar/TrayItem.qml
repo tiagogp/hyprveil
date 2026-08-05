@@ -22,8 +22,9 @@ Item {
     // The item may live directly in the bar or inside the collapsed tray
     // PopupWindow. Menus must anchor to whichever window actually hosts it.
     property var hostWindow: null
+    property bool compact: false
 
-    implicitWidth: Tokens.iconHit
+    implicitWidth: compact ? 28 : Tokens.iconHit
     implicitHeight: Tokens.iconHit
     Accessible.role: Accessible.Button
     Accessible.name: root.item?.tooltipTitle || root.item?.title || "Tray item"

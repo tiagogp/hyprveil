@@ -50,18 +50,18 @@ otherwise live in separate places or external apps:
   settings…** route back to the complete stack. The Audio section still links to
   GNOME sound settings for advanced routing the shell does not own.
 
-## Three-island bar
+## Single bar
 
-The top bar is one transparent layer-shell reservation with three independently
-sized glass islands: workspaces and the active app on the left, a stable
-date/clock in the real screen center, and media/status/actions on the right. A
-Quickshell `Region` mask makes the gaps click-through rather than invisible
-input blockers.
+The top bar is one transparent layer-shell reservation with a single glass
+surface: workspaces and the active app on the left, a stable date/clock in the
+real screen center, and media/status/actions on the right. A Quickshell `Region`
+mask keeps the outer margins click-through rather than invisible input blockers.
 
 The layout responds to each monitor's logical width. At 1600px and wider it
 shows the active title, media label, system monitors, and tray icons inline when
-they fit; larger trays use the drawer so they cannot cross the center island. From
-1280–1599px it collapses media and the tray and hides system-monitor detail.
+they fit; larger trays use the drawer so they cannot cross the center clock. From
+1280–1599px it keeps a shorter media label, collapses the tray, and hides
+system-monitor detail.
 Below 1280px it keeps workspaces, a shorter date/clock, and essential status
 actions. Hidden wallpaper, Bluetooth, and system detail remain available from
 Quick Settings.
@@ -83,7 +83,7 @@ plain `quickshell` with no `-c`):
 |---|---|
 | `shell.qml` | Entry point; instantiates the bar and dock per monitor, plus the notification server, panel, lock, and Bluetooth watcher. |
 | `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
-| `Bar/Bar.qml` / `BarIsland.qml` | Responsive three-island composition and shared adaptive glass wrapper. |
+| `Bar/Bar.qml` / `BarIsland.qml` | Responsive single-bar composition and shared adaptive glass wrapper. |
 | `Bar/BarAction.qml` / `BarTooltip.qml` | Shared action states, accessibility, and anchored tooltips. |
 | `Bar/Media.qml` / `MediaCard.qml` | Compact media chip and its artwork, timeline, seek, and transport popup. |
 | `Panel/WifiSection.qml` / `BluetoothSection.qml` / `AudioSection.qml` / `PowerProfileSection.qml` / `ClipboardSection.qml` / `NotificationSection.qml` | The sections. |

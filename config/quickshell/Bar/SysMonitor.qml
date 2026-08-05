@@ -35,8 +35,8 @@ RowLayout {
     Component.onDestruction: if (watching) SysInfo.unwatch()
 
     // At the lower edge of the full breakpoint all three values remain visible,
-    // but share one compact readout so the right island cannot cross the stable
-    // center island.
+    // but share one compact readout so the right side cannot cross the stable
+    // center clock.
     RowLayout {
         visible: root.compact
         spacing: Tokens.spacing1h

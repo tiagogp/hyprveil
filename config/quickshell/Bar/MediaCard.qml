@@ -86,10 +86,20 @@ PopupWindow {
                 spacing: Tokens.spacing3
 
                 ClippingRectangle {
-                    implicitWidth: 72
-                    implicitHeight: 72
+                    implicitWidth: 76
+                    implicitHeight: 76
                     radius: Tokens.radiusMd
                     color: Tokens.elevated
+                    border.width: 2
+                    border.color: root.playing ? Accent.accent : Qt.rgba(1, 1, 1, Tokens.elev1Border)
+
+                    Behavior on border.color {
+                        ColorAnimation {
+                            duration: Motion.duration(Tokens.dur2)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Tokens.easeStandard
+                        }
+                    }
 
                     Image {
                         id: albumArt
@@ -210,7 +220,7 @@ PopupWindow {
                 }
 
                 RowLayout {
-                    spacing: Tokens.spacing1
+                    spacing: Tokens.spacing1h
 
                     BarAction {
                         glyph: "\u{f04ae}"
@@ -219,9 +229,9 @@ PopupWindow {
                         onClicked: root.player?.previous()
                     }
                     BarAction {
+                        variant: "primary"
                         glyph: root.playing ? "\u{f03e4}" : "\u{f040a}"
                         tooltip: root.playing ? "Pause" : "Play"
-                        active: root.playing
                         enabled: root.player?.canTogglePlaying ?? false
                         onClicked: root.player?.togglePlaying()
                     }

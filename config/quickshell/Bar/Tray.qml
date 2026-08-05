@@ -13,12 +13,12 @@ RowLayout {
     property bool drawerOpen: false
     readonly property int count: SystemTray.items.values.length
 
-    spacing: Tokens.spacing3
+    spacing: Tokens.spacing1
     visible: count > 0
 
     RowLayout {
         visible: !root.collapsed
-        spacing: Tokens.spacing3
+        spacing: Tokens.spacingHair
 
         Repeater {
             model: SystemTray.items
@@ -26,6 +26,7 @@ RowLayout {
             TrayItem {
                 required property var modelData
                 item: modelData
+                compact: true
                 hostWindow: root.hostWindow
             }
         }

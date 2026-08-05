@@ -36,9 +36,14 @@ Singleton {
     readonly property string activeAppId:
         (root.activeWindow?.lastIpcObject?.class ?? "").toLowerCase()
     readonly property string activeDesktopId:
-        root.activeAppId === "" ? "" : root.activeAppId + ".desktop"
+        root.desktopIdForApp(root.activeAppId)
+    readonly property var activeDesktopEntry:
+        root.activeAppId === "" ? null
+        : DesktopEntries.byId(root.activeDesktopId)
+          ?? DesktopEntries.byId(root.activeAppId)
     readonly property string activeIconSource: root.activeAppId === "" ? ""
-        : Icons.resolve(undefined, root.activeDesktopId, root.activeAppId, true)
+        : Icons.resolve(root.activeDesktopEntry?.icon,
+                        root.activeDesktopId, root.activeAppId, true)
 
     // Prefer Hyprland's own focus once events have set it; derive it from the
     // active window until then. Both track correctly after the first change, so
@@ -77,6 +82,31 @@ Singleton {
 
     function workspace(id: int): var {
         return Hyprland.workspaces.values.find(w => w.id === id) ?? null;
+    }
+
+    function windowForWorkspace(id: int): var {
+        if (root.activeWindow?.workspace?.id === id)
+            return root.activeWindow;
+        return Hyprland.toplevels.values.find(w => w.workspace?.id === id) ?? null;
+    }
+
+    function iconSourceForWindow(window: var): string {
+        const appId = (window?.lastIpcObject?.class ?? "").toLowerCase();
+        if (appId === "")
+            return "";
+        const desktopId = root.desktopIdForApp(appId);
+        const entry = DesktopEntries.byId(desktopId) ?? DesktopEntries.byId(appId);
+        return Icons.resolve(entry?.icon, desktopId, appId, true);
+    }
+
+    function iconSourceForWorkspace(id: int): string {
+        return root.iconSourceForWindow(root.windowForWorkspace(id));
+    }
+
+    function desktopIdForApp(appId: string): string {
+        if (appId === "")
+            return "";
+        return Pins.desktopIdForApp(appId) || appId + ".desktop";
     }
 
     // Windows on the focused workspace, by lowercased class.

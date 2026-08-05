@@ -41,7 +41,21 @@ Scope {
                 try {
                     const c = JSON.parse(text);
                     root.dir = c.dir ?? "";
-                    root.images = c.images ?? [];
+                    // Reassigning root.images always replaces the GridView's
+                    // model with a new array, even when the contents are
+                    // identical — the view can't tell it's the same list, so
+                    // it tears down and rebuilds every delegate, and every
+                    // thumbnail Image with it. That's the blank-then-pop-in
+                    // flash on reopen despite the Image cache below: the
+                    // pixmap is cached, but the Image *element* holding it
+                    // was just destroyed and recreated. Keeping the old
+                    // array when nothing changed keeps the delegates (and
+                    // their decoded thumbnails) alive across reopenings.
+                    const newImages = c.images ?? [];
+                    const sameImages = newImages.length === root.images.length
+                        && newImages.every((p, i) => p === root.images[i]);
+                    if (!sameImages)
+                        root.images = newImages;
                     root.outputs = c.outputs ?? [];
                     // A monitor can disappear between openings; fall back to
                     // "all" rather than silently applying to a dead output.

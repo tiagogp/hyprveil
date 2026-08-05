@@ -1,4 +1,4 @@
-// Connectivity, audio and battery controls for the right bar island.
+// Connectivity, audio and battery controls for the right side of the bar.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Bluetooth
