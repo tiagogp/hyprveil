@@ -334,7 +334,8 @@ grep -q 'HYPRVEIL_STATE_HOME' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion service ignores the HYPRVEIL_STATE_HOME test override"
 # Every animated surface added for the desktop-polish work routes its durations
 # through the service; a raw Tokens.durN in a Behavior would ignore the profile.
-for surface in Osd/Osd Panel/AudioSlider Overview/Overview Overview/WindowTile Bar/TrayItem; do
+for surface in Osd/Osd Panel/AudioSlider Overview/Overview Overview/WindowTile \
+        Bar/TrayItem Bar/BarIsland Bar/BarAction Bar/BarTooltip Bar/MediaCard; do
     grep -q 'Motion.duration(' "$REPO/config/quickshell/$surface.qml" \
         || fail "$surface animates without honoring the reduced-motion profile"
 done
@@ -361,12 +362,94 @@ grep -q 'Calendar {' "$REPO/config/quickshell/shell.qml" \
 grep -q 'calendar.open = !bar.calendar.open' "$REPO/config/quickshell/Bar/Bar.qml" \
     || fail "the bar clock does not toggle the calendar"
 
+# Single-surface bar: reusable actions, click-through outer margins, stable
+# center clock, and explicit responsive classes. The old manual title/media
+# offsets must not creep back in.
+for component in BarIsland BarAction BarDivider BarTooltip MediaCard; do
+    [ -f "$REPO/config/quickshell/Bar/$component.qml" ] \
+        || fail "missing reusable bar component: $component"
+done
+[ "$(grep -c 'id: barSurface' "$REPO/config/quickshell/Bar/Bar.qml")" -eq 1 ] \
+    || fail "the top bar does not expose one glass surface"
+grep -q 'mask: Region {' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "outer bar margins do not have a click-through mask"
+grep -q 'item: barSurface' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the bar mask is not bound to the single surface"
+grep -q 'monitorWidth >= 1600' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the full bar breakpoint is missing"
+grep -q 'monitorWidth >= 1280' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the supported 1280px bar breakpoint is missing"
+for mode in full standard compact; do
+    grep -q "\"$mode\"" "$REPO/config/quickshell/Bar/Bar.qml" \
+        || fail "the bar has no $mode responsive mode"
+done
+grep -q 'Accessible.name: "Open calendar, " + dateTime.text' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the center clock click target is not exposed as an accessible button"
+grep -q 'readonly property bool active: bar.calendar?.open' "$REPO/config/quickshell/Bar/Bar.qml" \
+    || fail "the center clock does not show the calendar's active state"
+grep -q 'SystemClock {' "$REPO/config/quickshell/Time.qml" \
+    || fail "Time does not use Quickshell's minute-aligned SystemClock"
+grep -q 'precision: SystemClock.Minutes' "$REPO/config/quickshell/Time.qml" \
+    || fail "SystemClock wakes more often than the minute-based UI needs"
+grep -q 'Tokens.iconHit' "$REPO/config/quickshell/Bar/BarAction.qml" \
+    || fail "bar actions do not use the shared 40px hit target"
+grep -q 'Accessible.name' "$REPO/config/quickshell/Bar/BarAction.qml" \
+    || fail "bar actions do not expose accessible names"
+grep -q 'PopupWindow {' "$REPO/config/quickshell/Bar/BarTooltip.qml" \
+    || fail "bar tooltips are not layer-shell-safe anchored popups"
+grep -q 'anchor.item: anchorItem' "$REPO/config/quickshell/Bar/MediaCard.qml" \
+    || fail "media detail is not anchored to its chip"
+grep -q 'property string displayMode' "$REPO/config/quickshell/Bar/Media.qml" \
+    || fail "media has no responsive full/icon display contract"
+grep -q 'PopupWindow {' "$REPO/config/quickshell/Bar/Tray.qml" \
+    || fail "the collapsed tray is not an anchored drawer popup"
+grep -q 'implicitWidth: active ? 36 : 28' "$REPO/config/quickshell/Bar/Workspaces.qml" \
+    || fail "workspaces do not use the 36px active and 28px inactive pills"
+! grep -Eq 'gapLeft|gapRight|opticalBias|bannerRightOffset' \
+    "$REPO/config/quickshell/Bar/Bar.qml" \
+    "$REPO/config/quickshell/Bar/Media.qml" \
+    "$REPO/config/quickshell/Bar/MediaCard.qml" \
+    || fail "manual bar or media screen-offset arithmetic returned"
+grep -q 'activeAppId' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "the compositor service does not expose active-app identity"
+grep -q 'activeIconSource' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "the compositor service does not expose the active-app icon"
+grep -q 'iconSourceForWorkspace' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "the compositor service does not expose workspace app icons"
+grep -q 'Pins.desktopIdForApp(appId)' "$REPO/config/quickshell/Services/Compositor.qml" \
+    || fail "workspace icons do not reuse pinned desktop ids"
+grep -q 'function desktopIdForApp(appId: string)' "$REPO/config/quickshell/Services/Pins.qml" \
+    || fail "pin state does not expose desktop ids by app class"
+grep -q 'opacity: pill.active ? 1.0 : 0.34' "$REPO/config/quickshell/Bar/Workspaces.qml" \
+    || fail "inactive workspace app icons are not visually muted"
+ok "single bar uses reusable, responsive, anchored Quickshell primitives"
+
+# Contextual status routing keeps the bar inside Hyprveil's own visual system.
+grep -q 'function toggleSection(section: string)' \
+    "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+    || fail "Quick Settings has no contextual section toggle API"
+for view in wifi bluetooth audio notifications; do
+    grep -q "root.view === \"$view\"" \
+        "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+        || fail "Quick Settings has no $view contextual view"
+    grep -q "toggleSection(\"$view\")" \
+        "$REPO/config/quickshell/Bar/"*.qml \
+        || fail "the bar never routes to the $view contextual view"
+done
+grep -q 'text: "All settings…"' "$REPO/config/quickshell/Panel/QuickSettings.qml" \
+    || fail "contextual Quick Settings has no route back to the full panel"
+ok "bar status actions route to contextual Quick Settings views"
+
 # System tray: a StatusNotifier host in the bar, hidden when empty, with the
 # three-button contract and a menu anchor.
 grep -q 'Quickshell.Services.SystemTray' "$REPO/config/quickshell/Bar/Tray.qml" \
     || fail "Tray does not use the SystemTray service"
-grep -q 'SystemTray.items.values.length > 0' "$REPO/config/quickshell/Bar/Tray.qml" \
+grep -q 'visible: count > 0' "$REPO/config/quickshell/Bar/Tray.qml" \
     || fail "Tray does not hide itself when nothing is registered"
+grep -q 'property bool collapsed' "$REPO/config/quickshell/Bar/Tray.qml" \
+    || fail "Tray has no compact drawer mode"
+grep -q 'property var hostWindow' "$REPO/config/quickshell/Bar/TrayItem.qml" \
+    || fail "tray menus cannot follow items between the bar and drawer"
 grep -q 'QsMenuAnchor' "$REPO/config/quickshell/Bar/TrayItem.qml" \
     || fail "tray items have no context-menu anchor"
 grep -q 'Tray {' "$REPO/config/quickshell/Bar/Bar.qml" \

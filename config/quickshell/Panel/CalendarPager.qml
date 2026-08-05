@@ -1,6 +1,6 @@
 // A month-pager chevron for the calendar header.
 //
-// Small enough that BarButton's icon-size hit target is too big and its
+// Small enough that BarAction's icon-size hit target is too big and its
 // bar-tuned hover colours are the wrong ones (those lift against the measured
 // chrome fill; this sits on a panel). A local disc that echoes the panel's close
 // button keeps the two feeling like one control set.

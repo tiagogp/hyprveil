@@ -51,4 +51,13 @@ Singleton {
             return [];
         }
     }
+
+    function desktopIdForApp(appId: string): string {
+        const wanted = appId.toLowerCase();
+        for (const pin of root.pins) {
+            if ((pin.app_id ?? "").toLowerCase() === wanted)
+                return pin.desktop_id ?? "";
+        }
+        return "";
+    }
 }

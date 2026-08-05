@@ -28,6 +28,10 @@ clones pull these changes in.
 
 ### Added
 
+- The Quickshell top bar is now three responsive glass islands with a stable
+  centered date/clock, progressive detail reduction at 1600px and 1280px,
+  click-through gaps, anchored tooltips/media/tray popups, and contextual
+  Quick Settings routes for network, Bluetooth, audio, and notifications.
 - `xdg-desktop-portal-gtk` is now a required dependency and installed in
   `scripts/01-install-fedora-core.sh`'s core stage — without it, GTK file-picker
   dialogs have no portal backend to render through.

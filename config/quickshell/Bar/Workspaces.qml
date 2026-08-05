@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Widgets
 import ".."
 import "../Services"
 
@@ -26,38 +27,63 @@ RowLayout {
             // empty on these objects, so reading .windows off it always gave 0
             // and every workspace rendered as unoccupied.
             readonly property bool occupied: (ws?.toplevels?.values?.length ?? 0) > 0
+            readonly property string iconSource:
+                Compositor.iconSourceForWorkspace(wsId)
+            readonly property bool showIcon: iconSource !== ""
 
-            implicitWidth: Tokens.spacing5
-            implicitHeight: Tokens.spacing5
-            radius: Tokens.radiusXs
+            implicitWidth: active ? 36 : 28
+            implicitHeight: showIcon ? 34 : 28
+            radius: Tokens.radiusPill
             color: active ? Accent.accentSoft : "transparent"
             // Width stays 1 and the COLOUR carries the state, because
             // border.width is an int that snaps and would pop the outline in
-            // while the fill was still fading. The pill is a fixed
-            // spacing5 square and a Rectangle draws its border inside, so a
-            // permanent 1px border costs no layout.
+            // while the fill and the active pill's width were still moving.
+            // Rectangle draws the permanent border inside, so it costs no
+            // layout when the pill expands from 28 to 36px.
             border.width: 1
             border.color: active ? Accent.accentOnChrome : "transparent"
 
-            Text {
-                renderType: Text.NativeRendering
+            ColumnLayout {
                 anchors.centerIn: parent
-                text: pill.wsId
-                font.family: Tokens.fontUi
-                font.pixelSize: Tokens.text2xs
-                font.weight: pill.active ? Tokens.weightBold : Tokens.weightSemibold
-                color: pill.active ? Accent.accentOnChrome
-                     : pill.occupied ? Tokens.muted
-                     : Accent.dimOnChrome
+                spacing: -Tokens.spacingHair
 
-                // The label crosses three colours (dim -> muted -> accent) as a
-                // workspace fills and focuses. Left unanimated it was the one
-                // part of the pill that snapped while the fill and border faded.
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Motion.duration(Tokens.dur1)
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: Tokens.easeStandard
+                IconImage {
+                    visible: pill.showIcon
+                    source: pill.iconSource
+                    implicitSize: 12
+                    opacity: pill.active ? 1.0 : 0.34
+                    Layout.alignment: Qt.AlignHCenter
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.duration(Tokens.dur1)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Tokens.easeStandard
+                        }
+                    }
+                }
+
+                Text {
+                    renderType: Text.NativeRendering
+                    Layout.alignment: Qt.AlignHCenter
+                    text: pill.wsId
+                    font.family: Tokens.fontUi
+                    font.pixelSize: pill.showIcon ? 10 : Tokens.text2xs
+                    font.weight: pill.active ? Tokens.weightBold : Tokens.weightSemibold
+                    color: pill.active ? Accent.accentOnChrome
+                         : pill.occupied ? Tokens.muted
+                         : Accent.dimOnChrome
+
+                    // The label crosses three colours (dim -> muted -> accent)
+                    // as a workspace fills and focuses. Left unanimated it was
+                    // the one part of the pill that snapped while the fill and
+                    // border faded.
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.duration(Tokens.dur1)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Tokens.easeStandard
+                        }
                     }
                 }
             }
@@ -66,6 +92,17 @@ RowLayout {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hyprland.dispatch("workspace " + pill.wsId)
+            }
+
+            Accessible.role: Accessible.Button
+            Accessible.name: `Workspace ${wsId}${active ? ", active" : ""}`
+
+            Behavior on implicitWidth {
+                NumberAnimation {
+                    duration: Motion.duration(Tokens.dur2h)
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Tokens.easeOut
+                }
             }
 
             Behavior on color {

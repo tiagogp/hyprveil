@@ -738,7 +738,7 @@ Scope {
                             }
 
                             // Transport. These are bare MouseAreas rather than
-                            // BarButton because BarButton carries a tooltip
+                            // BarAction because the bar control carries a tooltip
                             // PopupWindow, and a lock surface is not a window
                             // stack that can host one.
                             //

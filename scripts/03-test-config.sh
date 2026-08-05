@@ -63,6 +63,8 @@ for f in hypr/hyprland.conf hypr/colors.conf hypr/variables.conf hypr/monitors.c
          kitty/kitty.conf kitty/accent.conf kitty/hyprveil-session.sh \
          rofi/config.rasi rofi/hyprveil.rasi rofi/hyprveil.rasi.in rofi/accent.rasi swaync/config.json swaync/style.css swaync/accent.css \
          swaync/style.css.in wlogout/style.css.in quickshell/Tokens.qml.in quickshell/Tokens.qml \
+         quickshell/Bar/Bar.qml quickshell/Bar/BarIsland.qml quickshell/Bar/BarAction.qml \
+         quickshell/Bar/BarDivider.qml quickshell/Bar/BarTooltip.qml quickshell/Bar/MediaCard.qml \
          wlogout/layout wlogout/style.css wlogout/accent.css \
          gtk-3.0/settings.ini gtk-3.0/gtk.css gtk-3.0/accent.css gtk-4.0/settings.ini gtk-4.0/gtk.css gtk-4.0/accent.css \
          qt5ct/qt5ct.conf qt5ct/colors/hyprveil.conf \

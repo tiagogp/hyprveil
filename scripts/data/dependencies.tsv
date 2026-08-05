@@ -20,7 +20,7 @@ required|glib2|gio|desktop-entry dock launching
 required|gtk3|gtk-launch|dock fallback when DesktopEntries cannot resolve a pin
 optional|bluez|bluetoothctl|Bluetooth status
 optional|blueman|blueman-manager|Bluetooth management
-optional|gnome-control-center|gnome-control-center|settings pages the bar's Bluetooth, network, and volume glyphs open
+optional|gnome-control-center|gnome-control-center|advanced sound routing linked from Quick Settings
 optional|NetworkManager|nmcli|Wi-Fi panel scan and connect
 optional|brightnessctl|brightnessctl|laptop brightness keys
 optional|power-profiles-daemon|powerprofilesctl|laptop power profile controls

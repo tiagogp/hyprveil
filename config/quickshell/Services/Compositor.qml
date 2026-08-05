@@ -24,6 +24,27 @@ import Quickshell.Hyprland
 Singleton {
     id: root
 
+    // The current toplevel, guarded against Hyprland's stale activeToplevel
+    // value after switching to or emptying a workspace.
+    readonly property var activeWindow: {
+        const active = Hyprland.activeToplevel;
+        if (active?.workspace?.id === root.focusedWorkspaceId)
+            return active;
+        return Hyprland.toplevels.values.find(
+            w => w.workspace?.id === root.focusedWorkspaceId) ?? null;
+    }
+    readonly property string activeAppId:
+        (root.activeWindow?.lastIpcObject?.class ?? "").toLowerCase()
+    readonly property string activeDesktopId:
+        root.desktopIdForApp(root.activeAppId)
+    readonly property var activeDesktopEntry:
+        root.activeAppId === "" ? null
+        : DesktopEntries.byId(root.activeDesktopId)
+          ?? DesktopEntries.byId(root.activeAppId)
+    readonly property string activeIconSource: root.activeAppId === "" ? ""
+        : Icons.resolve(root.activeDesktopEntry?.icon,
+                        root.activeDesktopId, root.activeAppId, true)
+
     // Prefer Hyprland's own focus once events have set it; derive it from the
     // active window until then. Both track correctly after the first change, so
     // this is a cold-start bridge rather than a permanent workaround.
@@ -41,8 +62,8 @@ Singleton {
     // stale-activeToplevel case is exactly the one that was showing "hyprveil"
     // over a workspace full of windows.
     readonly property string activeTitle: {
-        const t = Hyprland.activeToplevel;
-        if (t && t.workspace?.id === root.focusedWorkspaceId && t.title !== "")
+        const t = root.activeWindow;
+        if (t && t.title !== "")
             return root.displayTitle(t.title);
         for (const w of Hyprland.toplevels.values) {
             if (w.workspace?.id !== root.focusedWorkspaceId) continue;
@@ -61,6 +82,31 @@ Singleton {
 
     function workspace(id: int): var {
         return Hyprland.workspaces.values.find(w => w.id === id) ?? null;
+    }
+
+    function windowForWorkspace(id: int): var {
+        if (root.activeWindow?.workspace?.id === id)
+            return root.activeWindow;
+        return Hyprland.toplevels.values.find(w => w.workspace?.id === id) ?? null;
+    }
+
+    function iconSourceForWindow(window: var): string {
+        const appId = (window?.lastIpcObject?.class ?? "").toLowerCase();
+        if (appId === "")
+            return "";
+        const desktopId = root.desktopIdForApp(appId);
+        const entry = DesktopEntries.byId(desktopId) ?? DesktopEntries.byId(appId);
+        return Icons.resolve(entry?.icon, desktopId, appId, true);
+    }
+
+    function iconSourceForWorkspace(id: int): string {
+        return root.iconSourceForWindow(root.windowForWorkspace(id));
+    }
+
+    function desktopIdForApp(appId: string): string {
+        if (appId === "")
+            return "";
+        return Pins.desktopIdForApp(appId) || appId + ".desktop";
     }
 
     // Windows on the focused workspace, by lowercased class.

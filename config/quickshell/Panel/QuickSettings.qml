@@ -18,14 +18,33 @@ Scope {
     id: root
 
     property bool open: false
-    // Which sections the panel shows. "all" is the full stack the SUPER+N
-    // keybind and the IPC target open; "notifications" is what the bar's bell
-    // opens, because a bell that answers with wifi and bluetooth is not the
-    // control the glyph promised. Same window either way — a second panel would
-    // be a second copy of the close button, the Escape handler, and the
-    // layershell setup, all of which already drifted once between AGS sections.
+    // Which sections the panel shows. The bar routes status controls straight
+    // to their matching section while the IPC target continues to open the full
+    // stack. One window owns every view so close/focus/layer-shell behavior
+    // cannot drift between separate panels.
     property string view: "all"
     readonly property bool notificationsOnly: view === "notifications"
+    readonly property bool contextual: view !== "all"
+    readonly property string viewTitle: {
+        switch (view) {
+        case "wifi": return "Wi-Fi";
+        case "bluetooth": return "Bluetooth";
+        case "audio": return "Audio";
+        case "notifications": return "Notifications";
+        default: return "Quick Settings";
+        }
+    }
+
+    function toggleSection(section: string): void {
+        const valid = ["all", "notifications", "wifi", "bluetooth", "audio"];
+        const next = valid.includes(section) ? section : "all";
+        if (root.open && root.view === next) {
+            root.open = false;
+            return;
+        }
+        root.view = next;
+        root.open = true;
+    }
 
     // Supplied by shell.qml so the history list and the popup stack read the
     // same notification server — two servers would mean two histories.
@@ -72,7 +91,7 @@ Scope {
                     Text {
                         renderType: Text.NativeRendering
                         Layout.fillWidth: true
-                        text: root.notificationsOnly ? "Notifications" : "Quick Settings"
+                        text: root.viewTitle
                         font.family: Tokens.fontUi
                         font.pixelSize: Tokens.textLg
                         font.weight: Tokens.weightBold
@@ -113,44 +132,45 @@ Scope {
 
                 WifiSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all" || root.view === "wifi"
                 }
                 BluetoothSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all" || root.view === "bluetooth"
                 }
                 AudioSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all" || root.view === "audio"
                 }
                 NightLightSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                 }
                 PowerProfileSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                 }
                 ClipboardSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                 }
                 NotificationSection {
                     Layout.fillWidth: true
                     notifications: root.notifications
+                    visible: root.view === "all" || root.view === "notifications"
                     // The panel header already reads "Notifications" in this
                     // mode; showing both stacked the same word twice.
                     showHeader: !root.notificationsOnly
                 }
                 AccentSection {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                 }
 
                 // Opens the shell's own picker.
                 LinkRow {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                     text: "Wallpapers…"
                     onClicked: {
                         root.open = false;
@@ -160,12 +180,19 @@ Scope {
 
                 LinkRow {
                     Layout.fillWidth: true
-                    visible: !root.notificationsOnly
+                    visible: root.view === "all"
                     text: "Keyboard shortcuts…"
                     onClicked: {
                         root.open = false;
                         cheatsheet.open = true;
                     }
+                }
+
+                LinkRow {
+                    Layout.fillWidth: true
+                    visible: root.contextual
+                    text: "All settings…"
+                    onClicked: root.view = "all"
                 }
             }
         }

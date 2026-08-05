@@ -85,8 +85,19 @@ Scope {
                 try {
                     const c = JSON.parse(text);
                     root.limit = c.limit ?? 10;
-                    root.entries = (c.entries ?? []).slice().sort(
+                    const sorted = (c.entries ?? []).slice().sort(
                         (a, b) => a.name.localeCompare(b.name));
+                    // Reassigning root.entries always hands the ListView a new
+                    // array, even when the catalogue is unchanged from last
+                    // opening — the view can't tell it's the same list, so it
+                    // tears down and rebuilds every row, IconImage included.
+                    // That's a flash of every app icon blanking and redecoding
+                    // on an opening that changed nothing. JSON.stringify is a
+                    // cheap enough compare for a few hundred plain-object rows
+                    // and keeps the old array (and its resolved icons) alive
+                    // when nothing actually installed or removed an app.
+                    if (JSON.stringify(sorted) !== JSON.stringify(root.entries))
+                        root.entries = sorted;
                     root.status = "";
                 } catch (e) {
                     root.entries = [];
@@ -116,7 +127,15 @@ Scope {
             else
                 missing++;
         }
-        root.staged = next;
+        // Same reasoning as the entries compare above: the staged chips carry
+        // their own IconImage row (the Flow near the top of the dialog), and
+        // reassigning root.staged on every opening flashed those too even
+        // when the pin set hadn't moved. Order matters here, so this compares
+        // position by position rather than by set membership.
+        const same = next.length === root.staged.length
+            && next.every((id, i) => id === root.staged[i]);
+        if (!same)
+            root.staged = next;
         root.unresolved = missing;
     }
 
