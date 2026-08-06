@@ -107,7 +107,7 @@ Singleton {
     // strip under the bar needs to hold muted text at 4.5:1. Accent.chromeAlpha
     // is the measured value for the current wallpaper and is usually glassier;
     // this is the fallback when nothing has been measured. See tokens.conf.
-    readonly property real chromeAlpha: 0.87
+    readonly property real chromeAlpha: 0.68
 
     // ---------------------------------------------------------------------
     // Motion — milliseconds. Hyprland's deciseconds do not cross into QML.

@@ -1,17 +1,20 @@
 // Compact bar presentation for the active MPRIS player.
 //
-// The former component mixed player selection, three inline transport buttons,
-// title layout, screen-coordinate measurement, and a 300-line hover card. The
-// chip now owns only selection and bar interaction; MediaCard owns the anchored
-// detail UI.
+// The chip sits at divider height rather than the bar's full row height, and
+// carries its own previous/play/next transport plus a marquee title inline —
+// no need to open MediaCard just to skip a track. MediaCard still owns the
+// anchored artwork/seek detail on hover.
 import QtQuick
+import QtQuick.Layouts
 import Quickshell.Services.Mpris
+import ".."
+import "../Services"
 
 Item {
     id: root
 
     property string displayMode: "full" // full | icon
-    property real labelMaximumWidth: 180
+    property real labelMaximumWidth: 140
     readonly property var player: {
         const all = Mpris.players.values;
         return all.find(p => p.playbackState === MprisPlaybackState.Playing)
@@ -21,7 +24,7 @@ Item {
     readonly property bool active: player !== null
     readonly property bool playing:
         player?.playbackState === MprisPlaybackState.Playing
-    readonly property bool hovered: action.hovered || card.hovered
+    readonly property bool hovered: chromeHover.hovered || card.hovered
     property bool previewOpen: false
 
     function playerText(fallback) {
@@ -32,8 +35,8 @@ Item {
         return title || artist || fallback;
     }
 
-    implicitWidth: action.implicitWidth
-    implicitHeight: action.implicitHeight
+    implicitWidth: surface.implicitWidth
+    implicitHeight: Tokens.spacing5
     visible: active
 
     onHoveredChanged: {
@@ -52,22 +55,83 @@ Item {
         onTriggered: root.previewOpen = false
     }
 
-    BarAction {
-        id: action
-        anchors.fill: parent
-        glyph: root.playing ? "\u{f03e4}" : "\u{f040a}"
-        label: root.playerText("Media")
-        showLabel: root.displayMode === "full"
-        labelMaximumWidth: root.labelMaximumWidth
-        accessibleName: root.playing ? "Pause media" : "Play media"
-        active: root.playing
-        enabled: root.player?.canTogglePlaying ?? false
-        onClicked: root.player?.togglePlaying()
+    Rectangle {
+        id: surface
+        anchors.verticalCenter: parent.verticalCenter
+        readonly property real pad: root.hovered ? Tokens.spacing2h : Tokens.spacing1
+
+        implicitWidth: row.implicitWidth + pad * 2
+        implicitHeight: Tokens.spacing5
+        radius: root.hovered ? Tokens.radiusXs : Tokens.radiusSm
+        color: root.playing ? Accent.accentSoft
+            : root.hovered ? Tokens.stateHoverSurface : "transparent"
+        border.width: root.playing ? 1 : 0
+        border.color: Accent.accentOnChrome
+
+        Behavior on implicitWidth {
+            NumberAnimation {
+                duration: Motion.duration(Tokens.dur2h)
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Tokens.easeOut
+            }
+        }
+        Behavior on radius {
+            NumberAnimation {
+                duration: Motion.duration(Tokens.dur1)
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Tokens.easeStandard
+            }
+        }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.duration(Tokens.dur1)
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Tokens.easeStandard
+            }
+        }
+
+        HoverHandler { id: chromeHover }
+
+        RowLayout {
+            id: row
+            anchors.centerIn: parent
+            spacing: Tokens.spacing1h
+
+            MediaButton {
+                glyph: "\u{f04ae}"
+                accessibleName: "Previous track"
+                enabled: root.player?.canGoPrevious ?? false
+                onClicked: root.player?.previous()
+            }
+
+            MediaButton {
+                glyph: root.playing ? "\u{f03e4}" : "\u{f040a}"
+                accessibleName: root.playing ? "Pause media" : "Play media"
+                active: root.playing
+                enabled: root.player?.canTogglePlaying ?? false
+                onClicked: root.player?.togglePlaying()
+            }
+
+            MediaButton {
+                glyph: "\u{f04ad}"
+                accessibleName: "Next track"
+                enabled: root.player?.canGoNext ?? false
+                onClicked: root.player?.next()
+            }
+
+            MediaMarquee {
+                Layout.leftMargin: Tokens.spacing1
+                visible: root.displayMode === "full"
+                text: root.playerText("Media")
+                maximumWidth: root.labelMaximumWidth
+                color: root.playing ? Accent.accentOnChrome : Tokens.muted
+            }
+        }
     }
 
     MediaCard {
         id: card
-        anchorItem: action
+        anchorItem: surface
         player: root.player
         open: root.previewOpen
     }
