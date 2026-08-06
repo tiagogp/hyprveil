@@ -30,6 +30,7 @@ RowLayout {
             readonly property string iconSource:
                 Compositor.iconSourceForWorkspace(wsId)
             readonly property bool showIcon: iconSource !== ""
+            readonly property int iconSize: Tokens.iconSm
 
             implicitWidth: active ? 36 : 28
             implicitHeight: showIcon ? 34 : 28
@@ -55,7 +56,7 @@ RowLayout {
                 IconImage {
                     visible: pill.showIcon
                     source: pill.iconSource
-                    implicitSize: 12
+                    implicitSize: pill.iconSize
                     opacity: pill.active ? 1.0 : 0.34
                     Layout.alignment: Qt.AlignHCenter
 

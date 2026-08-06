@@ -15,6 +15,28 @@ import QtQuick
 import Quickshell
 
 Singleton {
+    readonly property var preferredIcons: ({
+        // Kitty also ships a hicolor icon, and user themes may provide their own
+        // `kitty.svg`; the legacy Waybar dock already uses Papirus here, so keep
+        // the Quickshell bar/dock on the same artwork.
+        "kitty": "file:///usr/share/icons/Papirus/64x64/apps/kitty.svg"
+    })
+
+    function preferred(entryIcon, desktopId, appId): string {
+        const keys = [
+            appId ?? "",
+            (desktopId ?? "").replace(/\.desktop$/, ""),
+            entryIcon ?? ""
+        ];
+        for (const raw of keys) {
+            const key = raw.toLowerCase();
+            const path = preferredIcons[key] ?? "";
+            if (path !== "")
+                return path;
+        }
+        return "";
+    }
+
     // Untyped parameters on purpose: callers pass `entry?.icon`, which is
     // undefined whenever the entry is missing — precisely the case this exists
     // to survive — and a `string` annotation rejects it.
@@ -24,6 +46,10 @@ Singleton {
     // theme has no such icon. That is what makes this a chain at all — without
     // it every candidate "resolves" to an image:// URL that renders as nothing.
     function resolve(entryIcon, desktopId, appId, generic) {
+        const preferredPath = preferred(entryIcon, desktopId, appId);
+        if (preferredPath !== "")
+            return preferredPath;
+
         const candidates = [
             entryIcon ?? "",
             (desktopId ?? "").replace(/\.desktop$/, ""),

@@ -420,6 +420,8 @@ grep -q 'Pins.desktopIdForApp(appId)' "$REPO/config/quickshell/Services/Composit
     || fail "workspace icons do not reuse pinned desktop ids"
 grep -q 'function desktopIdForApp(appId: string)' "$REPO/config/quickshell/Services/Pins.qml" \
     || fail "pin state does not expose desktop ids by app class"
+grep -q 'file:///usr/share/icons/Papirus/64x64/apps/kitty.svg' "$REPO/config/quickshell/Services/Icons.qml" \
+    || fail "Kitty icon is not pinned to the same Papirus artwork used by the legacy dock"
 grep -q 'opacity: pill.active ? 1.0 : 0.34' "$REPO/config/quickshell/Bar/Workspaces.qml" \
     || fail "inactive workspace app icons are not visually muted"
 ok "single bar uses reusable, responsive, anchored Quickshell primitives"

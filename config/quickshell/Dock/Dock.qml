@@ -50,11 +50,17 @@ PanelWindow {
 
         for (const pin of Pins.pins) {
             const id = pin.app_id.toLowerCase();
+            const desktopId = pin.desktop_id || Compositor.desktopIdForApp(id);
             seen.add(id);
             // Matched across ALL workspaces: the toplevel is what lets a click
             // focus-and-switch from anywhere.
             const win = Compositor.toplevelForClass(pin.app_id);
-            out.push({ appId: pin.app_id, desktopId: pin.desktop_id, toplevel: win, pinned: true });
+            out.push({
+                appId: pin.app_id,
+                desktopId: desktopId,
+                toplevel: win,
+                pinned: true
+            });
         }
 
         for (const t of Hyprland.toplevels.values) {
@@ -64,7 +70,12 @@ PanelWindow {
             // one is still worth a tile, because clicking it is how you get
             // there.
             seen.add(cls);
-            out.push({ appId: cls, desktopId: null, toplevel: t, pinned: false });
+            out.push({
+                appId: cls,
+                desktopId: Compositor.desktopIdForApp(cls),
+                toplevel: t,
+                pinned: false
+            });
         }
         return out;
     }
@@ -166,10 +177,13 @@ PanelWindow {
                 DockTile {
                     required property var modelData
                     required property int index
+                    readonly property string resolvedDesktopId:
+                        modelData.desktopId || Compositor.desktopIdForApp(modelData.appId)
 
-                    entry: DesktopEntries.byId(modelData.desktopId ?? modelData.appId)
+                    entry: DesktopEntries.byId(resolvedDesktopId)
+                           ?? DesktopEntries.byId(modelData.appId)
                     appId: modelData.appId
-                    desktopId: modelData.desktopId ?? ""
+                    desktopId: resolvedDesktopId
                     tooltip: entry?.name ?? modelData.appId
                     running: modelData.toplevel !== null
                     // The toplevel check is not redundant: at cold start

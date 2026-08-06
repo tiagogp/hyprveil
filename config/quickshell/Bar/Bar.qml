@@ -42,6 +42,18 @@ PanelWindow {
 
     mask: Region { item: barSurface }
 
+    // Quick settings and the calendar grab pointer input to close on an
+    // outside click; the bar registers itself so that grab doesn't swallow
+    // clicks on its own buttons — including the one that opened the panel.
+    Component.onCompleted: {
+        quickSettings?.registerBar(bar);
+        calendar?.registerBar(bar);
+    }
+    Component.onDestruction: {
+        quickSettings?.unregisterBar(bar);
+        calendar?.unregisterBar(bar);
+    }
+
     Surface {
         id: barSurface
         anchors.left: parent.left

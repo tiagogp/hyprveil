@@ -13,6 +13,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
@@ -75,6 +76,19 @@ Scope {
     // language the rest of the bar does not speak.
     readonly property var weekdayLabels: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
+    // Bar windows, one per monitor, registered by Bar.qml itself. Exempt from
+    // the outside-click dismissal below — see QuickSettings.qml, which the
+    // same reasoning was written against.
+    property var barWindows: []
+
+    function registerBar(bar): void {
+        if (root.barWindows.indexOf(bar) === -1)
+            root.barWindows = root.barWindows.concat([bar]);
+    }
+    function unregisterBar(bar): void {
+        root.barWindows = root.barWindows.filter(w => w !== bar);
+    }
+
     PanelWindow {
         id: win
         visible: root.open
@@ -90,6 +104,15 @@ Scope {
         // Escape, but must not pull the keyboard off the focused window merely
         // by being open.
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+        // Same click-outside-to-close grab as QuickSettings.qml, and for the
+        // same reason.
+        HyprlandFocusGrab {
+            id: focusGrab
+            windows: [win].concat(root.barWindows)
+            onCleared: root.open = false
+        }
+        onVisibleChanged: focusGrab.active = visible
 
         Surface {
             anchors.fill: parent

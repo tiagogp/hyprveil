@@ -10,6 +10,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
@@ -56,7 +57,23 @@ Scope {
     // exactly the audience a cheatsheet has.
     property var cheatsheet: null
 
+    // Bar windows, one per monitor, registered by Bar.qml itself. They are
+    // exempt from the outside-click dismissal below — without that, the
+    // first click on any bar button while the panel was open would only
+    // close the panel instead of also doing what the button does, since the
+    // panel's focus grab would swallow it.
+    property var barWindows: []
+
+    function registerBar(bar): void {
+        if (root.barWindows.indexOf(bar) === -1)
+            root.barWindows = root.barWindows.concat([bar]);
+    }
+    function unregisterBar(bar): void {
+        root.barWindows = root.barWindows.filter(w => w !== bar);
+    }
+
     PanelWindow {
+        id: win
         visible: root.open
         anchors { top: true; right: true }
         margins { top: Tokens.spacing2h; right: Tokens.spacing2h }
@@ -69,6 +86,17 @@ Scope {
         // OnDemand rather than Exclusive: the panel needs Escape, but must not
         // steal the keyboard from the focused window while it is merely open.
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+        // Grabs pointer/keyboard input at the compositor so a click anywhere
+        // outside the panel — and outside the bar it was opened from — closes
+        // it, the way any other popover does. Layer-shell has no such
+        // primitive of its own; this is the Hyprland-specific stand-in for it.
+        HyprlandFocusGrab {
+            id: focusGrab
+            windows: [win].concat(root.barWindows)
+            onCleared: root.open = false
+        }
+        onVisibleChanged: focusGrab.active = visible
 
         Surface {
             anchors.fill: parent
@@ -135,14 +163,21 @@ Scope {
                 WifiSection {
                     Layout.fillWidth: true
                     visible: root.view === "all" || root.view === "wifi"
+                    // The panel header already reads "Wi-Fi" in this mode;
+                    // showing both stacked the same word twice.
+                    showHeader: root.view !== "wifi"
                 }
                 BluetoothSection {
                     Layout.fillWidth: true
                     visible: root.view === "all" || root.view === "bluetooth"
+                    // Same reasoning: contextual view titles itself already.
+                    showHeader: root.view !== "bluetooth"
                 }
                 AudioSection {
                     Layout.fillWidth: true
                     visible: root.view === "all" || root.view === "audio"
+                    // Same reasoning: contextual view titles itself already.
+                    showHeader: root.view !== "audio"
                 }
                 NightLightSection {
                     Layout.fillWidth: true
