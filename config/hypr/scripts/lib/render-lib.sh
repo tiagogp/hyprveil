@@ -229,8 +229,20 @@ load_palette() {
 # Escapes a value for use as a sed replacement. Today every token is numeric or
 # a hex color so none of these characters occur — which is exactly why the
 # escaping would be forgotten the first time a token holds a font name or a path.
+#
+# Pure parameter expansion, not a `sed` pipe: render_template calls this once
+# per token per templated consumer, and HV_TOKENS runs past 270 entries. At 10
+# consumers that was ~2750 forked `sed` processes on every wallpaper change —
+# measured at ~3.8s of system time alone, the actual cause of the bar stalling
+# (and every continuous animation, like the media marquee, stuttering) each
+# time the accent re-derives. Backslash first, so the backslashes introduced
+# escaping `&` and `/` are not themselves re-escaped.
 hv_sed_escape() {
-    printf '%s' "$1" | sed -e 's/[\\&/]/\\&/g'
+    local s=$1
+    s=${s//\\/\\\\}
+    s=${s//&/\\&}
+    s=${s//\//\\/}
+    printf '%s' "$s"
 }
 
 # Formats with no include mechanism — mako, the Qt color schemes, the wlogout
