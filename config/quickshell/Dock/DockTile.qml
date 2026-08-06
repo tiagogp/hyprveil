@@ -96,7 +96,7 @@ Item {
         radius: Tokens.radiusSm
         color: tile.active ? Accent.accentSoft
              : mouse.containsMouse ? Tokens.stateHoverSurface
-             : Tokens.elevated
+             : Qt.rgba(0, 0, 0, 0.4)
         border.width: tile.active ? 1 : 0
         border.color: Accent.accentOnChrome
 

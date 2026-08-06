@@ -114,7 +114,7 @@ PanelWindow {
                     Glyph {
                         text: "\u{f00ed}"
                         size: Tokens.iconSm
-                        color: centerButton.active ? Accent.accentOnChrome : Tokens.dim
+                        color: centerButton.active ? Accent.accentOnChrome : Accent.dimOnChrome
 
                         // The glyph's ink sits a couple of px below the
                         // Nerd Font's own vertical center, so AlignVCenter
