@@ -109,6 +109,40 @@ Singleton {
         return Pins.desktopIdForApp(appId) || appId + ".desktop";
     }
 
+    // Every non-special workspace id that currently has a window, plus the
+    // focused workspace id even when it is empty — so the bar always shows
+    // where you are, not just where something is open.
+    function occupiedWorkspaceIds(): var {
+        const out = new Set();
+        for (const w of Hyprland.workspaces.values) {
+            if (w.id > 0 && (w.toplevels?.values?.length ?? 0) > 0)
+                out.add(w.id);
+        }
+        if (root.focusedWorkspaceId > 0)
+            out.add(root.focusedWorkspaceId);
+        return Array.from(out);
+    }
+
+    // The bar's dynamic pill set: occupied workspaces plus the immediate
+    // neighbours of the focused one, so switching one step over never
+    // requires typing a number that is not currently drawn. Replaces the
+    // fixed 1-5 range, which hid every workspace above 5 and every special
+    // workspace outright.
+    function visibleWorkspaceIds(): var {
+        const ids = new Set(root.occupiedWorkspaceIds());
+        const focused = root.focusedWorkspaceId > 0 ? root.focusedWorkspaceId : 1;
+        if (focused > 1) ids.add(focused - 1);
+        ids.add(focused + 1);
+        return Array.from(ids).sort((a, b) => a - b);
+    }
+
+    // The pre-dynamic behaviour, kept as an opt-out in Preferences
+    // (`Settings.bar.workspacesMode === "fixed"`) for anyone who specifically
+    // wants a stable-width bar over always-relevant pills.
+    function fixedWorkspaceIds(): var {
+        return [1, 2, 3, 4, 5];
+    }
+
     // Windows on the focused workspace, by lowercased class.
     function classesOnFocused(): var {
         const out = new Set();
@@ -126,6 +160,15 @@ Singleton {
         // focus-and-switch from anywhere.
         return Hyprland.toplevels.values.find(
             t => (t.lastIpcObject?.class ?? "").toLowerCase() === id) ?? null;
+    }
+
+    // Every toplevel of a class, not just the first — what a dock tile needs
+    // to know it represents more than one window and to offer a picker rather
+    // than silently focusing whichever happened to be first in the list.
+    function toplevelsForClass(appId: string): var {
+        const id = appId.toLowerCase();
+        return Hyprland.toplevels.values.filter(
+            t => (t.lastIpcObject?.class ?? "").toLowerCase() === id);
     }
 
     // Dispatch a window verb at a toplevel.

@@ -186,7 +186,10 @@ PanelWindow {
 
                 Media {
                     id: media
-                    displayMode: bar.showMediaLabel ? "full" : "icon"
+                    // Calm Mode collapses media to its icon-only form, same
+                    // as the compact breakpoint already does — one code path
+                    // for "less room" and "less noise wanted" rather than two.
+                    displayMode: (bar.showMediaLabel && !CalmMode.collapseMedia) ? "full" : "icon"
                     labelMaximumWidth: bar.full
                         ? (bar.monitorWidth >= 2560 ? 180 : 100) : 84
                 }
@@ -203,7 +206,11 @@ PanelWindow {
                     // At 1600px one icon costs the same width as the drawer action;
                     // larger trays collapse until there is enough room to keep the
                     // true center clock clear. Six-item trays are therefore safe.
+                    // Calm Mode also collapses it regardless of width — "tray
+                    // sob demanda" — since a visible tray is exactly the kind
+                    // of ambient noise the mode exists to remove.
                     collapsed: !bar.full || count > (bar.monitorWidth >= 1920 ? 3 : 1)
+                        || CalmMode.trayOnDemand
                 }
 
                 BarDivider {

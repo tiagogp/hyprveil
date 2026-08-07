@@ -56,6 +56,10 @@ Scope {
     // is the discoverable route for anyone who does not know that yet, which is
     // exactly the audience a cheatsheet has.
     property var cheatsheet: null
+    // The capability doctor, likewise.
+    property var integrations: null
+    // Preferences, likewise.
+    property var preferences: null
 
     // Bar windows, one per monitor, registered by Bar.qml itself. They are
     // exempt from the outside-click dismissal below — without that, the
@@ -179,6 +183,10 @@ Scope {
                     // Same reasoning: contextual view titles itself already.
                     showHeader: root.view !== "audio"
                 }
+                BrightnessSection {
+                    Layout.fillWidth: true
+                    visible: root.view === "all"
+                }
                 NightLightSection {
                     Layout.fillWidth: true
                     visible: root.view === "all"
@@ -222,6 +230,26 @@ Scope {
                     onClicked: {
                         root.open = false;
                         cheatsheet.open = true;
+                    }
+                }
+
+                LinkRow {
+                    Layout.fillWidth: true
+                    visible: root.view === "all"
+                    text: "Integrations…"
+                    onClicked: {
+                        root.open = false;
+                        integrations.open = true;
+                    }
+                }
+
+                LinkRow {
+                    Layout.fillWidth: true
+                    visible: root.view === "all"
+                    text: "Preferences…"
+                    onClicked: {
+                        root.open = false;
+                        preferences.open = true;
                     }
                 }
 

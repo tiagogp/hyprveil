@@ -1,0 +1,24 @@
+{
+    "version": 1,
+    "providers": [
+        {
+            "id": "calculator",
+            "label": "Calculator",
+            "glyphCodepoint": 986340,
+            "kind": "calculator"
+        },
+        {
+            "id": "files",
+            "label": "Files",
+            "glyphCodepoint": 983627,
+            "kind": "files",
+            "root": "~"
+        },
+        {
+            "id": "emoji",
+            "label": "Emoji",
+            "glyphCodepoint": 984470,
+            "kind": "emoji"
+        }
+    ]
+}

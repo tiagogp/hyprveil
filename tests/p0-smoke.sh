@@ -328,8 +328,13 @@ ok "Quick Settings, modal, dock-picker, and lock controls expose keyboard/access
 # the panel, OSD, and sliders moving exactly as before.
 grep -q 'motion-profile' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion service does not read the motion-profile state file"
-grep -q 'reduced ? 0' "$REPO/config/quickshell/Services/Motion.qml" \
+# Also collapses under Calm Mode's "pausa de animação em bateria" — see
+# CalmMode.qml — so this only requires that a zero-duration branch exists and
+# that both conditions feed it, not their exact parenthesization.
+grep -q '? 0 : ms' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion.duration does not collapse to zero under reduced motion"
+grep -q 'CalmMode.pauseAnimations' "$REPO/config/quickshell/Services/Motion.qml" \
+    || fail "Motion.duration does not also collapse under Calm Mode"
 grep -q 'HYPRVEIL_STATE_HOME' "$REPO/config/quickshell/Services/Motion.qml" \
     || fail "Motion service ignores the HYPRVEIL_STATE_HOME test override"
 # Every animated surface added for the desktop-polish work routes its durations

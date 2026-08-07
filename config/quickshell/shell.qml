@@ -18,6 +18,8 @@ import "Lock"
 import "Services"
 import "Osd"
 import "Overview"
+import "Launcher"
+import "Session"
 
 ShellRoot {
     // One bar and one dock per monitor. Variants re-instantiates its delegate
@@ -55,7 +57,7 @@ ShellRoot {
     // Popups are deliberately NOT per-monitor. The design stacks them top-right
     // on the focused output; drawing the same toast on every screen is noise,
     // and AGS had the multi-monitor path written but never instantiated it.
-    Popups { id: notifs }
+    Popups { id: notifs; statusCapsule: statusCapsule }
 
     // The panel reads the popup scope's server rather than owning one, so the
     // history it lists and the toasts that appeared are the same objects.
@@ -69,7 +71,19 @@ ShellRoot {
         notifications: notifs
         wallpapers: wallpaperPicker
         cheatsheet: keybindSheet
+        integrations: integrationsPanel
+        preferences: preferencesPanel
     }
+
+    // "Sistema > Integrações" — the capability doctor, reachable from Quick
+    // Settings or `qs ipc call integrations toggle`. One scope, like the
+    // other modals.
+    Integrations { id: integrationsPanel }
+
+    // Preferences — bar/dock/accent/Calm Mode/launcher providers/monitors/
+    // scenes, all through settings-store.sh. Reachable from Quick Settings or
+    // `qs ipc call preferences toggle`.
+    Preferences { id: preferencesPanel }
 
     // The wallpaper picker. wallpaper.sh owns the state and the Hyprpaper IPC;
     // this only renders `list` and calls `apply`.
@@ -88,6 +102,17 @@ ShellRoot {
     // toplevels directly, so it needs nothing wired in from here.
     Overview { id: overviewPanel }
 
+    // The native launcher — apps, windows, system actions. Opened by SUPER
+    // alone, SUPER+Space, or its IPC target; see keybindings.conf. A single
+    // scope like the other modals, for the same reason: one keyboard grab,
+    // one state, regardless of which monitor was focused when it opened.
+    Launcher { id: launcher }
+
+    // The native session/power modal — confirmed lock/suspend/logout/
+    // restart/shutdown. Opened by SUPER+Escape, Ctrl+Alt+Delete, or its IPC
+    // target; see keybindings.conf. wlogout stays bound as the fallback.
+    Session { id: sessionPanel }
+
     // Holds the session lock. See Lock/Lock.qml and hypr/scripts/lock.sh — a
     // failure here is a lockout, so the script never trusts this unconditionally.
     //
@@ -105,4 +130,9 @@ ShellRoot {
     // script owns the system command and this scope only renders the latest
     // value, so repeated keypresses update one overlay instead of stacking.
     Osd {}
+
+    // The transient status capsule — DND and Calm Mode toggles, the two
+    // state changes that previously had no on-screen acknowledgment at all.
+    // Top-center so it never collides with Osd's bottom-center overlay.
+    StatusCapsule { id: statusCapsule }
 }

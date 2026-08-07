@@ -7,5 +7,9 @@ singleton Compositor 1.0 Compositor.qml
 singleton Keybinds 1.0 Keybinds.qml
 singleton Motion 1.0 Motion.qml
 singleton SysInfo 1.0 SysInfo.qml
+singleton Brightness 1.0 Brightness.qml
+singleton Capabilities 1.0 Capabilities.qml
+singleton Settings 1.0 Settings.qml
+singleton CalmMode 1.0 CalmMode.qml
 
 BluetoothWatch 1.0 BluetoothWatch.qml

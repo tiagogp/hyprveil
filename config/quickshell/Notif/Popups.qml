@@ -11,6 +11,7 @@ import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import ".."
+import "../Services"
 
 Scope {
     id: root
@@ -19,6 +20,74 @@ Scope {
     // reads this same list for history.
     property alias notifications: server.trackedNotifications
     property bool dontDisturb: false
+    onDontDisturbChanged: root.statusCapsule?.show(
+        root.dontDisturb ? "\u{f0392}" : "\u{f0391}",
+        "Do Not Disturb " + (root.dontDisturb ? "on" : "off"));
+
+    // The transient status capsule, handed down from shell.qml — see
+    // Osd/StatusCapsule.qml. DND is toggled from two places (the bar and the
+    // notification section), so this watches the ONE property both of them
+    // already write to rather than needing a capsule call added at each site.
+    property var statusCapsule: null
+
+    // Bounds the "Earlier" list in the panel to notifications from a PREVIOUS
+    // session: everything from this one is already in `notifications` above,
+    // and persisting also writes those, so without this cutoff every live
+    // notification would double up as its own history entry.
+    readonly property double sessionStartTs: Date.now() / 1000
+
+    readonly property string storeScript:
+        Quickshell.env("HOME") + "/.config/hypr/scripts/notification-store.sh"
+
+    // Notifications from a session that ended — appName/summary/image/urgency
+    // only, never the body; see notification-store.sh for why. Rendered by
+    // NotificationSection as read-only rows beneath the live/tracked ones.
+    // Each entry is already shaped like the subset of a Quickshell Notification
+    // that NotificationCard reads (summary/body/appIcon/urgency/actions), so
+    // the same card renders both without a second code path.
+    property var persistedHistory: []
+
+    function _loadPersisted() {
+        historyLoader.running = true;
+    }
+
+    Process {
+        id: historyLoader
+        command: [root.storeScript, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const raw = JSON.parse(text);
+                    root.persistedHistory = raw.map(r => ({
+                        sid: r.sid,
+                        app: r.app ?? "",
+                        summary: r.summary ?? "",
+                        body: "",
+                        appIcon: r.image ?? "",
+                        urgency: r.urgency === "critical" ? NotificationUrgency.Critical
+                               : r.urgency === "low" ? NotificationUrgency.Low
+                               : NotificationUrgency.Normal,
+                        actions: [],
+                        ts: r.ts ?? 0
+                    })).reverse();
+                } catch (e) {
+                    root.persistedHistory = [];
+                }
+            }
+        }
+    }
+
+    function removePersisted(sid) {
+        root.persistedHistory = root.persistedHistory.filter(n => n.sid !== sid);
+        Quickshell.execDetached([root.storeScript, "remove", sid]);
+    }
+
+    function clearPersisted() {
+        root.persistedHistory = [];
+        Quickshell.execDetached([root.storeScript, "clear"]);
+    }
+
+    Component.onCompleted: root._loadPersisted()
 
     // Quickshell's Notification carries no timestamp of its own, so the server
     // records arrival times here, keyed by notification id. Reading a `time`
@@ -48,7 +117,20 @@ Scope {
             // Stamped before the do-not-disturb bail: a suppressed notification
             // still lands in history and still needs its time.
             root._received[notif.id] = new Date();
+
+            // Persisted regardless of DND, same as the in-memory history —
+            // only metadata, per notification-store.sh's privacy scope.
+            const urgencyName = notif.urgency === NotificationUrgency.Critical ? "critical"
+                : notif.urgency === NotificationUrgency.Low ? "low" : "normal";
+            Quickshell.execDetached([root.storeScript, "append",
+                notif.appName ?? "", notif.summary ?? "", notif.appIcon ?? "", urgencyName]);
+
             if (root.dontDisturb) return;
+            // Calm Mode's narrower suppression: non-urgent popups are held
+            // back while a Critical one always reaches the screen — see
+            // CalmMode.suppressPopup. History already has the entry either
+            // way, from the append above.
+            if (CalmMode.suppressPopup(notif.urgency === NotificationUrgency.Critical)) return;
 
             // A replacement reuses an existing id, so it must NOT restart the
             // timer — otherwise a progress notification that updates every
@@ -154,6 +236,7 @@ Scope {
         const all = server.trackedNotifications.values.slice();
         for (const n of all) n.dismiss();
         popupModel = [];
+        root.clearPersisted();
     }
 
     // notification-daemon.sh toggle/dnd route here, the way they routed to

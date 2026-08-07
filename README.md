@@ -96,6 +96,8 @@ The docs are intentionally small:
   accents, keybindings, and optional dependencies.
 - [docs/HARDWARE.md](docs/HARDWARE.md): desktop/laptop and GPU profiles.
 - [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md): panel controls and cheatsheet.
+- [docs/QUICKSHELL-COMPETITIVE-ANALYSIS.md](docs/QUICKSHELL-COMPETITIVE-ANALYSIS.md):
+  competitive benchmark and roadmap against leading Hyprland + Quickshell shells.
 - [docs/RECOVERY.md](docs/RECOVERY.md): rollback and component recovery.
 
 Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md); see

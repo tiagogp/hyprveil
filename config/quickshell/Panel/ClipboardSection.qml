@@ -32,6 +32,25 @@ Section {
         return entry.replace(/^\s*\d+\s+/, "");
     }
 
+    // cliphist prints a binary entry as e.g. "[[ binary data 312 B png
+    // 8x8 ]]" — "binary data" followed eventually by the decoded format
+    // name, NOT an "image/…" mime string (verified against a real
+    // `cliphist store`/`cliphist list` round trip). Anything binary that is
+    // not one of the common image formats — a copied PDF, say — is left
+    // alone rather than guessed at.
+    function isImageEntry(entry) {
+        return /binary data.*\b(png|jpe?g|gif|bmp|webp|tiff|ico)\b/i.test(entry);
+    }
+
+    // Discardable, capped, never the persistent history: a thumbnail is a
+    // resized decode of something already IN cliphist's own database, kept
+    // only long enough to draw a preview. Wiped by clearAll() below and safe
+    // to lose entirely — reload() would just regenerate what is still
+    // there.
+    readonly property string thumbCacheDir:
+        (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache"))
+        + "/hyprveil/clipboard-thumbs"
+
     function reload() {
         lister.running = true;
     }
@@ -53,6 +72,7 @@ Section {
 
     function clearAll() {
         Quickshell.execDetached(["cliphist", "wipe"]);
+        Quickshell.execDetached(["sh", "-c", "rm -rf \"$1\"", "_", root.thumbCacheDir]);
         root.entries = [];
         root.status = "Clipboard history is empty";
     }
@@ -202,7 +222,17 @@ Section {
             model: root.filteredEntries.slice(0, 6)
 
             Rectangle {
+                id: entryRow
                 required property string modelData
+                readonly property bool isImage: root.isImageEntry(modelData)
+                // cliphist's own entry id — already unique and stable, so it
+                // doubles as the thumbnail cache key without hashing
+                // anything.
+                readonly property string entryId:
+                    (modelData.match(/^\s*(\d+)/) ?? ["", ""])[1]
+                readonly property string thumbPath:
+                    entryId !== "" ? root.thumbCacheDir + "/" + entryId + ".png" : ""
+                property bool thumbReady: false
 
                 Layout.fillWidth: true
                 implicitHeight: Tokens.spacing8
@@ -212,11 +242,33 @@ Section {
                 border.width: activeFocus ? 1 : 0
                 border.color: Accent.accent
                 Accessible.role: Accessible.Button
-                Accessible.name: "Copy clipboard item " + root.preview(modelData)
+                Accessible.name: (isImage ? "Copy clipboard image " : "Copy clipboard item ") + root.preview(modelData)
 
                 Keys.onReturnPressed: root.copy(modelData)
                 Keys.onSpacePressed: root.copy(modelData)
                 Keys.onDeletePressed: root.remove(modelData)
+
+                // Decodes and downsizes ONCE per entry id, to a capped
+                // 64x64 PNG under thumbCacheDir — small enough that a full
+                // panel of image entries stays cheap, and never the
+                // original resolution/bytes cliphist itself holds.
+                Process {
+                    id: thumbGen
+                    running: entryRow.isImage && entryRow.entryId !== ""
+                    // A template literal (backtick string), not a regular
+                    // QML string, specifically so this shell script can use
+                    // ordinary double quotes around "$2" without escaping
+                    // every one of them. `magick` preferred over the
+                    // deprecated `convert` — same preference accent.sh's
+                    // magick_cmd() already uses.
+                    command: ["sh", "-c", `
+                        mkdir -p "$(dirname "$2")" || exit 0
+                        [ -f "$2" ] && exit 0
+                        im=$(command -v magick || command -v convert) || exit 0
+                        printf '%s\\n' "$1" | cliphist decode | "$im" - -resize 64x64 "$2" 2>/dev/null || true
+                    `, "_", entryRow.modelData, entryRow.thumbPath]
+                    onRunningChanged: if (!running) entryRow.thumbReady = true
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -224,8 +276,24 @@ Section {
                     anchors.rightMargin: Tokens.spacing1
                     spacing: Tokens.spacing2
 
+                    Image {
+                        id: thumbImage
+                        visible: entryRow.isImage && status === Image.Ready
+                        Layout.preferredWidth: Tokens.iconSm
+                        Layout.preferredHeight: Tokens.iconSm
+                        fillMode: Image.PreserveAspectCrop
+                        source: (entryRow.isImage && entryRow.thumbReady && entryRow.thumbPath !== "")
+                            ? "file://" + entryRow.thumbPath : ""
+                        asynchronous: true
+                    }
+
+                    // The glyph doubles as the pending/failed state for an
+                    // image entry — a picture icon while ImageMagick is not
+                    // installed or the decode failed is still a truthful
+                    // "this is an image", not a broken-image square.
                     Glyph {
-                        text: "\u{f014f}"
+                        visible: !entryRow.isImage || thumbImage.status !== Image.Ready
+                        text: entryRow.isImage ? "\u{f021f}" : "\u{f014f}"
                         size: Tokens.iconSm
                         color: Tokens.muted
                     }

@@ -14,13 +14,19 @@ import "../Services"
 RowLayout {
     spacing: Tokens.spacing1h
 
+    // Occupied workspaces plus the focused one's immediate neighbours, not a
+    // fixed 1-5 — see Compositor.visibleWorkspaceIds for why. A workspace
+    // above 5, or an empty one nobody switched to yet, no longer disappears
+    // from the bar just because it is outside a hardcoded range. Preferences
+    // can opt back into the fixed range (Settings.bar.workspacesMode).
     Repeater {
-        model: 5
+        model: Settings.bar.workspacesMode === "fixed"
+            ? Compositor.fixedWorkspaceIds() : Compositor.visibleWorkspaceIds()
 
         Rectangle {
             id: pill
-            required property int index
-            readonly property int wsId: index + 1
+            required property int modelData
+            readonly property int wsId: modelData
             readonly property var ws: Compositor.workspace(wsId)
             readonly property bool active: Compositor.focusedWorkspaceId === wsId
             // Counted from the workspace's own toplevel model. lastIpcObject is

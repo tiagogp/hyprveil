@@ -20,6 +20,28 @@ Section {
     readonly property var items:
         notifications?.notifications?.values?.slice()?.reverse() ?? []
 
+    // Persisted entries from a session before this one — see Popups.sessionStartTs
+    // — grouped by app so a dozen notifications from one chat client collapse
+    // into one row instead of burying everything else in the panel. Newest
+    // group first, and within a group, newest entry first.
+    readonly property var earlierGroups: {
+        const cutoff = notifications?.sessionStartTs ?? 0;
+        const earlier = (notifications?.persistedHistory ?? []).filter(n => n.ts < cutoff);
+        const order = [];
+        const byApp = {};
+        for (const n of earlier) {
+            const key = n.app || "Unknown";
+            if (!byApp[key]) { byApp[key] = []; order.push(key); }
+            byApp[key].push(n);
+        }
+        return order.map(key => ({
+            app: key,
+            entries: byApp[key],
+            latest: byApp[key][0],
+            sids: byApp[key].map(n => n.sid)
+        }));
+    }
+
     RowLayout {
         Layout.fillWidth: true
         Layout.bottomMargin: Tokens.spacing1
@@ -124,6 +146,94 @@ Section {
                 received: root.notifications?.receivedAt(modelData)
                 popup: false
                 onDismissed: modelData.dismiss()
+            }
+        }
+    }
+
+    // Grouped history from before this session — see earlierGroups above.
+    // One row per app, not per notification: expanding every message from a
+    // chat client individually is exactly the inbox-complexity the roadmap
+    // calls out as unwanted.
+    ColumnLayout {
+        Layout.fillWidth: true
+        Layout.topMargin: root.items.length > 0 ? Tokens.spacing2 : 0
+        spacing: Tokens.spacingHair
+        visible: root.earlierGroups.length > 0
+
+        Text {
+            renderType: Text.NativeRendering
+            Layout.fillWidth: true
+            text: "Earlier"
+            font.family: Tokens.fontUi
+            font.pixelSize: Tokens.text2xs
+            font.weight: Tokens.weightSemibold
+            color: Tokens.dim
+        }
+
+        Repeater {
+            // Groups, not raw entries — capped generously since each row is
+            // one line regardless of how many notifications it represents.
+            model: root.earlierGroups.slice(0, 8)
+
+            RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: Tokens.spacing2
+
+                Text {
+                    renderType: Text.NativeRendering
+                    Layout.preferredWidth: 96
+                    text: modelData.app
+                    font.family: Tokens.fontUi
+                    font.pixelSize: Tokens.textXs
+                    font.weight: Tokens.weightMedium
+                    color: Tokens.muted
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    renderType: Text.NativeRendering
+                    Layout.fillWidth: true
+                    text: modelData.entries.length > 1
+                        ? modelData.latest.summary + " (+" + (modelData.entries.length - 1) + ")"
+                        : modelData.latest.summary
+                    font.family: Tokens.fontUi
+                    font.pixelSize: Tokens.textXs
+                    color: Tokens.dim
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    implicitWidth: Tokens.spacing5
+                    implicitHeight: Tokens.spacing5
+                    radius: Tokens.radiusSm
+                    activeFocusOnTab: true
+                    color: earlierDismiss.containsMouse ? Accent.accentSoft : "transparent"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Clear " + modelData.app + " history"
+
+                    function clear() {
+                        for (const sid of modelData.sids)
+                            root.notifications?.removePersisted(sid);
+                    }
+                    Keys.onReturnPressed: clear()
+                    Keys.onSpacePressed: clear()
+
+                    Glyph {
+                        anchors.centerIn: parent
+                        text: "\u{f0156}"
+                        size: Tokens.iconSm
+                        color: earlierDismiss.containsMouse ? Accent.accent : Tokens.dim
+                    }
+
+                    MouseArea {
+                        id: earlierDismiss
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: parent.clear()
+                    }
+                }
             }
         }
     }

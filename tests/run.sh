@@ -152,9 +152,16 @@ for test in tests/p0-smoke.sh tests/p1-smoke.sh tests/p2-smoke.sh \
             tests/p3-smoke.sh tests/p4-nested-smoke.sh tests/p5-smoke.sh \
             tests/p6-accent-smoke.sh tests/p7-token-smoke.sh tests/p8-lock-smoke.sh \
             tests/p9-maintenance-smoke.sh tests/p10-setup-smoke.sh \
-            tests/p11-palette-drift-smoke.sh tests/p12-brightness-ramp-smoke.sh; do
+            tests/p11-palette-drift-smoke.sh tests/p12-brightness-ramp-smoke.sh \
+            tests/p13-qml-load-smoke.sh tests/p14-matugen-adapter-smoke.sh \
+            tests/p15-calendar-events-smoke.sh tests/p16-settings-store-smoke.sh \
+            tests/p17-scenes-smoke.sh tests/p18-launcher-providers-smoke.sh \
+            tests/p19-status-capsule-smoke.sh tests/p20-clipboard-thumbnail-smoke.sh; do
     printf '\n== %s ==\n' "$test"
     "$test"
 done
+
+printf '\n== tests/bench.sh --check ==\n'
+tests/bench.sh --check
 
 printf '\nHyprveil non-session quality gate passed.\n'

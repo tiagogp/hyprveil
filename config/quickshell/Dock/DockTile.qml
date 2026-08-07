@@ -24,6 +24,10 @@ Item {
     property string tooltip: ""
     property bool running: false
     property bool active: false
+    // >1 when this tile represents several open windows of the same class —
+    // see Dock.qml's grouping and WindowPicker.qml for what a click on one
+    // of those opens.
+    property int windowCount: 0
     // Only pinned tiles opt in: a running window that is not pinned has no
     // stored position, so there is nothing for a drop to write.
     property bool draggable: false
@@ -246,6 +250,33 @@ Item {
             if (event.button === Qt.MiddleButton) tile.closed();
             else if (event.button === Qt.RightButton) tile.unpinned();
             else tile.activated();
+        }
+    }
+
+    // The window-count badge. A second dot rather than a number-in-a-circle:
+    // the dot below already carries "running", so this only needs to say
+    // "more than one" — the exact count is one hover away in the picker.
+    Rectangle {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: -Tokens.spacingHair
+        anchors.topMargin: -Tokens.spacingHair
+        width: Tokens.spacing3
+        height: Tokens.spacing3
+        radius: Tokens.radiusPill
+        visible: tile.windowCount > 1
+        color: Tokens.elevated
+        border.width: 1
+        border.color: Accent.accentOnChrome
+
+        Text {
+            renderType: Text.NativeRendering
+            anchors.centerIn: parent
+            text: tile.windowCount > 9 ? "9+" : String(tile.windowCount)
+            font.family: Tokens.fontUi
+            font.pixelSize: 8
+            font.weight: Tokens.weightBold
+            color: Accent.accentOnChrome
         }
     }
 

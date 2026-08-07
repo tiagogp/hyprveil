@@ -27,6 +27,14 @@ PanelWindow {
     // two docks disagreeing about what is staged is not a state worth having.
     property var pinPicker: null
 
+    // Preferences > dock autohide, with a per-monitor override — see
+    // Settings.dockAutohideFor. Read from the window's own connector name so
+    // one instance of this file, Variant-ed per screen by shell.qml, can
+    // answer differently on a laptop panel than on an external display.
+    readonly property string monitorName: dock.screen?.name ?? ""
+    readonly property bool autohide: Settings.dockAutohideFor(dock.monitorName)
+    readonly property bool revealed: !dock.autohide || dockHover.hovered
+
     anchors.bottom: true
     // Rev 02 floats the dock further off the bottom edge (frame 2a/2c) —
     // spacing3 is the closest step on the closed scale to the mockup's 14px.
@@ -34,10 +42,13 @@ PanelWindow {
     implicitHeight: 44 + Tokens.spacing5
     implicitWidth: row.implicitWidth + Tokens.spacing6
     color: "transparent"
-    // Left at the default (auto), which reserves implicitHeight plus the bottom
-    // margin. Pinning it to 0 made the dock float over tiled windows: a maximised
-    // window ran under it and its last rows were unreachable. The bar has always
-    // reserved its strip; the dock now matches.
+    // Left at the default (auto) UNLESS autohide is on: a hidden dock that
+    // still reserves its strip defeats the point of hiding it, so autohide
+    // also stops excluding tiled windows from that space. Pinning it to 0
+    // unconditionally made the dock float over tiled windows even when
+    // shown; the bar has always reserved its strip, and a non-autohide dock
+    // still matches that.
+    exclusionMode: dock.autohide ? ExclusionMode.Ignore : ExclusionMode.Normal
     WlrLayershell.namespace: "hyprveil-dock"
     WlrLayershell.layer: WlrLayer.Top
 
@@ -52,13 +63,15 @@ PanelWindow {
             const id = pin.app_id.toLowerCase();
             const desktopId = pin.desktop_id || Compositor.desktopIdForApp(id);
             seen.add(id);
-            // Matched across ALL workspaces: the toplevel is what lets a click
-            // focus-and-switch from anywhere.
-            const win = Compositor.toplevelForClass(pin.app_id);
+            // Every window of the class, not just one — see Compositor.
+            // toplevelsForClass and WindowPicker.qml for what a second window
+            // does to the tile.
+            const wins = Compositor.toplevelsForClass(pin.app_id);
             out.push({
                 appId: pin.app_id,
                 desktopId: desktopId,
-                toplevel: win,
+                toplevel: wins[0] ?? null,
+                toplevels: wins,
                 pinned: true
             });
         }
@@ -70,10 +83,12 @@ PanelWindow {
             // one is still worth a tile, because clicking it is how you get
             // there.
             seen.add(cls);
+            const wins = Compositor.toplevelsForClass(cls);
             out.push({
                 appId: cls,
                 desktopId: Compositor.desktopIdForApp(cls),
-                toplevel: t,
+                toplevel: wins[0] ?? null,
+                toplevels: wins,
                 pinned: false
             });
         }
@@ -134,154 +149,194 @@ PanelWindow {
         dock.dragTo = -1;
     }
 
-    Surface {
-        anchors.centerIn: parent
-        implicitWidth: row.implicitWidth + Tokens.spacing3 * 2
-        implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
-        elevation: 2
-        alphaOverride: Accent.chromeAlpha
-        tint: Tokens.chromeTint
-        radius: Tokens.radiusLg
+    // Everything visible lives in this one Item so autohide can translate it
+    // as a unit and track hover across it as a unit — see the autohide
+    // properties above. HoverHandler here (not a background MouseArea) is
+    // the same pattern Media.qml/MediaCard.qml use: it reports hover across
+    // the whole Item's bounds regardless of which tile's own MouseArea is
+    // topmost at the cursor, which a plain background MouseArea would not.
+    Item {
+        id: dockChrome
+        anchors.fill: parent
 
-        RowLayout {
-            id: row
-            anchors.centerIn: parent
-            spacing: Tokens.spacing2
+        HoverHandler { id: dockHover }
 
-            // The pin settings tile. Pinning used to be reachable only through
-            // Rofi, which meant the dock's own contents were the one thing on
-            // the dock you could not change from the dock.
-            //
-            // It sits where the Rofi launcher tile used to: that tile was a
-            // second way to do what tapping Super already does from anywhere, so
-            // the leading slot is better spent on the one control that exists
-            // nowhere but the dock.
-            DockTile {
-                glyph: "\u{f0493}"
-                tooltip: "Configure dock pins"
-                onActivated: if (dock.pinPicker) dock.pinPicker.open = true
-            }
-
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: Tokens.spacing6 + Tokens.spacing1
-                Layout.leftMargin: Tokens.spacingHair
-                Layout.rightMargin: Tokens.spacingHair
-                color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
-            }
-
-            Repeater {
-                id: pinTiles
-                model: dock.items
-
-                DockTile {
-                    required property var modelData
-                    required property int index
-                    readonly property string resolvedDesktopId:
-                        modelData.desktopId || Compositor.desktopIdForApp(modelData.appId)
-
-                    entry: DesktopEntries.byId(resolvedDesktopId)
-                           ?? DesktopEntries.byId(modelData.appId)
-                    appId: modelData.appId
-                    desktopId: resolvedDesktopId
-                    tooltip: entry?.name ?? modelData.appId
-                    running: modelData.toplevel !== null
-                    // The toplevel check is not redundant: at cold start
-                    // activeToplevel is null, and comparing two optional-chained
-                    // nulls yields undefined === undefined, which lit up every
-                    // pinned-but-not-running tile as focused.
-                    active: modelData.toplevel !== null
-                            && Hyprland.activeToplevel?.address === modelData.toplevel.address
-
-                    // A pinned app that is not running launches; anything else
-                    // focuses. focuswindow follows the window to whatever
-                    // workspace it is on, which is what makes an off-workspace
-                    // tile a way to switch pages rather than a dead entry.
-                    // Middle closes, right unpins — same verbs the Waybar dock
-                    // bound, minus the three-way shell dispatch.
-                    onActivated: {
-                        if (modelData.toplevel)
-                            Compositor.dispatchTo("focuswindow", modelData.toplevel);
-                        else if (entry)
-                            entry.execute();
-                        else if (modelData.desktopId)
-                            // Same reason the tile falls back for its icon: with
-                            // no entry there is nothing to execute(), and a
-                            // pinned app that does nothing on click is a dead
-                            // tile. gtk-launch takes the desktop id directly.
-                            Quickshell.execDetached(["gtk-launch", modelData.desktopId]);
-                    }
-                    onClosed: Compositor.dispatchTo("closewindow", modelData.toplevel)
-                    onUnpinned: if (modelData.pinned)
-                        Quickshell.execDetached([
-                            Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
-                            "remove", modelData.appId])
-
-                    // A running window that is not pinned has no stored
-                    // position, so there is nothing a drop could write.
-                    draggable: modelData.pinned
-                    onDragStarted: dock.beginDrag(index)
-                    onDragMoved: dx => dock.updateDrag(dx)
-                    onDragEnded: dock.commitDrag(modelData)
-                    onDragCanceled: dock.cancelDrag()
+        transform: Translate {
+            // Slides the dock below the visible edge rather than fading it —
+            // a faded-but-still-hoverable dock would dead-zone clicks in the
+            // space it used to occupy.
+            y: dock.revealed ? 0 : dock.implicitHeight
+            Behavior on y {
+                NumberAnimation {
+                    duration: Motion.duration(Tokens.dur2h)
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Tokens.easeStandard
                 }
-            }
-
-            Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: Tokens.spacing6 + Tokens.spacing1
-                Layout.leftMargin: Tokens.spacingHair
-                Layout.rightMargin: Tokens.spacingHair
-                color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
-            }
-
-            // The trash tile, in the trailing slot every dock puts it in.
-            //
-            // Stateless on purpose: there is no full/empty variant of the glyph
-            // and no dot, because knowing which one to draw means watching
-            // ~/.local/share/Trash/files, and Quickshell watches files rather
-            // than directories — so the only way to keep it truthful would be
-            // the timer-and-subprocess loop the rest of this dock exists to
-            // retire. `trash:///` is the XDG-standard URI, and nautilus is
-            // launched directly rather than through xdg-open: almost nothing
-            // registers x-scheme-handler/trash, and xdg-open answers an
-            // unregistered scheme by handing the URI to the default browser.
-            DockTile {
-                glyph: "\u{f0a79}"
-                tooltip: "Trash"
-                onActivated: Quickshell.execDetached(
-                    ["nautilus", "--new-window", "trash:///"])
             }
         }
 
-        // The drop indicator: where the lifted tile lands if released now.
-        //
-        // Drawn as a gap marker between two slots rather than a highlight on the
-        // target tile, because "swap with this one" and "insert before this one"
-        // look identical as a highlight and only one of them is what happens.
-        Rectangle {
-            // Dragging right lands the tile AFTER the tile currently at dragTo,
-            // dragging left lands it BEFORE — same index, opposite edge.
-            readonly property int boundary:
-                dock.dragTo > dock.dragFrom ? dock.dragTo + 1 : dock.dragTo
+        Surface {
+            anchors.centerIn: parent
+            implicitWidth: row.implicitWidth + Tokens.spacing3 * 2
+            implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
+            elevation: 2
+            alphaOverride: Accent.chromeAlpha
+            tint: Tokens.chromeTint
+            radius: Tokens.radiusLg
 
-            visible: dock.dragFrom >= 0 && dock.dragTo !== dock.dragFrom
-            width: 2
-            height: 44
-            radius: Tokens.radiusPill
-            // Chrome-lifted: this 2px bar is drawn straight onto the dock, and a
-            // drop marker that cannot be seen is the one thing this control has
-            // to communicate.
-            color: Accent.accentOnChrome
-            y: row.y + (row.height - height) / 2
-            x: row.x + dock.pinsOriginX + boundary * dock.slot
-               - row.spacing / 2 - width / 2
+            RowLayout {
+                id: row
+                anchors.centerIn: parent
+                spacing: Tokens.spacing2
 
-            Behavior on x {
-                NumberAnimation {
-                    duration: Motion.duration(Tokens.dur2)
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Tokens.easeOut
+                // The pin settings tile. Pinning used to be reachable only through
+                // Rofi, which meant the dock's own contents were the one thing on
+                // the dock you could not change from the dock.
+                //
+                // It sits where the Rofi launcher tile used to: that tile was a
+                // second way to do what tapping Super already does from anywhere, so
+                // the leading slot is better spent on the one control that exists
+                // nowhere but the dock.
+                DockTile {
+                    glyph: "\u{f0493}"
+                    tooltip: "Configure dock pins"
+                    onActivated: if (dock.pinPicker) dock.pinPicker.open = true
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 1
+                    Layout.preferredHeight: Tokens.spacing6 + Tokens.spacing1
+                    Layout.leftMargin: Tokens.spacingHair
+                    Layout.rightMargin: Tokens.spacingHair
+                    color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
+                }
+
+                Repeater {
+                    id: pinTiles
+                    model: dock.items
+
+                    DockTile {
+                        required property var modelData
+                        required property int index
+                        readonly property string resolvedDesktopId:
+                            modelData.desktopId || Compositor.desktopIdForApp(modelData.appId)
+
+                        entry: DesktopEntries.byId(resolvedDesktopId)
+                               ?? DesktopEntries.byId(modelData.appId)
+                        appId: modelData.appId
+                        desktopId: resolvedDesktopId
+                        tooltip: entry?.name ?? modelData.appId
+                        running: modelData.toplevel !== null
+                        windowCount: modelData.toplevels?.length ?? 0
+                        // The toplevel check is not redundant: at cold start
+                        // activeToplevel is null, and comparing two optional-chained
+                        // nulls yields undefined === undefined, which lit up every
+                        // pinned-but-not-running tile as focused.
+                        active: modelData.toplevel !== null
+                                && Hyprland.activeToplevel?.address === modelData.toplevel.address
+
+                        // A pinned app that is not running launches; a single
+                        // running window focuses; two or more open the picker
+                        // instead of silently picking the first one Hyprland
+                        // happened to report. focuswindow follows the window to
+                        // whatever workspace it is on, which is what makes an
+                        // off-workspace tile a way to switch pages rather than a
+                        // dead entry. Middle closes, right unpins — same verbs the
+                        // Waybar dock bound, minus the three-way shell dispatch.
+                        onActivated: {
+                            if ((modelData.toplevels?.length ?? 0) > 1) {
+                                picker.toplevels = modelData.toplevels;
+                                picker.visible = !picker.visible;
+                            } else if (modelData.toplevel) {
+                                Compositor.dispatchTo("focuswindow", modelData.toplevel);
+                            } else if (entry) {
+                                entry.execute();
+                            } else if (modelData.desktopId) {
+                                // Same reason the tile falls back for its icon: with
+                                // no entry there is nothing to execute(), and a
+                                // pinned app that does nothing on click is a dead
+                                // tile. gtk-launch takes the desktop id directly.
+                                Quickshell.execDetached(["gtk-launch", modelData.desktopId]);
+                            }
+                        }
+
+                        WindowPicker {
+                            id: picker
+                            target: parent
+                            onPicked: toplevel => Compositor.dispatchTo("focuswindow", toplevel)
+                        }
+                        onClosed: Compositor.dispatchTo("closewindow", modelData.toplevel)
+                        onUnpinned: if (modelData.pinned)
+                            Quickshell.execDetached([
+                                Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
+                                "remove", modelData.appId])
+
+                        // A running window that is not pinned has no stored
+                        // position, so there is nothing a drop could write.
+                        draggable: modelData.pinned
+                        onDragStarted: dock.beginDrag(index)
+                        onDragMoved: dx => dock.updateDrag(dx)
+                        onDragEnded: dock.commitDrag(modelData)
+                        onDragCanceled: dock.cancelDrag()
+                    }
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 1
+                    Layout.preferredHeight: Tokens.spacing6 + Tokens.spacing1
+                    Layout.leftMargin: Tokens.spacingHair
+                    Layout.rightMargin: Tokens.spacingHair
+                    color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
+                }
+
+                // The trash tile, in the trailing slot every dock puts it in.
+                //
+                // Stateless on purpose: there is no full/empty variant of the glyph
+                // and no dot, because knowing which one to draw means watching
+                // ~/.local/share/Trash/files, and Quickshell watches files rather
+                // than directories — so the only way to keep it truthful would be
+                // the timer-and-subprocess loop the rest of this dock exists to
+                // retire. `trash:///` is the XDG-standard URI, and nautilus is
+                // launched directly rather than through xdg-open: almost nothing
+                // registers x-scheme-handler/trash, and xdg-open answers an
+                // unregistered scheme by handing the URI to the default browser.
+                DockTile {
+                    glyph: "\u{f0a79}"
+                    tooltip: "Trash"
+                    onActivated: Quickshell.execDetached(
+                        ["nautilus", "--new-window", "trash:///"])
+                }
+            }
+
+            // The drop indicator: where the lifted tile lands if released now.
+            //
+            // Drawn as a gap marker between two slots rather than a highlight on the
+            // target tile, because "swap with this one" and "insert before this one"
+            // look identical as a highlight and only one of them is what happens.
+            Rectangle {
+                // Dragging right lands the tile AFTER the tile currently at dragTo,
+                // dragging left lands it BEFORE — same index, opposite edge.
+                readonly property int boundary:
+                    dock.dragTo > dock.dragFrom ? dock.dragTo + 1 : dock.dragTo
+
+                visible: dock.dragFrom >= 0 && dock.dragTo !== dock.dragFrom
+                width: 2
+                height: 44
+                radius: Tokens.radiusPill
+                // Chrome-lifted: this 2px bar is drawn straight onto the dock, and a
+                // drop marker that cannot be seen is the one thing this control has
+                // to communicate.
+                color: Accent.accentOnChrome
+                y: row.y + (row.height - height) / 2
+                x: row.x + dock.pinsOriginX + boundary * dock.slot
+                   - row.spacing / 2 - width / 2
+
+                Behavior on x {
+                    NumberAnimation {
+                        duration: Motion.duration(Tokens.dur2)
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Tokens.easeOut
+                    }
                 }
             }
         }

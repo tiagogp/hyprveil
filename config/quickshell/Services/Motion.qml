@@ -35,9 +35,11 @@ Singleton {
     // The one call site every Behavior uses. Reduced motion is not slower
     // motion — a long slow fade is worse for vestibular triggers than none —
     // so the reduced answer is zero: the property snaps to its new value with
-    // no travel, and the easing curve stops mattering.
+    // no travel, and the easing curve stops mattering. Calm Mode's
+    // "pausa de animação em bateria" reuses the exact same zero-duration
+    // path rather than a separate slow-motion mode of its own.
     function duration(ms: int): int {
-        return root.reduced ? 0 : ms;
+        return (root.reduced || CalmMode.pauseAnimations) ? 0 : ms;
     }
 
     FileView {

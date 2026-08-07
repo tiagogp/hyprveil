@@ -17,6 +17,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Services"
 
 Scope {
     id: root
@@ -30,7 +31,47 @@ Scope {
     property int viewYear: Time.today.getFullYear()
     property int viewMonth: Time.today.getMonth() // 0-11
 
-    onOpenChanged: if (open) resetToToday()
+    // Upcoming events — see hypr/scripts/calendar-events.sh. Loaded only when
+    // the calendar actually opens, never at shell startup: the roadmap's
+    // "lazy load" requirement for this item, and there is nothing to show
+    // before the panel that would show it exists.
+    property var upcomingEvents: []
+
+    onOpenChanged: {
+        if (open) {
+            resetToToday();
+            eventsLoader.running = true;
+        }
+    }
+
+    Process {
+        id: eventsLoader
+        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/calendar-events.sh", "upcoming", "3"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.upcomingEvents = JSON.parse(text);
+                } catch (e) {
+                    // No ICS source configured, or nothing parsed — the
+                    // month grid below is the complete fallback either way,
+                    // exactly as if this Process had never run.
+                    root.upcomingEvents = [];
+                }
+            }
+        }
+    }
+
+    function eventTimeLabel(raw) {
+        // DTSTART;VALUE=DATE has no time component (8 digits, no "T") — an
+        // all-day event reads as a bare date rather than a false midnight.
+        if (raw.length === 8) return Qt.formatDate(new Date(
+            Number(raw.slice(0, 4)), Number(raw.slice(4, 6)) - 1, Number(raw.slice(6, 8))), "MMM d");
+        const y = Number(raw.slice(0, 4)), mo = Number(raw.slice(4, 6)) - 1, d = Number(raw.slice(6, 8));
+        const hh = Number(raw.slice(9, 11)), mm = Number(raw.slice(11, 13));
+        const dt = raw.endsWith("Z")
+            ? new Date(Date.UTC(y, mo, d, hh, mm)) : new Date(y, mo, d, hh, mm);
+        return Qt.formatDateTime(dt, "MMM d, HH:mm");
+    }
 
     function resetToToday(): void {
         root.viewYear = Time.today.getFullYear();
@@ -160,6 +201,63 @@ Scope {
                     CalendarPager {
                         glyph: "\u{f0142}" // chevron-right
                         onClicked: root.step(1)
+                    }
+                }
+
+                // Upcoming events — see calendar-events.sh above. Absent
+                // entirely (not an empty placeholder row) when no ICS source
+                // was found, so the fallback is pixel-identical to the
+                // calendar this panel had before events existed.
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Tokens.spacing1
+                    spacing: Tokens.spacingHair
+                    visible: root.upcomingEvents.length > 0
+
+                    Text {
+                        renderType: Text.NativeRendering
+                        Layout.fillWidth: true
+                        text: "Upcoming"
+                        font.family: Tokens.fontUi
+                        font.pixelSize: Tokens.text2xs
+                        font.weight: Tokens.weightSemibold
+                        color: Tokens.dim
+                    }
+
+                    Repeater {
+                        model: root.upcomingEvents
+
+                        RowLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: Tokens.spacing2
+
+                            Text {
+                                renderType: Text.NativeRendering
+                                text: root.eventTimeLabel(parent.modelData.raw)
+                                font.family: Tokens.fontUi
+                                font.pixelSize: Tokens.text2xs
+                                font.weight: Tokens.weightMedium
+                                color: Accent.accent
+                            }
+
+                            Text {
+                                renderType: Text.NativeRendering
+                                Layout.fillWidth: true
+                                text: parent.modelData.summary
+                                font.family: Tokens.fontUi
+                                font.pixelSize: Tokens.textXs
+                                color: Tokens.text
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.topMargin: Tokens.spacing1
+                        implicitHeight: 1
+                        color: Qt.rgba(1, 1, 1, Tokens.elev0Border)
                     }
                 }
 
