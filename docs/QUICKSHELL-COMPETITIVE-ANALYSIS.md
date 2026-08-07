@@ -491,9 +491,8 @@ mencionado no cabeçalho deste documento.
   - Critério de conclusão: backlight e DDC testados; ausente/degradado não
     quebra painel; teclado e slider sincronizam.
   - Implementado em `Services/Brightness.qml` (probe único de backlight +
-    probe/porta DDC sob demanda) e `Panel/BrightnessSection.qml`; verificado
-    por `tests/p12-brightness-ramp-smoke.sh` e pelo carregamento real do QML
-    em `tests/p13-qml-load-smoke.sh`.
+    probe/porta DDC sob demanda) e `Panel/BrightnessSection.qml`; o gate
+    leve mantém o carregamento real do QML via `tests/qml-load-smoke.sh`.
 - [x] **Launcher nativo MVP** — apps, janelas e ações em um fluxo;
   Caelestia/end-4/DMS.
   - Dependências: índice desktop, Hyprland IPC, coordenador de foco.
@@ -612,9 +611,8 @@ mencionado no cabeçalho deste documento.
   - Critério de conclusão: previews limitados, cache descartável, exclusão e
     modo privado/lock testados.
   - Implementado em `Panel/ClipboardSection.qml`: detecção de entradas de
-    imagem do cliphist (heurística verificada contra uma saída real de
-    `cliphist list`, não assumida — ver `tests/p20-clipboard-thumbnail-
-    smoke.sh`), thumbnail 64×64 decodificado sob demanda para
+    imagem do cliphist a partir da saída real de `cliphist list`, thumbnail
+    64×64 decodificado sob demanda para
     `$XDG_CACHE_HOME/hyprveil/clipboard-thumbs/`, nunca para o histórico
     persistente, apagado por `clearAll()`. Modo privado/lock NÃO tem uma
     guarda explícita própria nesta passada: o painel de Quick Settings já é
@@ -652,9 +650,8 @@ mencionado no cabeçalho deste documento.
     terceiros — só um `kind` que este build conhece (`calculator`, `files`,
     `emoji`) é ativado, e uma entrada com `kind` desconhecido ou malformada é
     filtrada individualmente sem falhar o carregamento do registry nem do
-    launcher. Testado via `tests/manual/providers/probe.qml` +
-    `tests/p18-launcher-providers-smoke.sh`, que roda o `quickshell` real
-    sem sessão Wayland. Sem sandbox real de execução de código arbitrário —
+    launcher. O carregamento QML geral continua coberto pelo gate leve; sem
+    sandbox real de execução de código arbitrário —
     fora de escopo para um MVP declarativo; ver limitações.
 - [x] **Cenas por monitor** — alterna trabalho/apresentação rapidamente.
   - Dependências: overrides, coordinator, wallpaper.
@@ -665,8 +662,8 @@ mencionado no cabeçalho deste documento.
     `revert`/`remove`, snapshot de `dock`/`accent`/`modules` — nunca
     wallpaper, que continua exclusivamente de `wallpaper.sh` — aplicado
     atomicamente via `settings-store.sh set`, com um slot de reverter de um
-    passo) e uma seção "Scenes" em `Panel/Preferences.qml`; testado em
-    `tests/p17-scenes-smoke.sh`. "Por monitor" é uma simplificação do nome —
+    passo) e uma seção "Scenes" em `Panel/Preferences.qml`. "Por monitor" é
+    uma simplificação do nome —
     ver a nota de escopo no cabeçalho de `scenes.sh`: isto é hoje um perfil
     de mesa inteira, não por conector; recuperação após remoção de monitor
     não se aplica a este MVP porque nada aqui referencia um monitor
@@ -691,9 +688,7 @@ mencionado no cabeçalho deste documento.
   - Implementado em `Launcher/Providers.qml`: arquivos via `find` (sem
     depender de `fd`), debounced e limitado a 8 resultados, com `timeout 2`
     no processo; calculadora via um parser aritmético próprio (sem `eval`,
-    sem `qalc`) verificado em `tests/p18-launcher-providers-smoke.sh`
-    (precedência, parênteses, divisão, negativos, divisão por zero, entrada
-    não numérica e entrada malformada); emoji via lista estática curta. Cada
+    sem `qalc`); emoji via lista estática curta. Cada
     provider liga/desliga em `Settings.modules.launcherProviders` a partir
     de `Panel/Preferences.qml`; calculadora ligada por padrão (nenhum
     processo obrigatório), arquivos e emoji desligados por padrão como o

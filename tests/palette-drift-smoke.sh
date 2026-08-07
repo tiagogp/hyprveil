@@ -58,4 +58,4 @@ for name in text text-muted; do
 done
 ok "rofi's template mirrors \$text/\$text-muted from neutrals.conf"
 
-printf 'P11 palette drift smoke test passed.\n'
+printf 'Palette drift smoke test passed.\n'

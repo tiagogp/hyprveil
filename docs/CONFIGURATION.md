@@ -49,7 +49,7 @@ HYPRVEIL_CONFIG_HOME="$PWD/config" ./config/hypr/scripts/accent.sh render
 ```
 
 `accent.sh check` renders every consumer into a scratch copy and diffs it against
-the committed output, so an edit without a following `render` fails the P6 gate
+the committed output, so an edit without a following `render` fails locally
 instead of shipping a stale file.
 
 For a manual accent without a wallpaper to derive from, `accent.sh preset list`

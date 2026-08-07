@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-TMP=$(mktemp -d "${TMPDIR:-/tmp}/hyprveil-p8.XXXXXX")
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/hyprveil-lock.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -116,4 +116,4 @@ grep -q 'function unlock' "$REPO/config/quickshell/Lock/Lock.qml" \
     && fail "Lock.qml exposes unlock over IPC, which makes the lock bypassable"
 ok "every lock trigger routes through the fallback and the lock IPC is one-way"
 
-printf 'P8 lock smoke tests passed.\n'
+printf 'Lock smoke tests passed.\n'

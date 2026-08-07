@@ -97,7 +97,7 @@ whenever the shell cannot be confirmed — not installed, no answer, an unexpect
 answer, or a hang. Test the decision without locking anything:
 
 ```bash
-./tests/p8-lock-smoke.sh
+./tests/lock-smoke.sh
 ```
 
 If the Quickshell lock is faulty, force hyprlock permanently by pointing

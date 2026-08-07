@@ -166,8 +166,8 @@ Actions are shown as the command that actually runs (`$terminal` resolved to
 same reason: a label is a second source of truth that goes stale the first time
 the command changes.
 
-`tests/manual/cheatsheet/probe.qml` opens the modal standalone, so checking a
-change to it does not mean restarting the shell and discarding the session's
+For quick checks while editing, call `qs ipc call cheatsheet toggle` in a running
+session; it opens the modal without restarting the shell or discarding
 notification history.
 
 ## Talking to the shell
@@ -187,7 +187,7 @@ qs ipc call lock isLocked            # lock state
 ```
 
 There is deliberately **no unlock over IPC**. Anything that can reach the socket
-could otherwise bypass the lock screen; `tests/p8-lock-smoke.sh` asserts no such
+could otherwise bypass the lock screen; `tests/lock-smoke.sh` asserts no such
 function appears.
 
 ## Dependencies

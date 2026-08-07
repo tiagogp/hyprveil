@@ -13,7 +13,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq shellcheck gawk
-      - name: Run P0-P10 quality gate
+      - name: Run lightweight quality gate
         run: ./tests/run.sh --require-shellcheck
 
   # The job above mocks every dnf/repoquery call, so the actual command syntax

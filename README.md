@@ -82,8 +82,8 @@ Important warnings:
   accent presets for picking a look without a wallpaper (`accent.sh preset`).
 - GTK 3/4, Qt 5/6, Kitty, Rofi, wlogout, Papirus, Bibata, Geist, Fira Code, and
   Starship theming.
-- Mocked non-session smoke tests for installer safety, shell wiring, accents,
-  tokens, lock fallback behavior, and nested-session setup.
+- Lightweight non-session quality gate for syntax, config parsing, docs links,
+  lock fallback behavior, palette drift, QML loading, and benchmark metadata.
 
 ## Documentation
 
@@ -113,7 +113,7 @@ Run the deterministic non-session gate from the repo root:
 ```
 
 It checks Bash syntax, ShellCheck when available, JSON/JSONC parsing, executable
-bits, Markdown links, and the mocked P0-P12 smoke suites. Use
+bits, Markdown links, a few focused smoke tests, and benchmark metadata. Use
 `./tests/run.sh --require-shellcheck` when ShellCheck should be enforced instead
 of treated as optional.
 

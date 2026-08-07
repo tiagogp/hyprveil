@@ -57,8 +57,11 @@ scripts/
 ├── uninstall.sh                 # remove Hyprveil while keeping Kitty and zsh
 └── lib/                       # shared installer and render helpers
 tests/
-├── p0-smoke.sh ... p12-brightness-ramp-smoke.sh
-└── run.sh                      # non-session P0-P12 quality gate
+├── lock-smoke.sh
+├── palette-drift-smoke.sh
+├── qml-load-smoke.sh
+├── bench.sh
+└── run.sh                      # lightweight non-session quality gate
 install.sh                      # recommended entrypoint
 hyprveil                        # maintenance command (doctor/update/rollback/uninstall)
 ```

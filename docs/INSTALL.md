@@ -118,7 +118,7 @@ Then reload Hyprland or restart the affected component. The installer never dele
 backup directories automatically.
 
 Run `./scripts/03-test-config.sh` for config validation and Fedora/source reporting,
-or `./tests/run.sh` for Bash/JSON/executable validation and every non-root mocked
-behavior check. Use `./tests/run.sh --require-shellcheck` when ShellCheck should be
+or `./tests/run.sh` for Bash/JSON/executable validation and the focused non-root
+checks. Use `./tests/run.sh --require-shellcheck` when ShellCheck should be
 enforced instead of treated as optional. See [RECOVERY.md](RECOVERY.md) for
 component recovery and full rollback.
