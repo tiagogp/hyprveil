@@ -1,0 +1,2 @@
+import "../Bar"
+Bar {}

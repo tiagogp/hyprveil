@@ -12,12 +12,12 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
 
-    readonly property string scriptPath:
-        Quickshell.env("HOME") + "/.config/hypr/scripts/doctor.sh"
+    readonly property string scriptPath: Paths.hyprScripts + "/doctor.sh"
 
     // [{ id, label, available, degraded, hint }]
     property var rows: []

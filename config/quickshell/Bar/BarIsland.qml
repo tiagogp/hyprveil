@@ -6,6 +6,7 @@
 import QtQuick
 import Quickshell.Widgets
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Surface {
@@ -49,7 +50,7 @@ Surface {
     // Optional whole-island interaction is used by the clock. Keeping the hit
     // layer here makes the standard glass padding clickable too; a MouseArea in
     // the wrapped content would cover only the text's implicit rectangle.
-    MouseArea {
+    HvPointerArea {
         anchors.fill: parent
         enabled: root.interactive
         visible: root.interactive

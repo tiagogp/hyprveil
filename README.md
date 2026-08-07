@@ -49,11 +49,13 @@ chmod +x scripts/*.sh
 The installer probes enabled Fedora repositories first, offers COPR fallbacks only
 when needed, records package-source choices, preserves state under
 `$XDG_STATE_HOME/hyprveil`, and creates timestamped backups before replacing
-Hyprveil-managed config trees. It is safe to rerun.
+Hyprveil-managed config trees. It also installs the versioned CLI under
+`~/.local/bin/hyprveil` and Bash completion under `$XDG_DATA_HOME`. It is safe
+to rerun.
 
 Important warnings:
 
-- Run `./hyprveil setup` after installing to detect monitors and pick keyboard,
+- Run `hyprveil setup` after installing to detect monitors and pick keyboard,
   apps, and idle timers. For common single-monitor hardware the shipped catch-all
   layout already works; `setup` is what handles multi-monitor and custom scale
   without hand-editing `~/.config/hypr/monitors.conf`.
@@ -72,9 +74,11 @@ Important warnings:
 - Exclusive surface coordination for the native launcher, session dialog, Quick
   Settings, preferences, wallpaper picker, overview, calendar, and cheatsheet.
 - Explicit default/recovery profiles; the doctor labels recovery as degraded.
-- Versioned settings schema v2 with validation, v1 migration, atomic writes,
+- Versioned `$XDG_CONFIG_HOME/hyprveil/shell.json` schema v2 with one shared
+  defaults source, validation, v1 migration, atomic writes,
   corrupt-file recovery, providers, accessibility, and per-monitor overrides.
-- Public `hyprveil shell` and `hyprveil wallpaper` commands.
+- Installed, versioned `hyprveil shell` and `hyprveil wallpaper` commands with
+  Bash completion.
 - Wallpaper state and per-monitor fit restored through Hyprpaper IPC.
 - Standard/reduced motion profiles and a global animation toggle.
 - Wallpaper-derived accent rendering for Hyprland, Quickshell, Kitty, Rofi,
@@ -82,8 +86,8 @@ Important warnings:
   accent presets for picking a look without a wallpaper (`accent.sh preset`).
 - GTK 3/4, Qt 5/6, Kitty, Rofi, wlogout, Papirus, Bibata, Geist, Fira Code, and
   Starship theming.
-- Lightweight non-session quality gate for syntax, config parsing, docs links,
-  lock fallback behavior, palette drift, QML loading, and benchmark metadata.
+- Lightweight non-session quality gate plus an explicit self-hosted Wayland
+  runtime gate for real QML loading, IPC latency, CPU, and memory measurements.
 
 ## Documentation
 

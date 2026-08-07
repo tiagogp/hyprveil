@@ -62,15 +62,16 @@ shell.qml
         Design/Tokens.qml + Motion.qml
       Services/*                     normalized observable state
         Adapters/*                   external commands and compositor IPC
+        Utils/*                      XDG paths, strings, and pure helpers
 ```
 
 `shell.qml` is only the Quickshell entry point. `App/Shell.qml` composes the
 runtime. Features may call service or adapter methods but must not embed
 `systemctl`, `hyprctl`, script paths, or direct settings JSON access.
 
-Lock, passive notifications, and OSD remain separately instantiated because
-their security and lifetime differ from interactive navigation. They can consume
-read-only shared state but are never children of an interactive modal.
+The lock remains outside every navigation host because its security and lifetime
+differ from ordinary shell surfaces. Passive notifications and OSD are owned by
+`PassiveHost`; they consume shared state but never enter an interactive modal.
 
 ## Surface ownership
 
@@ -108,6 +109,8 @@ The pre-migration inventory found these repeated constructions:
 | section/title/absence | `Section`, local headings and empty labels | `HvSection`, `HvHeader`, `HvEmptyState` |
 | focus/help/menu | local border, tooltip, secondary-click menus | `HvFocusRing`, `HvTooltip`, `HvContextMenu` |
 
-Source-level architecture tests prevent features from reintroducing direct
-system actions or settings reads. Real QML loading remains the integration gate
-when a Wayland session and Quickshell are available.
+Source-level architecture tests prevent features from reintroducing processes,
+file reads, system actions, or configuration paths. `tests/runtime-shell.sh` is
+the required integration gate on a Wayland-capable runner: it refuses to skip a
+real QML load and records IPC latency, CPU, RSS, PSS, and USS. The ordinary
+non-session job keeps those checks optional because hosted CI has no compositor.

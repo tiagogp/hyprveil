@@ -13,6 +13,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import ".."
+import "../Design/Components"
 import "../Services"
 
 PopupWindow {
@@ -73,7 +74,7 @@ PopupWindow {
                         elide: Text.ElideRight
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         id: rowMouse
                         anchors.fill: parent
                         hoverEnabled: true

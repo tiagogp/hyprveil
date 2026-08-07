@@ -83,7 +83,7 @@ HvSection {
                 }
             }
 
-            MouseArea {
+            HvPointerArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 function setFromX(x) {
@@ -147,7 +147,7 @@ HvSection {
                     }
                 }
 
-                MouseArea {
+                HvPointerArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     function setFromX(x) {

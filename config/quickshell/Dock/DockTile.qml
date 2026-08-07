@@ -10,6 +10,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Item {
@@ -179,7 +180,7 @@ Item {
         }
     }
 
-    MouseArea {
+    HvPointerArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true

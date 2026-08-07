@@ -11,6 +11,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../Services"
 import ".."
+import "../Design/Components"
 
 Surface {
     id: root
@@ -139,7 +140,7 @@ Surface {
         }
     }
 
-    MouseArea {
+    HvPointerArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true

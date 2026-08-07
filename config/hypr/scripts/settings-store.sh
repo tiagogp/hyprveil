@@ -7,7 +7,13 @@
 set -euo pipefail
 
 STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
-SETTINGS_FILE="$STATE_HOME/settings.json"
+CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+SETTINGS_DIR="$CONFIG_HOME/hyprveil"
+SETTINGS_FILE="$SETTINGS_DIR/shell.json"
+LEGACY_SETTINGS_FILE="$STATE_HOME/settings.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCHEMA_FILE="$SCRIPT_DIR/data/settings-schema.json"
+VALIDATOR="$SCRIPT_DIR/data/settings-validator.py"
 LOCK_FILE="$STATE_HOME/settings.lock"
 LOCK_DIR="$STATE_HOME/settings.lock.d"
 LOCK_KIND=
@@ -46,32 +52,7 @@ settings_unlock() {
 }
 
 defaults() {
-    jq -nc --argjson v "$CURRENT_VERSION" '{
-        version: $v,
-        appearance: { accentProvider: "hyprveil", density: "comfortable" },
-        modules: {
-            enabled: { bar: true, dock: true, notifications: true, osd: true },
-            calmMode: false
-        },
-        bar: { workspacesMode: "dynamic", position: "top" },
-        dock: { autohide: false },
-        surfaces: { popupMonitor: "focused", rememberLastPage: false },
-        animation: { profile: "system", reducedMotion: false },
-        accessibility: { highContrast: false, largeTargets: false },
-        providers: {
-            launcher: { files: false, calculator: true, emoji: false },
-            notifications: "quickshell",
-            wallpaper: "hyprpaper"
-        },
-        # Per-connector-name overrides, e.g. {"DP-2": {"dockAutohide": true}}.
-        # A monitor with no entry here inherits every global default above —
-        # this object only ever holds the DIFFERENCE from the default.
-        monitors: {},
-        # Named snapshots of the settings above (never wallpaper/accent
-        # colors, which stay owned by wallpaper.sh/accent.sh) plus the one
-        # snapshot needed to undo the last apply — see scenes.sh.
-        scenes: { profiles: {}, previous: null }
-    }'
+    jq -c '.default' "$SCHEMA_FILE"
 }
 
 # Recursive merge: stored keys win over defaults, but a key the defaults
@@ -103,7 +84,9 @@ merge_defaults() {
                 notifications: ($s.providers.notifications // $d.providers.notifications),
                 wallpaper: ($s.providers.wallpaper // $d.providers.wallpaper)
             },
-            monitors: ($s.monitors // {}),
+            monitors: (($s.monitors // {}) | with_entries(.value |=
+                ({dockAutohide: .dockAutohide, barWorkspacesMode: .barWorkspacesMode}
+                | with_entries(select(.value != null))))),
             scenes: ($d.scenes * ($s.scenes // {}))
         }
     ' <<<"$1" 2>/dev/null
@@ -139,36 +122,28 @@ migrate() {
 
 settings_write_locked() {
     local json=$1 tmp
-    mkdir -p "$STATE_HOME"
-    tmp=$(mktemp "$STATE_HOME/.settings.XXXXXX")
+    mkdir -p "$SETTINGS_DIR"
+    tmp=$(mktemp "$SETTINGS_DIR/.shell.XXXXXX")
     printf '%s\n' "$json" > "$tmp"
     mv -f "$tmp" "$SETTINGS_FILE"
 }
 
 settings_valid() {
-    jq -e '
-        type == "object" and
-        if .version == 1 then true
-        elif .version == 2 then
-            ((keys_unsorted - ["version","appearance","modules","bar","dock","surfaces","animation","accessibility","providers","monitors","scenes"]) | length == 0) and
-            (.appearance | type == "object" and .accentProvider as $a | ($a == "hyprveil" or $a == "matugen") and (.density == "compact" or .density == "comfortable")) and
-            (.modules.enabled | type == "object" and all(.[]; type == "boolean")) and (.modules.calmMode | type == "boolean") and
-            (.bar.workspacesMode == "dynamic" or .bar.workspacesMode == "fixed") and (.bar.position == "top" or .bar.position == "bottom") and
-            (.dock.autohide | type == "boolean") and
-            (.surfaces.popupMonitor | type == "string") and (.surfaces.rememberLastPage | type == "boolean") and
-            (.animation.profile == "system" or .animation.profile == "standard" or .animation.profile == "reduced") and (.animation.reducedMotion | type == "boolean") and
-            (.accessibility.highContrast | type == "boolean") and (.accessibility.largeTargets | type == "boolean") and
-            (.providers.launcher | all(.[]; type == "boolean")) and
-            (.providers.notifications == "quickshell" or .providers.notifications == "swaync" or .providers.notifications == "mako") and
-            (.providers.wallpaper | type == "string") and
-            (.monitors | type == "object") and all(.monitors[]; type == "object" and ((keys_unsorted - ["dockAutohide","barWorkspacesMode","surfaceScale"]) | length == 0)) and
-            (.scenes | type == "object") and (.scenes.profiles | type == "object")
-        else false end
-    ' "$1" >/dev/null 2>&1
+    python3 "$VALIDATOR" --allow-v1 "$SCHEMA_FILE" "$1" >/dev/null 2>&1
 }
 
 cmd_get() {
     mkdir -p "$STATE_HOME"
+    if [ ! -e "$SETTINGS_FILE" ] && [ -e "$LEGACY_SETTINGS_FILE" ]; then
+        settings_lock
+        if [ ! -e "$SETTINGS_FILE" ] && [ -e "$LEGACY_SETTINGS_FILE" ]; then
+            mkdir -p "$SETTINGS_DIR"
+            cp -a "$LEGACY_SETTINGS_FILE" "$SETTINGS_FILE"
+            mv "$LEGACY_SETTINGS_FILE" "$LEGACY_SETTINGS_FILE.migrated"
+            message "Legacy settings were migrated to $SETTINGS_FILE."
+        fi
+        settings_unlock
+    fi
     if [ ! -e "$SETTINGS_FILE" ] || ! settings_valid "$SETTINGS_FILE"; then
         settings_lock
             if [ ! -e "$SETTINGS_FILE" ] || ! settings_valid "$SETTINGS_FILE"; then
@@ -203,7 +178,7 @@ cmd_set() {
     # in the CURRENT shell before the subshell body ever runs, so on a
     # brand-new install (nothing has called `get` yet) the open failed with
     # "No such file or directory" if the directory did not already exist.
-    mkdir -p "$STATE_HOME"
+    mkdir -p "$STATE_HOME" "$SETTINGS_DIR"
     settings_lock
         # Merged onto the CURRENT stored (already defaulted/migrated)
         # settings, not onto raw defaults — merge_defaults's `$d[0] * $stored`
@@ -220,22 +195,16 @@ cmd_set() {
         current=$(merge_defaults "$(migrate "$raw")")
         [ -n "$current" ] || current=$(defaults)
         merged=$(jq -c --argjson patch "$json" '. * $patch' <<<"$current")
-        if ! jq -e '
-            .version == 2 and
-            ((keys_unsorted - ["version","appearance","modules","bar","dock","surfaces","animation","accessibility","providers","monitors","scenes"]) | length == 0) and
-            (.appearance.accentProvider == "hyprveil" or .appearance.accentProvider == "matugen") and
-            (.appearance.density == "compact" or .appearance.density == "comfortable") and
-            (.modules.enabled | all(.[]; type == "boolean")) and (.modules.calmMode | type == "boolean") and
-            (.bar.workspacesMode == "dynamic" or .bar.workspacesMode == "fixed") and
-            (.dock.autohide | type == "boolean") and (.surfaces.popupMonitor | type == "string") and
-            (.animation.reducedMotion | type == "boolean") and
-            (.accessibility.highContrast | type == "boolean") and
-            (.providers.launcher | all(.[]; type == "boolean")) and (.monitors | type == "object")
-        ' >/dev/null 2>&1 <<<"$merged"; then
+        local validation_file
+        validation_file=$(mktemp "$STATE_HOME/.settings-validation.XXXXXX")
+        printf '%s\n' "$merged" > "$validation_file"
+        if ! python3 "$VALIDATOR" "$SCHEMA_FILE" "$validation_file" >/dev/null 2>&1; then
+            rm -f "$validation_file"
             message "settings-store.sh set: patch violates schema v2"
             settings_unlock
             exit 1
         fi
+        rm -f "$validation_file"
         settings_write_locked "$merged"
     settings_unlock
 }

@@ -1,0 +1,16 @@
+BarFeature 1.0 BarFeature.qml
+DockFeature 1.0 DockFeature.qml
+PinPickerFeature 1.0 PinPickerFeature.qml
+NotificationPopupsFeature 1.0 NotificationPopupsFeature.qml
+QuickSettingsFeature 1.0 QuickSettingsFeature.qml
+IntegrationsFeature 1.0 IntegrationsFeature.qml
+PreferencesFeature 1.0 PreferencesFeature.qml
+WallpapersFeature 1.0 WallpapersFeature.qml
+CheatsheetFeature 1.0 CheatsheetFeature.qml
+CalendarFeature 1.0 CalendarFeature.qml
+OverviewFeature 1.0 OverviewFeature.qml
+LauncherFeature 1.0 LauncherFeature.qml
+SessionFeature 1.0 SessionFeature.qml
+LockFeature 1.0 LockFeature.qml
+OsdFeature 1.0 OsdFeature.qml
+StatusCapsuleFeature 1.0 StatusCapsuleFeature.qml

@@ -9,6 +9,7 @@ import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
 import ".."
+import "../Design/Components"
 import "../Adapters"
 
 Surface {
@@ -167,7 +168,7 @@ Surface {
                             verticalAlignment: Text.AlignVCenter
                         }
 
-                        MouseArea {
+                        HvPointerArea {
                             id: actionMouse
                             anchors.fill: parent
                             hoverEnabled: true
@@ -203,7 +204,7 @@ Surface {
                 color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
             }
 
-            MouseArea {
+            HvPointerArea {
                 id: closeMouse
                 anchors.fill: parent
                 hoverEnabled: true

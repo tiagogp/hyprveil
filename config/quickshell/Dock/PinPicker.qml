@@ -13,7 +13,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
 import ".."
@@ -154,7 +153,7 @@ Scope {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
 
-            MouseArea {
+            HvPointerArea {
                 anchors.fill: parent
                 onClicked: root.open = false
             }
@@ -185,7 +184,7 @@ Scope {
 
             // Stops a click inside the dialog reaching the scrim and dismissing
             // the thing the user is aiming at.
-            MouseArea { anchors.fill: parent }
+            HvPointerArea { anchors.fill: parent }
 
             ColumnLayout {
                 id: column
@@ -228,7 +227,7 @@ Scope {
                             color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
                         }
 
-                        MouseArea {
+                        HvPointerArea {
                             id: closeMouse
                             anchors.fill: parent
                             hoverEnabled: true
@@ -289,7 +288,7 @@ Scope {
                                 }
                             }
 
-                            MouseArea {
+                            HvPointerArea {
                                 id: chipMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
@@ -448,7 +447,7 @@ Scope {
                             }
                         }
 
-                        MouseArea {
+                        HvPointerArea {
                             id: rowMouse
                             anchors.fill: parent
                             hoverEnabled: true
@@ -507,16 +506,4 @@ Scope {
         }
     }
 
-    // Same shape the wallpaper picker exposes, so the dock's pins are
-    // scriptable from outside the shell without going through Rofi.
-    IpcHandler {
-        target: "dockpins"
-
-        function toggle(): string {
-            root.open = !root.open;
-            return root.open ? "open" : "closed";
-        }
-        function open(): string { root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

@@ -3,10 +3,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
-    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/hypr/scripts/nightlight.sh"
+    readonly property string scriptPath: Paths.hyprScripts + "/nightlight.sh"
     readonly property bool available: state !== "missing"
     property string state: "off"
     readonly property bool busy: checker.running || setter.running

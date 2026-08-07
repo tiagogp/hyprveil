@@ -8,21 +8,26 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Io
 import Quickshell.Services.Notifications
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
+    property bool enabled: true
+
     // Persists for the session and survives a wallpaper/accent change. The panel
     // reads this same list for history.
     property alias notifications: server.trackedNotifications
     property bool dontDisturb: false
-    onDontDisturbChanged: root.statusCapsule?.show(
-        root.dontDisturb ? "\u{f0392}" : "\u{f0391}",
-        "Do Not Disturb " + (root.dontDisturb ? "on" : "off"));
+    onDontDisturbChanged: {
+        if (root.dontDisturb) root.popupModel = [];
+        root.statusCapsule?.show(
+            root.dontDisturb ? "\u{f0392}" : "\u{f0391}",
+            "Do Not Disturb " + (root.dontDisturb ? "on" : "off"));
+    }
 
     // The transient status capsule, handed down from shell.qml — see
     // Osd/StatusCapsule.qml. DND is toggled from two places (the bar and the
@@ -142,7 +147,7 @@ Scope {
         implicitWidth: 340
         implicitHeight: Math.max(1, stack.implicitHeight)
         color: "transparent"
-        visible: root.popupModel.length > 0
+        visible: root.enabled && root.popupModel.length > 0
         // Overlay, not Top: a toast has to be visible over a fullscreen window,
         // which is the one case where it matters most.
         WlrLayershell.namespace: "hyprveil-notifications"
@@ -178,7 +183,7 @@ Scope {
                         onTriggered: root._drop(modelData)
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         anchors.fill: parent
                         // Behind the card's own content: without this, this
                         // area — declared after RowLayout and so stacked on
@@ -215,25 +220,4 @@ Scope {
         root.clearPersisted();
     }
 
-    // notification-daemon.sh toggle/dnd route here, the way they routed to
-    // `ags request` before. The keybinds themselves never change: they have
-    // always gone through the helper script.
-    IpcHandler {
-        target: "notifications"
-
-        function dnd(): string {
-            root.dontDisturb = !root.dontDisturb;
-            if (root.dontDisturb) root.popupModel = [];
-            return root.dontDisturb ? "on" : "off";
-        }
-
-        function clear(): string {
-            root.clearAll();
-            return "cleared";
-        }
-
-        function count(): string {
-            return String(server.trackedNotifications.values.length);
-        }
-    }
 }

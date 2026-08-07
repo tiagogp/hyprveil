@@ -631,7 +631,7 @@ mencionado no cabeçalho deste documento.
     atrás de uma confirmação em duas etapas, navegação por teclado completa
     (setas, Enter, Escape recua um nível por vez em vez de sempre fechar),
     ligado a `$mod, Escape` e `CTRL ALT, Delete` (que antes chamavam o
-    `wlogout` diretamente) via `qs ipc call session toggle`; `wlogout`
+    `wlogout` diretamente) via `hyprveil shell toggle session`; `wlogout`
     permanece o fallback em `$mod SHIFT, Escape`. "Estados disabled" não foi
     implementado — nenhuma ação é desabilitada condicionalmente nesta
     passada; ver limitações.

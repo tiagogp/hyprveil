@@ -16,3 +16,4 @@ HvFocusRing 1.0 HvFocusRing.qml
 HvTooltip 1.0 HvTooltip.qml
 HvContextMenu 1.0 HvContextMenu.qml
 HvChrome 1.0 HvChrome.qml
+HvPointerArea 1.0 HvPointerArea.qml

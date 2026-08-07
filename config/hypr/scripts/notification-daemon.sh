@@ -50,9 +50,9 @@ qs_running() {
 # No -c: the shell is deployed flat at ~/.config/quickshell/shell.qml, which is
 # Quickshell's default config path, so both the launch and the IPC target the
 # default instance.
-qs_ipc() {
-    command -v qs >/dev/null 2>&1 || return 1
-    qs ipc call "$@" >/dev/null 2>&1
+shell_cli() {
+    command -v hyprveil >/dev/null 2>&1 || return 1
+    hyprveil shell "$@" >/dev/null 2>&1
 }
 
 stop_daemons() {
@@ -153,9 +153,9 @@ case "${1:-start}" in
         fi
         ;;
     toggle)
-        if [ "$(shell_profile)" = default ]; then qs_ipc quicksettings toggle; exit $?; fi
+        if [ "$(shell_profile)" = default ]; then shell_cli toggle quick-settings; exit $?; fi
         case "$(backend)" in
-            quickshell) qs_ipc quicksettings toggle ;;
+            quickshell) shell_cli toggle quick-settings ;;
             swaync) swaync-client -t -sw ;;
             *)
                 command -v notify-send >/dev/null 2>&1 \
@@ -164,9 +164,9 @@ case "${1:-start}" in
         esac
         ;;
     dnd)
-        if [ "$(shell_profile)" = default ]; then qs_ipc notifications dnd; exit $?; fi
+        if [ "$(shell_profile)" = default ]; then shell_cli dnd toggle; exit $?; fi
         case "$(backend)" in
-            quickshell) qs_ipc notifications dnd ;;
+            quickshell) shell_cli dnd toggle ;;
             swaync) swaync-client -d -sw ;;
             *) makoctl mode -t do-not-disturb ;;
         esac

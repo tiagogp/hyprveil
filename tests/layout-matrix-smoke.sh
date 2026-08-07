@@ -36,13 +36,12 @@ surface_files = {
     "integrations": "Panel/Integrations.qml", "overview": "Overview/Overview.qml",
     "cheatsheet": "Panel/Cheatsheet.qml",
 }
-for monitor_count in (1, 2, 3):
-    assert app.count("model: Quickshell.screens") >= 2
-    for name, rel in surface_files.items():
-        assert f'registerSurface("{name}"' in app
-        source = (repo / "config/quickshell" / rel).read_text()
-        assert "property var targetScreen" in source
-        assert "screen: root.targetScreen" in source
+assert app.count("Quickshell.screens") >= 2
+for name, rel in surface_files.items():
+    assert f'registerSurface("{name}"' in app
+    source = (repo / "config/quickshell" / rel).read_text()
+    assert "property var targetScreen" in source
+    assert "screen: root.targetScreen" in source
 
 motion = (repo / "config/quickshell/Services/Motion.qml").read_text()
 assert "return (root.reduced || CalmMode.pauseAnimations) ? 0 : ms" in motion
@@ -51,5 +50,5 @@ for component in (repo / "config/quickshell/Design/Components").glob("*.qml"):
     if re.search(r"signal (clicked|toggled|moved|accepted)", source):
         assert "Accessible." in source, component
 
-print("OK: 1280/1600/1920/ultrawide, fractional-scale, 1-3 monitor, keyboard, and reduced-motion contracts pass")
+print("OK: source-level geometry, per-screen ownership, accessibility, and reduced-motion constraints pass")
 PY

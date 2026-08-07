@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Widgets
 import ".."
+import "../Design/Components"
 import "../Services"
 
 PopupWindow {
@@ -198,7 +199,7 @@ PopupWindow {
                     visible: seekArea.enabled
                 }
 
-                MouseArea {
+                HvPointerArea {
                     id: seekMouse
                     anchors.fill: parent
                     hoverEnabled: true

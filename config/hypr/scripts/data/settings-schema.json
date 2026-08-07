@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyprveil.dev/schema/shell-settings-v2.json",
+  "title": "Hyprveil shell settings",
+  "type": "object",
+  "additionalProperties": false,
+  "default": {
+    "version": 2,
+    "appearance": { "accentProvider": "hyprveil", "density": "comfortable" },
+    "modules": {
+      "enabled": { "bar": true, "dock": true, "notifications": true, "osd": true },
+      "calmMode": false
+    },
+    "bar": { "workspacesMode": "dynamic", "position": "top" },
+    "dock": { "autohide": false },
+    "surfaces": { "popupMonitor": "focused", "rememberLastPage": false },
+    "animation": { "profile": "system", "reducedMotion": false },
+    "accessibility": { "highContrast": false, "largeTargets": false },
+    "providers": {
+      "launcher": { "files": false, "calculator": true, "emoji": false },
+      "notifications": "quickshell",
+      "wallpaper": "hyprpaper"
+    },
+    "monitors": {},
+    "scenes": { "profiles": {}, "previous": null }
+  },
+  "required": [
+    "version", "appearance", "modules", "bar", "dock", "surfaces",
+    "animation", "accessibility", "providers", "monitors", "scenes"
+  ],
+  "properties": {
+    "version": { "const": 2 },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accentProvider", "density"],
+      "properties": {
+        "accentProvider": { "enum": ["hyprveil", "matugen"] },
+        "density": { "enum": ["compact", "comfortable"] }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "calmMode"],
+      "properties": {
+        "enabled": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bar", "dock", "notifications", "osd"],
+          "properties": {
+            "bar": { "type": "boolean" },
+            "dock": { "type": "boolean" },
+            "notifications": { "type": "boolean" },
+            "osd": { "type": "boolean" }
+          }
+        },
+        "calmMode": { "type": "boolean" }
+      }
+    },
+    "bar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspacesMode", "position"],
+      "properties": {
+        "workspacesMode": { "enum": ["dynamic", "fixed"] },
+        "position": { "enum": ["top", "bottom"] }
+      }
+    },
+    "dock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["autohide"],
+      "properties": { "autohide": { "type": "boolean" } }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["popupMonitor", "rememberLastPage"],
+      "properties": {
+        "popupMonitor": { "type": "string", "minLength": 1 },
+        "rememberLastPage": { "type": "boolean" }
+      }
+    },
+    "animation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "reducedMotion"],
+      "properties": {
+        "profile": { "enum": ["system", "standard", "reduced"] },
+        "reducedMotion": { "type": "boolean" }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["highContrast", "largeTargets"],
+      "properties": {
+        "highContrast": { "type": "boolean" },
+        "largeTargets": { "type": "boolean" }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["launcher", "notifications", "wallpaper"],
+      "properties": {
+        "launcher": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["files", "calculator", "emoji"],
+          "properties": {
+            "files": { "type": "boolean" },
+            "calculator": { "type": "boolean" },
+            "emoji": { "type": "boolean" }
+          }
+        },
+        "notifications": { "enum": ["quickshell", "swaync", "mako"] },
+        "wallpaper": { "const": "hyprpaper" }
+      }
+    },
+    "monitors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dockAutohide": { "type": "boolean" },
+          "barWorkspacesMode": { "enum": ["dynamic", "fixed"] }
+        }
+      }
+    },
+    "scenes": {
+      "type": "object",
+      "required": ["profiles", "previous"],
+      "properties": {
+        "profiles": { "type": "object" },
+        "previous": { "type": ["object", "null"] }
+      }
+    }
+  }
+}

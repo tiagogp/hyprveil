@@ -45,7 +45,7 @@ HvSection {
                 Keys.onReturnPressed: root.apply(modelData.name)
                 Keys.onSpacePressed: root.apply(modelData.name)
 
-                MouseArea {
+                HvPointerArea {
                     id: hoverArea
                     anchors.fill: parent
                     hoverEnabled: true

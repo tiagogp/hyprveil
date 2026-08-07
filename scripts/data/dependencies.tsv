@@ -15,6 +15,7 @@ required|hypridle|hypridle|idle management
 required|hyprpaper|hyprpaper|wallpaper
 required|wlogout|wlogout|power menu
 required|jq|jq|JSON state helpers
+required|python3|python3|shell settings schema validation
 required|util-linux|flock|atomic dock and wallpaper state
 required|glib2|gio|desktop-entry dock launching
 required|gtk3|gtk-launch|dock fallback when DesktopEntries cannot resolve a pin

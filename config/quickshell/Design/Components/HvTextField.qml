@@ -1,5 +1,6 @@
 import QtQuick
 import "../.."
+import "../../Services"
 
 Rectangle {
     id: root
@@ -12,11 +13,11 @@ Rectangle {
     signal moveUp()
     signal moveDown()
 
-    implicitHeight: 44
+    implicitHeight: Ui.controlHeight
     implicitWidth: 240
     radius: Tokens.radiusSm
     color: Qt.rgba(1, 1, 1, 0.06)
-    border.width: input.activeFocus ? 1 : 0
+    border.width: input.activeFocus ? Ui.outlineWidth : (Ui.highContrast ? 1 : 0)
     border.color: Accent.accent
     Accessible.role: Accessible.EditableText
     Accessible.name: accessibleName

@@ -15,3 +15,4 @@ printf '%s\n' \
     > "$TMP/candidate.jsonl"
 
 "$REPO/tests/compare-bench.py" "$TMP/baseline.jsonl" "$TMP/candidate.jsonl"
+printf 'OK: benchmark comparator rejects regressions using deterministic fixtures\n'

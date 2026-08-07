@@ -7,13 +7,14 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../Services"
 
 Scope {
     id: root
+
+    property bool enabled: true
 
     property bool open: false
     property string kind: "volume"
@@ -40,8 +41,16 @@ Scope {
         return "\u{f0581}";
     }
 
+    function show(nextKind: string, nextPercent: string, nextMuted: string): void {
+        root.kind = nextKind;
+        root.percent = Math.round(Number(nextPercent));
+        root.muted = nextMuted === "true";
+        root.open = true;
+        hideTimer.restart();
+    }
+
     PanelWindow {
-        visible: root.open
+        visible: root.enabled && root.open
         anchors { bottom: true; left: true; right: true }
         margins { bottom: Tokens.spacing8 * 2 }
 
@@ -144,16 +153,4 @@ Scope {
         onTriggered: root.open = false
     }
 
-    IpcHandler {
-        target: "osd"
-
-        function show(kind: string, percent: string, muted: string): string {
-            root.kind = kind;
-            root.percent = Math.round(Number(percent));
-            root.muted = muted === "true";
-            root.open = true;
-            hideTimer.restart();
-            return "shown";
-        }
-    }
 }

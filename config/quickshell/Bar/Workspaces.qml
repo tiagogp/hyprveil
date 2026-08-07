@@ -9,9 +9,12 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Widgets
 import ".."
+import "../Design/Components"
 import "../Services"
 
 RowLayout {
+    id: root
+    property string mode: "dynamic"
     spacing: Tokens.spacing1h
 
     // Occupied workspaces plus the focused one's immediate neighbours, not a
@@ -20,7 +23,7 @@ RowLayout {
     // from the bar just because it is outside a hardcoded range. Preferences
     // can opt back into the fixed range (Settings.bar.workspacesMode).
     Repeater {
-        model: Settings.bar.workspacesMode === "fixed"
+        model: root.mode === "fixed"
             ? Compositor.fixedWorkspaceIds() : Compositor.visibleWorkspaceIds()
 
         Rectangle {
@@ -100,7 +103,7 @@ RowLayout {
                 }
             }
 
-            MouseArea {
+            HvPointerArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hyprland.dispatch("workspace " + pill.wsId)

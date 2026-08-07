@@ -177,7 +177,7 @@ Internamente ela pode usar o IPC do Quickshell, mas isso deixa de ser exposto ao
 
 Prazo estimado: 3–5 dias.
 
-Evoluir `settings.json` para schema v2:
+Evoluir a configuração central para `shell.json`, schema v2:
 
 - [x] aparência;
 - [x] módulos habilitados;

@@ -102,17 +102,17 @@ main() {
         run_scenario idle "$pid"
 
         # Launcher: open, settle one frame, sample, close.
-        qs ipc call launcher open >/dev/null 2>&1 || true
+        "$REPO/hyprveil" shell open launcher >/dev/null 2>&1 || true
         sleep 0.3
         run_scenario launcher "$pid"
-        qs ipc call launcher close >/dev/null 2>&1 || true
+        "$REPO/hyprveil" shell close >/dev/null 2>&1 || true
 
         sleep 0.3
         # Notifications: the panel's notification view, same open/sample/close.
-        qs ipc call quicksettings open >/dev/null 2>&1 || true
+        "$REPO/hyprveil" shell open quick-settings >/dev/null 2>&1 || true
         sleep 0.3
         run_scenario notifications "$pid"
-        qs ipc call quicksettings close >/dev/null 2>&1 || true
+        "$REPO/hyprveil" shell close >/dev/null 2>&1 || true
     } | if [ -n "$OUT" ]; then tee -a "$OUT"; else cat; fi
 }
 

@@ -1,0 +1,2 @@
+import "../Osd"
+Osd {}

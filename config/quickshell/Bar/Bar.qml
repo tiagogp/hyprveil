@@ -34,8 +34,18 @@ PanelWindow {
     // — an asymmetric margin rather than the uniform 10 every edge used before,
     // so the bar reads as floating clear of the corner rather than centred in
     // a padding box.
-    anchors { top: true; left: true; right: true }
-    margins { top: Tokens.spacing2h; left: Tokens.spacing3; right: Tokens.spacing3 }
+    anchors {
+        top: (Settings.bar.position ?? "top") === "top"
+        bottom: (Settings.bar.position ?? "top") === "bottom"
+        left: true
+        right: true
+    }
+    margins {
+        top: (Settings.bar.position ?? "top") === "top" ? Tokens.spacing2h : 0
+        bottom: (Settings.bar.position ?? "top") === "bottom" ? Tokens.spacing2h : 0
+        left: Tokens.spacing3
+        right: Tokens.spacing3
+    }
 
     implicitHeight: 44
     color: "transparent"
@@ -81,7 +91,10 @@ PanelWindow {
                 clip: true
                 spacing: Tokens.spacing2
 
-                Workspaces { id: workspaces }
+                Workspaces {
+                    id: workspaces
+                    mode: Settings.workspacesModeFor(bar.monitorName)
+                }
 
                 BarDivider { visible: !bar.compact }
 
@@ -164,7 +177,7 @@ PanelWindow {
                     }
                 }
 
-                MouseArea {
+                HvPointerArea {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor

@@ -26,6 +26,7 @@ import Quickshell.Services.UPower
 import Quickshell.Bluetooth
 import ".."
 import "../Services"
+import "../Utils"
 
 Scope {
     id: root
@@ -38,7 +39,7 @@ Scope {
     readonly property string stateHome:
         Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"
     readonly property string wallpaperStatePath: stateHome + "/hyprveil/wallpapers.json"
-    readonly property string fallbackWallpaper: Quickshell.env("HOME") + "/.config/hypr/wallpaper-default.jpg"
+    readonly property string fallbackWallpaper: Paths.fallbackWallpaper
     property string wallpaperPath: fallbackWallpaper
 
     FileView {

@@ -11,7 +11,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../Design/Components"
@@ -269,7 +268,7 @@ Scope {
                                 styleColor: Qt.rgba(0, 0, 0, 0.75)
                             }
 
-                            MouseArea {
+                            HvPointerArea {
                                 id: tileMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
@@ -322,16 +321,4 @@ Scope {
         }
     }
 
-    // wallpaper.sh pick calls this when the shell is running, and falls back to
-    // its own Rofi flow when it is not — the same shape the AGS picker used.
-    IpcHandler {
-        target: "wallpapers"
-
-        function toggle(): string {
-            root.open = !root.open;
-            return root.open ? "open" : "closed";
-        }
-        function open(): string { root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

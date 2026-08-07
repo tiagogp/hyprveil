@@ -16,14 +16,13 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
 
-    readonly property string path:
-        (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
-        + "/hyprveil/dock-pins.json"
-    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh"
+    readonly property string path: Paths.stateHome + "/dock-pins.json"
+    readonly property string scriptPath: Paths.hyprScripts + "/dock-manager.sh"
 
     property var pins: []
     property bool available: true

@@ -5,11 +5,9 @@
 // same database so there is still one clipboard history, not one per surface.
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
 import ".."
-import "../Adapters"
 import "../Design/Components"
+import "../Services"
 
 HvSection {
     id: root
@@ -18,9 +16,11 @@ HvSection {
     title: "Clipboard"
 
     property string query: ""
-    property string status: "Checking clipboard history..."
-    property var entries: []
-    property bool toolsAvailable: false
+    readonly property string status: Clipboard.error.length > 0
+        ? Clipboard.error
+        : Clipboard.entries.length > 0 ? "" : "Clipboard history is empty"
+    readonly property var entries: Clipboard.entries
+    readonly property bool toolsAvailable: Clipboard.available
 
     readonly property var filteredEntries: {
         const q = root.query.trim().toLowerCase();
@@ -31,7 +31,7 @@ HvSection {
     }
 
     function preview(entry) {
-        return entry.replace(/^\s*\d+\s+/, "");
+        return Clipboard.preview(entry);
     }
 
     // cliphist prints a binary entry as e.g. "[[ binary data 312 B png
@@ -41,7 +41,7 @@ HvSection {
     // not one of the common image formats — a copied PDF, say — is left
     // alone rather than guessed at.
     function isImageEntry(entry) {
-        return /binary data.*\b(png|jpe?g|gif|bmp|webp|tiff|ico)\b/i.test(entry);
+        return Clipboard.isImage(entry);
     }
 
     // Discardable, capped, never the persistent history: a thumbnail is a
@@ -49,57 +49,22 @@ HvSection {
     // only long enough to draw a preview. Wiped by clearAll() below and safe
     // to lose entirely — reload() would just regenerate what is still
     // there.
-    readonly property string thumbCacheDir:
-        (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache"))
-        + "/hyprveil/clipboard-thumbs"
+    readonly property string thumbCacheDir: Clipboard.thumbnailDirectory
 
     function reload() {
-        lister.running = true;
+        Clipboard.refresh();
     }
 
     function copy(entry) {
-        SystemActions.clipboardCopy(entry);
+        Clipboard.copy(entry);
     }
 
     function remove(entry) {
-        SystemActions.clipboardDelete(entry);
-        reloadTimer.restart();
+        Clipboard.remove(entry);
     }
 
     function clearAll() {
-        SystemActions.clipboardClear(root.thumbCacheDir);
-        root.entries = [];
-        root.status = "Clipboard history is empty";
-    }
-
-    Process {
-        id: lister
-        command: [
-            "sh", "-c",
-            "if command -v cliphist >/dev/null 2>&1 && command -v wl-copy >/dev/null 2>&1; then cliphist list; else printf '__HYPRVEIL_CLIPBOARD_UNAVAILABLE__\\n'; fi"
-        ]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const trimmed = text.trim();
-                if (trimmed === "__HYPRVEIL_CLIPBOARD_UNAVAILABLE__") {
-                    root.toolsAvailable = false;
-                    root.entries = [];
-                    root.status = "Clipboard tools unavailable";
-                    return;
-                }
-
-                root.toolsAvailable = true;
-                root.entries = trimmed === "" ? [] : trimmed.split("\n");
-                root.status = root.entries.length > 0 ? "" : "Clipboard history is empty";
-            }
-        }
-    }
-
-    Timer {
-        id: reloadTimer
-        interval: 250
-        repeat: false
-        onTriggered: root.reload()
+        Clipboard.clear();
     }
 
     Component.onCompleted: root.reload()
@@ -185,7 +150,7 @@ HvSection {
                     ? Accent.accent : Tokens.muted
             }
 
-            MouseArea {
+            HvPointerArea {
                 id: clearAllMouse
                 anchors.fill: parent
                 hoverEnabled: true
@@ -247,22 +212,14 @@ HvSection {
                 // 64x64 PNG under thumbCacheDir — small enough that a full
                 // panel of image entries stays cheap, and never the
                 // original resolution/bytes cliphist itself holds.
-                Process {
-                    id: thumbGen
-                    running: entryRow.isImage && entryRow.entryId !== ""
-                    // A template literal (backtick string), not a regular
-                    // QML string, specifically so this shell script can use
-                    // ordinary double quotes around "$2" without escaping
-                    // every one of them. `magick` preferred over the
-                    // deprecated `convert` — same preference accent.sh's
-                    // magick_cmd() already uses.
-                    command: ["sh", "-c", `
-                        mkdir -p "$(dirname "$2")" || exit 0
-                        [ -f "$2" ] && exit 0
-                        im=$(command -v magick || command -v convert) || exit 0
-                        printf '%s\\n' "$1" | cliphist decode | "$im" - -resize 64x64 "$2" 2>/dev/null || true
-                    `, "_", entryRow.modelData, entryRow.thumbPath]
-                    onRunningChanged: if (!running) entryRow.thumbReady = true
+                Component.onCompleted: if (entryRow.isImage && entryRow.entryId !== "")
+                    Clipboard.ensureThumbnail(entryRow.modelData, entryRow.thumbPath)
+
+                Connections {
+                    target: Clipboard
+                    function onThumbnailReady(path: string): void {
+                        if (path === entryRow.thumbPath) entryRow.thumbReady = true;
+                    }
                 }
 
                 RowLayout {
@@ -324,7 +281,7 @@ HvSection {
                             color: deleteMouse.containsMouse ? Accent.accent : Tokens.dim
                         }
 
-                        MouseArea {
+                        HvPointerArea {
                             id: deleteMouse
                             anchors.fill: parent
                             hoverEnabled: true
@@ -334,7 +291,7 @@ HvSection {
                     }
                 }
 
-                MouseArea {
+                HvPointerArea {
                     id: clipMouse
                     anchors {
                         left: parent.left

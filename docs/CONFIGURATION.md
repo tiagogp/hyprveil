@@ -76,7 +76,6 @@ title, or app stylesheet, and document the reason next to the rule.
 | `dock-pins.json` | `dock-manager.sh` | invalid file is preserved; empty dock restored |
 | `wallpapers.json` | `wallpaper.sh` | invalid file is preserved; bundled fallback restored |
 | `motion-profile` | `motion-profile.sh` | invalid file is preserved; `standard` restored |
-| `settings.json` | `settings-store.sh` / `Services/Settings.qml` | schema v1 is migrated to v2; invalid files are preserved before defaults are restored |
 | `kitty-sessions/*.conf` | `kitty/hyprveil-session.sh` | explicit user snapshots; not read by the shell |
 | `backups/` | installer and manual backup | retained until the user removes it |
 
@@ -86,7 +85,10 @@ containing user choices use private permissions.
 
 ## Settings schema v2
 
-`settings.json` is the single typed configuration for shell preferences. Its
+`$XDG_CONFIG_HOME/hyprveil/shell.json` is the single typed configuration for
+shell preferences. The old `$XDG_STATE_HOME/hyprveil/settings.json` location is
+migrated once and retained with a `.migrated` suffix. Runtime state remains in
+the state directory; user configuration does not. Its
 documented defaults are:
 
 | Key | Default |
@@ -103,12 +105,26 @@ documented defaults are:
 | `providers.notifications` / `wallpaper` | `quickshell` / `hyprpaper` |
 | `monitors` | empty overrides object; global defaults are inherited |
 
-Every write goes through `settings-store.sh`: it validates the resulting v2
+The authoritative schema and defaults live in
+`config/hypr/scripts/data/settings-schema.json`; QML and the store both load
+that file rather than maintaining copies. Every write goes through
+`settings-store.sh`: it validates the resulting v2
 document before an atomic rename. Version 1 keys are migrated without losing
 bar, dock, accent, provider, monitor, or scene choices. A malformed file is
 copied beside the original with an `.invalid-<timestamp>` suffix before defaults
 are restored. `Services/State.qml` discovers settings, wallpaper, pins, and
-session state for QML; feature components do not read `settings.json`.
+session state for QML; feature components do not read configuration files.
+
+The installed CLI can inspect, update, or reset the file without exposing its
+storage implementation:
+
+```bash
+hyprveil shell get settings
+hyprveil shell set bar.position bottom
+hyprveil shell set accessibility.largeTargets true
+hyprveil shell dnd toggle
+hyprveil shell reset
+```
 
 ## Optional dependencies
 

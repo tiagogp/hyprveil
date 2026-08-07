@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Layouts
 import ".."
+import "../Design/Components"
 
 Rectangle {
     id: root
@@ -81,7 +82,7 @@ Rectangle {
                     color: parent.active ? Accent.accent : Tokens.muted
                 }
 
-                MouseArea {
+                HvPointerArea {
                     id: segMouse
                     anchors.fill: parent
                     hoverEnabled: true

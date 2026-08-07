@@ -8,8 +8,8 @@ PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/hyprveil-record.pid"
 OUTPUT_DIR="$HOME/Videos/Screencasts"
 
 show_osd() {
-    command -v qs >/dev/null 2>&1 || return 0
-    qs ipc call osd show "$@" >/dev/null 2>&1 || true
+    command -v hyprveil >/dev/null 2>&1 || return 0
+    hyprveil shell osd "$@" >/dev/null 2>&1 || true
 }
 
 is_recording() {

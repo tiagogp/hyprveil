@@ -14,7 +14,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../App"
@@ -315,16 +314,4 @@ Scope {
         }
     }
 
-    // Symmetry with the other panels: SUPER-key routing goes through a helper
-    // script that hits this IPC target, so a future keybind needs no code here.
-    IpcHandler {
-        target: "calendar"
-
-        function toggle(): string {
-            root.open = !root.open;
-            return root.open ? "open" : "closed";
-        }
-        function open(): string { root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

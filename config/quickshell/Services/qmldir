@@ -23,5 +23,8 @@ singleton NightLight 1.0 NightLight.qml
 singleton PowerProfiles 1.0 PowerProfiles.qml
 singleton CalendarEvents 1.0 CalendarEvents.qml
 singleton NotificationStore 1.0 NotificationStore.qml
+singleton LauncherProviders 1.0 LauncherProviders.qml
+singleton Clipboard 1.0 Clipboard.qml
+singleton Ui 1.0 Ui.qml
 
 BluetoothWatch 1.0 BluetoothWatch.qml

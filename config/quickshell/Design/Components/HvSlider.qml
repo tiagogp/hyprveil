@@ -1,5 +1,6 @@
 import QtQuick
 import "../.."
+import "../../Services"
 
 Item {
     id: root
@@ -14,7 +15,7 @@ Item {
     onMoved: next => { if (node?.audio) node.audio.volume = next; }
 
     implicitWidth: 180
-    implicitHeight: Tokens.iconHit
+    implicitHeight: Ui.controlHeight
     activeFocusOnTab: enabled
     Accessible.role: Accessible.Slider
     Accessible.name: accessibleName

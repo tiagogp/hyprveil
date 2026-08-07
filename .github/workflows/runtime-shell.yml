@@ -1,0 +1,16 @@
+name: runtime-shell
+
+on:
+  workflow_dispatch:
+
+jobs:
+  wayland-runtime:
+    runs-on: [self-hosted, linux, wayland, hyprveil]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the live Hyprland and Quickshell session
+        run: ./tests/runtime-shell.sh runtime-benchmark.jsonl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-benchmark
+          path: runtime-benchmark.jsonl

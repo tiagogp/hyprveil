@@ -1,5 +1,6 @@
 import QtQuick
 import "../.."
+import "../../Services"
 
 HvButton {
     id: root
@@ -7,7 +8,7 @@ HvButton {
     property int iconSize: Tokens.iconMd
     property string tooltip: accessibleName
     text: glyph
-    implicitWidth: Tokens.iconHit
+    implicitWidth: Ui.iconButtonSize
     labelFontFamily: Tokens.fontUiIcons
     labelPixelSize: iconSize
 

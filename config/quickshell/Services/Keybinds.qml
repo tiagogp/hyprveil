@@ -14,11 +14,12 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
 
-    readonly property string path: Quickshell.env("HOME") + "/.config/hypr/keybindings.conf"
+    readonly property string path: Paths.hyprConfig + "/keybindings.conf"
 
     // [ { title, groups: [ { label, binds: [ { keys: [...], desc, search } ] } ] } ]
     property var sections: []

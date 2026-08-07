@@ -147,7 +147,7 @@ HvSection {
                         }
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         id: outputMouse
                         anchors {
                             left: parent.left
@@ -272,7 +272,7 @@ HvSection {
                         }
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         id: inputMouse
                         anchors {
                             left: parent.left
@@ -391,7 +391,7 @@ HvSection {
                         }
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         id: streamMouse
                         anchors {
                             left: parent.left

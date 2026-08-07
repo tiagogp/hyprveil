@@ -1,0 +1,2 @@
+import "../Lock"
+Lock {}

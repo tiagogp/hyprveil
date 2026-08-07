@@ -11,7 +11,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../App"
@@ -231,22 +230,4 @@ Scope {
         }
     }
 
-    // notification-daemon.sh toggle routes here, the way it routed to
-    // `ags request toggle-quicksettings` before. The SUPER+N keybind is
-    // unchanged: it has always gone through the helper script.
-    IpcHandler {
-        target: "quicksettings"
-
-        // The IPC target is the full panel. A toggle that inherited whatever
-        // view the bar's bell left behind would make SUPER+N's result depend on
-        // what was clicked last.
-        function toggle(): string {
-            root.open = !root.open;
-            root.view = "all";
-            return root.open ? "open" : "closed";
-        }
-
-        function open(): string { root.view = "all"; root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

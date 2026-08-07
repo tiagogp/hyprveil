@@ -2,16 +2,26 @@
 # Hyprveil maintenance command.
 set -uo pipefail
 
-REPO="$(cd "$(dirname "$0")" && pwd)"
+HYPRVEIL_ENTRY=${BASH_SOURCE[0]}
+while [ -L "$HYPRVEIL_ENTRY" ]; do
+    HYPRVEIL_ENTRY=$(readlink "$HYPRVEIL_ENTRY")
+done
+REPO="$(cd "$(dirname "$HYPRVEIL_ENTRY")" && pwd)"
 # shellcheck disable=SC1091
 . "$REPO/scripts/lib/install-common.sh"
+# shellcheck disable=SC1091
+. "$REPO/scripts/lib/cli-shell.sh"
+# shellcheck disable=SC1091
+. "$REPO/scripts/lib/cli-wallpaper.sh"
+
+HYPRVEIL_VERSION=0.2.0
 
 FAIL=0
 WARN=0
 
 usage() {
     cat <<'EOF'
-Usage: ./hyprveil <command> [options]
+Usage: hyprveil <command> [options]
 
 Commands:
   setup             First-run setup: detect monitors, pick keyboard, apps,
@@ -23,7 +33,8 @@ Commands:
                     config, shell wiring, and Hyprveil state.
   shell             Control the running shell without exposing Quickshell IPC.
                     toggle|open <surface>, close, back, get active|settings,
-                    set <setting.path> <JSON value>, doctor.
+                    set <setting.path> <JSON value>, reset, dnd,
+                    notifications, osd, doctor.
   wallpaper         list, set <file> [--monitor NAME] [--fit cover|contain],
                     or restore through the wallpaper service.
   update            Preview repository changes, back up and atomically deploy
@@ -34,6 +45,7 @@ Commands:
   uninstall         Back up and remove Hyprveil-owned user config after
                     confirmation. State and backups are preserved by default.
                     Options: --export-state <dir>, --purge-state, --yes.
+  --version         Print the installed CLI version.
 EOF
 }
 
@@ -517,6 +529,7 @@ uninstall() {
     fi
 
     hv_remove_managed_config
+    hv_remove_cli
 
     if [ "$purge_state" -eq 1 ]; then
         if hv_confirm "Permanently delete all Hyprveil state and backups under $(redact "$HV_STATE_HOME")?"; then
@@ -528,117 +541,7 @@ uninstall() {
     else
         printf 'Preserved Hyprveil state and backups under %s.\n' "$(redact "$HV_STATE_HOME")"
     fi
-    printf 'Uninstall complete. The Hyprveil repository checkout was not removed.\n'
-}
-
-settings_store() {
-    if [ -x "$HV_CONFIG_HOME/hypr/scripts/settings-store.sh" ]; then
-        printf '%s\n' "$HV_CONFIG_HOME/hypr/scripts/settings-store.sh"
-    else
-        printf '%s\n' "$REPO/config/hypr/scripts/settings-store.sh"
-    fi
-}
-
-wallpaper_store() {
-    if [ -x "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" ]; then
-        printf '%s\n' "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh"
-    else
-        printf '%s\n' "$REPO/config/hypr/scripts/wallpaper.sh"
-    fi
-}
-
-shell_ipc() {
-    local qs_bin
-    if have qs; then qs_bin=qs
-    elif have quickshell; then qs_bin=quickshell
-    else
-        printf 'The shell IPC client is unavailable; install Quickshell or use the recovery profile.\n' >&2
-        return 1
-    fi
-    "$qs_bin" ipc call surface "$@"
-}
-
-shell_command() {
-    local action=${1:-} subject=${2:-} key value json_value patch store
-    case "$action" in
-        toggle|open)
-            [ "$#" -eq 2 ] || { printf 'Usage: hyprveil shell %s <surface>\n' "$action" >&2; return 2; }
-            case "$subject" in
-                launcher|quick-settings|calendar|session|preferences|wallpapers|integrations|overview|cheatsheet) ;;
-                *) printf 'Unknown shell surface: %s\n' "$subject" >&2; return 2 ;;
-            esac
-            shell_ipc "$action" "$subject"
-            ;;
-        close|back)
-            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil shell %s\n' "$action" >&2; return 2; }
-            shell_ipc "$action"
-            ;;
-        get)
-            [ "$#" -eq 2 ] || { printf 'Usage: hyprveil shell get active|settings\n' >&2; return 2; }
-            case "$subject" in
-                active) shell_ipc active ;;
-                settings) store=$(settings_store); "$store" get ;;
-                *) printf 'Unknown shell state: %s\n' "$subject" >&2; return 2 ;;
-            esac
-            ;;
-        set)
-            [ "$#" -eq 3 ] || { printf 'Usage: hyprveil shell set <setting.path> <JSON value>\n' >&2; return 2; }
-            key=$2; value=$3
-            [[ "$key" =~ ^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)*$ ]] \
-                || { printf 'Invalid setting path: %s\n' "$key" >&2; return 2; }
-            have jq || { printf 'jq is required to validate setting values.\n' >&2; return 1; }
-            if jq . >/dev/null 2>&1 <<<"$value"; then
-                json_value=$(jq -c . <<<"$value")
-            else
-                json_value=$(jq -nc --arg value "$value" '$value')
-            fi
-            patch=$(jq -nc --arg path "$key" --argjson value "$json_value" \
-                'setpath($path | split("."); $value)')
-            store=$(settings_store)
-            "$store" set "$patch" || return
-            "$store" get
-            ;;
-        doctor)
-            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil shell doctor\n' >&2; return 2; }
-            doctor
-            ;;
-        *)
-            printf 'Usage: hyprveil shell toggle|open|close|back|get|set|doctor ...\n' >&2
-            return 2
-            ;;
-    esac
-}
-
-wallpaper_command() {
-    local action=${1:-} path monitor='' fit=cover store
-    store=$(wallpaper_store)
-    case "$action" in
-        list|restore)
-            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil wallpaper %s\n' "$action" >&2; return 2; }
-            "$store" "$action"
-            ;;
-        set)
-            shift
-            path=${1:-}
-            [ -n "$path" ] || { printf 'Usage: hyprveil wallpaper set <file> [--monitor NAME] [--fit cover|contain]\n' >&2; return 2; }
-            shift
-            while [ "$#" -gt 0 ]; do
-                case "$1" in
-                    --monitor) shift; monitor=${1:-} ;;
-                    --fit) shift; fit=${1:-} ;;
-                    *) printf 'Unknown wallpaper option: %s\n' "$1" >&2; return 2 ;;
-                esac
-                shift
-            done
-            case "$fit" in cover|contain) ;; *) printf 'Invalid wallpaper fit: %s\n' "$fit" >&2; return 2 ;; esac
-            [ -f "$path" ] || { printf 'Wallpaper file does not exist: %s\n' "$path" >&2; return 1; }
-            "$store" apply "$path" "$monitor" "$fit"
-            ;;
-        *)
-            printf 'Usage: hyprveil wallpaper list|set|restore ...\n' >&2
-            return 2
-            ;;
-    esac
+    printf 'Uninstall complete. Managed config and the installed CLI runtime were removed; the repository checkout was not.\n'
 }
 
 case "${1:-}" in
@@ -649,6 +552,7 @@ case "${1:-}" in
     update) shift; update "$@" ;;
     rollback) shift; rollback "$@" ;;
     uninstall) shift; uninstall "$@" ;;
+    -v|--version) printf 'hyprveil %s\n' "$HYPRVEIL_VERSION" ;;
     -h|--help|'') usage ;;
     *) usage >&2; exit 2 ;;
 esac

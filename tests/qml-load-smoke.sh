@@ -20,13 +20,16 @@ trap 'rm -rf "$TMP"' EXIT
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 ok() { printf 'OK: %s\n' "$*"; }
+REQUIRE_RUNTIME=${HYPRVEIL_REQUIRE_RUNTIME:-0}
 
 if ! command -v quickshell >/dev/null 2>&1; then
+    [ "$REQUIRE_RUNTIME" -ne 1 ] || fail "quickshell is required for the runtime gate"
     printf 'WARN: quickshell is unavailable; skipping the real QML load smoke test\n' >&2
     exit 0
 fi
 
 if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    [ "$REQUIRE_RUNTIME" -ne 1 ] || fail "a Wayland display is required for the runtime gate"
     printf 'WARN: no Wayland display is available; skipping the real QML load smoke test\n' >&2
     exit 0
 fi
@@ -47,6 +50,7 @@ HOME="$TMP/home" XDG_STATE_HOME="$TMP/home/.local/state" XDG_RUNTIME_DIR="$TMP/r
 # load failure.
 if [ "$status" -ne 124 ]; then
     if grep -Eq 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$LOG"; then
+        [ "$REQUIRE_RUNTIME" -ne 1 ] || { cat "$LOG" >&2; fail "quickshell could not connect to the required runtime"; }
         printf 'WARN: quickshell could not start in this graphical environment; skipping the real QML load smoke test\n' >&2
         exit 0
     fi

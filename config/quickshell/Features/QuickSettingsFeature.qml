@@ -1,0 +1,2 @@
+import "../Panel"
+QuickSettings {}

@@ -13,7 +13,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../Services"
@@ -21,11 +20,14 @@ import "../Services"
 Scope {
     id: root
 
+    property bool enabled: true
+
     property bool open: false
     property string glyph: ""
     property string text: ""
 
     function show(glyph, text) {
+        if (!root.enabled) return;
         root.glyph = glyph;
         root.text = text;
         root.open = true;
@@ -55,7 +57,7 @@ Scope {
     }
 
     PanelWindow {
-        visible: root.open
+        visible: root.enabled && root.open
         anchors { top: true; left: true; right: true }
         margins { top: Tokens.spacing8 * 2 }
 
@@ -99,12 +101,4 @@ Scope {
         }
     }
 
-    IpcHandler {
-        target: "statuscapsule"
-
-        function show(glyph: string, text: string): string {
-            root.show(glyph, text);
-            return "shown";
-        }
-    }
 }

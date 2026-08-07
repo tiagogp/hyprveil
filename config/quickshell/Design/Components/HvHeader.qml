@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../.."
+import "../../Services"
 
 RowLayout {
     id: root
@@ -13,7 +14,7 @@ RowLayout {
     default property alias trailing: trailingSlot.data
     signal back()
     signal close()
-    implicitHeight: compact ? Tokens.iconHit : 56
+    implicitHeight: compact ? Ui.controlHeight : Ui.rowHeightWithSubtitle
     spacing: Tokens.spacing2
     Accessible.role: Accessible.Heading
     Accessible.name: title

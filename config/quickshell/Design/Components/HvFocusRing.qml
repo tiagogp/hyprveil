@@ -1,5 +1,6 @@
 import QtQuick
 import "../.."
+import "../../Services"
 
 Rectangle {
     required property Item target
@@ -8,7 +9,7 @@ Rectangle {
     radius: Math.max(("radius" in target) ? target.radius : Tokens.radiusSm,
         Tokens.radiusXs) + Tokens.spacingHair
     color: "transparent"
-    border.width: target.activeFocus ? 2 : 0
+    border.width: target.activeFocus ? Math.max(2, Ui.outlineWidth) : 0
     border.color: Accent.accent
     visible: target.activeFocus
     z: 100

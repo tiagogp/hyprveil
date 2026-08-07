@@ -164,10 +164,4 @@ Scope {
         }
     }
 
-    IpcHandler {
-        target: "session"
-        function toggle(): string { root.open = !root.open; return root.open ? "open" : "closed"; }
-        function open(): string { root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

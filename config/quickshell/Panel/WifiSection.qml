@@ -123,7 +123,7 @@ HvSection {
                     }
                 }
 
-                MouseArea {
+                HvPointerArea {
                     id: rowMouse
                     anchors.fill: parent
                     hoverEnabled: true

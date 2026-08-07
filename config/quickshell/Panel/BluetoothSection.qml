@@ -113,7 +113,7 @@ HvSection {
                     }
                 }
 
-                MouseArea {
+                HvPointerArea {
                     id: btMouse
                     anchors.fill: parent
                     hoverEnabled: true

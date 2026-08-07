@@ -35,6 +35,7 @@ done
 ok "all shell entrypoints have executable bits"
 
 python3 - "$REPO" <<'PY' || fail "JSON/JSONC parsing"
+import ast
 import json
 import pathlib
 import sys
@@ -90,8 +91,17 @@ for number, line in enumerate((repo / "config/wlogout/layout").read_text().split
         except json.JSONDecodeError as error:
             raise ValueError(f"config/wlogout/layout:{number}: {error}") from error
 json.loads((repo / "config/waybar/scripts/dock-icons.json").read_text())
+for path in repo.joinpath("config").rglob("*.json"):
+    json.loads(path.read_text())
+ast.parse((repo / "config/hypr/scripts/data/settings-validator.py").read_text())
 PY
 ok "JSON and JSONC configs parse"
+
+python3 config/hypr/scripts/data/settings-validator.py \
+    config/hypr/scripts/data/settings-schema.json \
+    <(jq '.default' config/hypr/scripts/data/settings-schema.json) \
+    || fail "authoritative settings default does not satisfy its schema"
+ok "authoritative settings default satisfies its schema"
 
 python3 - "$REPO" <<'PY' || fail "Markdown links and formatting"
 import pathlib

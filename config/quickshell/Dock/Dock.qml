@@ -18,6 +18,7 @@ import Quickshell.Hyprland
 import Quickshell.Widgets
 import ".."
 import "../Adapters"
+import "../App"
 import "../Design/Components"
 import "../Services"
 
@@ -195,9 +196,10 @@ PanelWindow {
                 // the leading slot is better spent on the one control that exists
                 // nowhere but the dock.
                 DockTile {
+                    id: pinSettingsTile
                     glyph: "\u{f0493}"
                     tooltip: "Configure dock pins"
-                    onActivated: if (dock.pinPicker) dock.pinPicker.open = true
+                    onActivated: SurfaceCoordinator.toggle("dock-pins", dock.screen, pinSettingsTile)
                 }
 
                 Rectangle {

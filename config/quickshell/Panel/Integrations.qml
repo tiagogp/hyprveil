@@ -8,7 +8,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import ".."
 import "../Design/Components"
@@ -157,14 +156,4 @@ Scope {
         }
     }
 
-    IpcHandler {
-        target: "integrations"
-
-        function toggle(): string {
-            root.open = !root.open;
-            return root.open ? "open" : "closed";
-        }
-        function open(): string { root.open = true; return "open"; }
-        function close(): string { root.open = false; return "closed"; }
-    }
 }

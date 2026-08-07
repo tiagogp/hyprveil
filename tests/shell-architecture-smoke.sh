@@ -10,7 +10,7 @@ ok() { printf 'OK: %s\n' "$*"; }
 
 for name in HvButton HvIconButton HvToggle HvListRow HvActionRow HvTextField \
     HvSearchField HvSlider HvPanel HvDialog HvPopover HvSection HvHeader \
-    HvEmptyState HvFocusRing HvTooltip HvContextMenu HvChrome; do
+    HvEmptyState HvFocusRing HvTooltip HvContextMenu HvChrome HvPointerArea; do
     [ -f "$COMPONENTS/$name.qml" ] || fail "missing shared component: $name"
     grep -q "^$name 1.0 $name.qml$" "$COMPONENTS/qmldir" \
         || fail "$name is not exported by the component module"
@@ -24,6 +24,25 @@ for file in Session/Session.qml Launcher/Launcher.qml \
     grep -q 'MouseArea {' "$path" && fail "$file still creates an ad-hoc MouseArea control"
 done
 ok "Session, Launcher, Integrations, and Preferences use shared interaction controls"
+rg -q 'MouseArea\s*\{' "$REPO/config/quickshell/Bar" "$REPO/config/quickshell/Dock" \
+    "$REPO/config/quickshell/Launcher" "$REPO/config/quickshell/Notif" \
+    "$REPO/config/quickshell/Osd" "$REPO/config/quickshell/Overview" \
+    "$REPO/config/quickshell/Panel" "$REPO/config/quickshell/Session" \
+    && fail "a feature bypasses the canonical pointer primitive"
+ok "specialized pointer interactions use the shared low-level primitive"
+
+FEATURES="$REPO/config/quickshell/Features"
+UTILS="$REPO/config/quickshell/Utils"
+for name in Bar Dock PinPicker NotificationPopups QuickSettings Integrations \
+    Preferences Wallpapers Cheatsheet Calendar Overview Launcher Session Lock Osd StatusCapsule; do
+    grep -q "^${name}Feature 1.0 ${name}Feature.qml$" "$FEATURES/qmldir" \
+        || fail "public feature module is missing ${name}Feature"
+done
+for name in Paths Strings; do
+    grep -q "^singleton $name 1.0 $name.qml$" "$UTILS/qmldir" \
+        || fail "utility module is missing $name"
+done
+ok "features and utilities expose explicit module APIs"
 
 APP="$REPO/config/quickshell/App"
 for name in SurfaceCoordinator SurfaceHost AnchoredHost ModalHost FullscreenHost PassiveHost Shell; do
@@ -31,6 +50,10 @@ for name in SurfaceCoordinator SurfaceHost AnchoredHost ModalHost FullscreenHost
 done
 grep -q 'App.Shell' "$REPO/config/quickshell/shell.qml" \
     || fail "shell.qml is not a thin App/Shell entry point"
+grep -q 'import "../Features"' "$APP/Shell.qml" \
+    || fail "App/Shell does not compose through the public feature module"
+rg -q 'import "\.\./(Bar|Dock|Launcher|Lock|Notif|Osd|Overview|Panel|Session)"' "$APP/Shell.qml" \
+    && fail "App/Shell bypasses the public feature module"
 for surface in quick-settings calendar launcher session preferences wallpapers \
     integrations overview cheatsheet; do
     grep -q "registerSurface(\"$surface\"" "$APP/Shell.qml" \
@@ -42,7 +65,19 @@ grep -q 'setControllerOpen(previous, false)' "$APP/SurfaceCoordinator.qml" \
     || fail "opening a surface does not close the previous controller"
 grep -q 'restore.forceActiveFocus' "$APP/SurfaceCoordinator.qml" \
     || fail "the coordinator does not restore focus to the opener"
+[ "$(rg -l 'IpcHandler\s*\{' "$REPO/config/quickshell" -g '*.qml' | wc -l | tr -d ' ')" = 2 ] \
+    || fail "feature-local IPC handlers bypass the centralized entrypoints"
+# The only other handler is the one-way lock request; it cannot unlock.
+rg -q 'IpcHandler\s*\{' "$APP/SurfaceCoordinator.qml" \
+    || fail "surface coordinator IPC entrypoint is missing"
 ok "surface coordinator registration, exclusivity, and focus restoration are wired"
+
+for host in AnchoredHost ModalHost FullscreenHost PassiveHost; do
+    grep -q "$host {" "$APP/Shell.qml" || fail "$host does not own runtime content"
+done
+grep -q 'default property list<QtObject> content' "$APP/SurfaceHost.qml" \
+    || fail "surface hosts do not own their controllers"
+ok "surface hosts own and register their respective controllers"
 
 for file in Panel/QuickSettings.qml Panel/Calendar.qml; do
     grep -q 'SurfaceCoordinator.originRect' "$REPO/config/quickshell/$file" \
@@ -68,25 +103,42 @@ for file in Bar/Bar.qml Dock/Dock.qml; do
 done
 ok "origin transitions, headers, state presentation, and shell chrome are unified"
 
-for name in Audio Network Bluetooth Settings WallpaperService ShellActions State; do
+for name in Audio Network Bluetooth Settings WallpaperService ShellActions State \
+    LauncherProviders Clipboard Ui; do
     file="$REPO/config/quickshell/Services/$name.qml"
     [ -f "$file" ] || fail "missing centralized service: $name"
     for contract in available state busy error lastUpdated refresh; do
         grep -q "$contract" "$file" || fail "$name does not expose service contract field $contract"
     done
 done
-for name in Hyprland SystemActions Wallpaper; do
+for name in Hyprland SystemActions Wallpaper Launcher Clipboard; do
     [ -f "$REPO/config/quickshell/Adapters/$name.qml" ] || fail "missing external adapter: $name"
 done
 rg -q 'systemctl' "$REPO/config/quickshell/Session" "$REPO/config/quickshell/Launcher" \
     && fail "session or launcher still invokes systemctl directly"
-settings_readers=$(rg -l '/settings.json' "$REPO/config/quickshell" -g '*.qml' || true)
-[ "$settings_readers" = "$REPO/config/quickshell/Services/Settings.qml" ] \
-    || fail "a feature reads settings.json directly"
+feature_io=$(rg -l 'Process\s*\{|FileView\s*\{|Quickshell\.env\(|import Quickshell\.Io' \
+    "$REPO/config/quickshell/Bar" "$REPO/config/quickshell/Dock" \
+    "$REPO/config/quickshell/Launcher" "$REPO/config/quickshell/Notif" \
+    "$REPO/config/quickshell/Osd" "$REPO/config/quickshell/Overview" \
+    "$REPO/config/quickshell/Panel" "$REPO/config/quickshell/Session" \
+    -g '*.qml' || true)
+[ -z "$feature_io" ] || fail "feature code performs external I/O: $feature_io"
+grep -q 'Paths.shellConfig' "$REPO/config/quickshell/Services/Settings.qml" \
+    || fail "settings do not use the centralized XDG path utility"
 for command in 'shell toggle' 'shell get' 'shell set' 'shell doctor' 'wallpaper set'; do
-    grep -q "$command" "$REPO/hyprveil" || fail "public CLI is missing: hyprveil $command"
+    rg -q "$command" "$REPO/hyprveil" "$REPO/scripts/lib/cli-"*.sh \
+        || fail "public CLI is missing: hyprveil $command"
 done
-ok "service contracts, adapters, state discovery, and public CLI are present"
+ok "service contracts, adapter boundaries, centralized paths, and public CLI are present"
+
+for binding in 'modules.enabled' 'bar.position' 'workspacesModeFor' \
+    'surfaces.rememberLastPage' 'animation.reducedMotion' \
+    'accessibility.highContrast' 'accessibility.largeTargets' \
+    'providers.notifications' 'providers.wallpaper'; do
+    rg -q "$binding" "$REPO/config/quickshell" -g '*.qml' \
+        || fail "documented setting has no runtime binding: $binding"
+done
+ok "every documented settings group affects the runtime"
 
 python3 - "$REPO/config/quickshell" <<'PY'
 import pathlib

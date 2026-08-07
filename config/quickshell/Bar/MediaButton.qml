@@ -4,6 +4,7 @@
 // fraction of the size.
 import QtQuick
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Item {
@@ -39,7 +40,7 @@ Item {
         }
     }
 
-    MouseArea {
+    HvPointerArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true

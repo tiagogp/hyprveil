@@ -9,13 +9,13 @@ Rectangle {
     property string accessibleName: "Toggle"
     signal toggled(bool value)
 
-    implicitWidth: 46
-    implicitHeight: 26
+    implicitWidth: Ui.largeTargets ? 52 : 46
+    implicitHeight: Ui.largeTargets ? 30 : 26
     radius: Tokens.radiusPill
     activeFocusOnTab: enabled && !busy
     opacity: enabled ? 1 : 0.42
     color: checked ? Accent.accent : Qt.rgba(1, 1, 1, 0.10)
-    border.width: 1
+    border.width: Ui.outlineWidth
     border.color: checked ? Accent.accent : Qt.rgba(1, 1, 1, Tokens.elev0Border)
     Accessible.role: Accessible.CheckBox
     Accessible.name: accessibleName

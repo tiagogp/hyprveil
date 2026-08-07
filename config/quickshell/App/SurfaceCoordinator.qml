@@ -14,6 +14,7 @@ Singleton {
     property var originItem: null
     property var originRect: ({ x: 0, y: 0, width: 0, height: 0 })
     property var history: []
+    property var lastPages: ({})
     property var registry: ({})
     property bool changing: false
 
@@ -48,7 +49,8 @@ Singleton {
             originRect = { x: 0, y: 0, width: 0, height: 0 };
             return;
         }
-        originRect = { x: item.x ?? 0, y: item.y ?? 0,
+        const mapped = item.mapToItem ? item.mapToItem(null, 0, 0) : Qt.point(item.x ?? 0, item.y ?? 0);
+        originRect = { x: mapped.x, y: mapped.y,
             width: item.width ?? 0, height: item.height ?? 0 };
     }
 
@@ -58,6 +60,13 @@ Singleton {
         if (entry.controller.targetScreen !== undefined)
             entry.controller.targetScreen = targetScreen;
         entry.controller.open = value;
+    }
+
+    function pageProperty(controller: var): string {
+        if (!controller) return "";
+        if (controller.page !== undefined) return "page";
+        if (controller.view !== undefined) return "view";
+        return "";
     }
 
     function open(name: string, screen: var, origin: var): string {
@@ -70,6 +79,10 @@ Singleton {
         targetScreen = resolveScreen(screen);
         rememberOrigin(origin);
         activeSurface = name;
+        const controller = registry[name]?.controller;
+        const pageKey = pageProperty(controller);
+        if ((Settings.surfaces.rememberLastPage ?? false) && pageKey && lastPages[name] !== undefined)
+            controller[pageKey] = lastPages[name];
         setControllerOpen(name, true);
         changing = false;
         return name;
@@ -87,6 +100,13 @@ Singleton {
         if (name && activeSurface !== name) return activeSurface || "closed";
         const previous = activeSurface;
         const restore = originItem;
+        const controller = registry[previous]?.controller;
+        const pageKey = pageProperty(controller);
+        if ((Settings.surfaces.rememberLastPage ?? false) && previous && pageKey) {
+            const nextPages = Object.assign({}, lastPages);
+            nextPages[previous] = controller[pageKey];
+            lastPages = nextPages;
+        }
         changing = true;
         if (previous) setControllerOpen(previous, false);
         activeSurface = "";
@@ -94,6 +114,7 @@ Singleton {
         originItem = null;
         originRect = { x: 0, y: 0, width: 0, height: 0 };
         history = [];
+        if (!(Settings.surfaces.rememberLastPage ?? false)) lastPages = {};
         changing = false;
         if (restore?.forceActiveFocus) Qt.callLater(() => restore.forceActiveFocus());
         return "closed";
@@ -120,8 +141,8 @@ Singleton {
         return close();
     }
 
-    // Adopts state changes from legacy per-feature IPC handlers and local close
-    // buttons. This keeps them mutually exclusive during the migration.
+    // Adopts state changes from local close buttons and direct controller
+    // changes so exclusivity cannot be bypassed.
     function reportState(name: string, isOpen: bool): void {
         if (changing) return;
         if (isOpen) {
@@ -148,5 +169,32 @@ Singleton {
         function close(): string { return root.close(); }
         function back(): string { return root.back(); }
         function active(): string { return root.activeSurface || "closed"; }
+        function dnd(mode: string): string {
+            if (mode === "on") ShellActions.setDnd(true);
+            else if (mode === "off") ShellActions.setDnd(false);
+            else ShellActions.toggleDnd();
+            return ShellActions.state.dnd ? "on" : "off";
+        }
+        function notifications(action: string): string {
+            const controller = root.registry.notifications?.controller;
+            if (!controller) return "unavailable";
+            if (action === "clear") {
+                controller.clearAll();
+                return "cleared";
+            }
+            return String(controller.notifications?.values?.length ?? 0);
+        }
+        function osd(kind: string, percent: string, muted: string): string {
+            const controller = root.registry.osd?.controller;
+            if (!controller) return "unavailable";
+            controller.show(kind, percent, muted);
+            return "shown";
+        }
+        function status(glyph: string, message: string): string {
+            const controller = root.registry.status?.controller;
+            if (!controller) return "unavailable";
+            controller.show(glyph, message);
+            return "shown";
+        }
     }
 }

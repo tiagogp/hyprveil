@@ -81,15 +81,17 @@ plain `quickshell` with no `-c`):
 
 | File | Role |
 |---|---|
-| `shell.qml` | Entry point; instantiates the bar and dock per monitor, plus the notification server, panel, lock, and Bluetooth watcher. |
-| `Panel/QuickSettings.qml` | Panel container, the `quicksettings` IPC target, Escape-to-close. |
+| `shell.qml` / `App/Shell.qml` | Thin entrypoint and host-based composition through the public `Features` module. |
+| `App/SurfaceCoordinator.qml` | The single `surface` IPC target, exclusivity, targeting, history, and focus restoration. |
+| `Panel/QuickSettings.qml` | Panel implementation and Escape-to-close behavior. |
 | `Bar/Bar.qml` / `BarIsland.qml` | Responsive single-bar composition and shared adaptive glass wrapper. |
 | `Bar/BarAction.qml` / `BarTooltip.qml` | Shared action states, accessibility, and anchored tooltips. |
 | `Bar/Media.qml` / `MediaCard.qml` | Compact media chip and its artwork, timeline, seek, and transport popup. |
 | `Panel/WifiSection.qml` / `BluetoothSection.qml` / `AudioSection.qml` / `PowerProfileSection.qml` / `ClipboardSection.qml` / `NotificationSection.qml` | The sections. |
-| `Panel/Section.qml` / `Toggle.qml` / `Segmented.qml` | Shared section chrome, the switch, and the segmented control. |
+| `Design/Components/HvSection.qml` / `HvToggle.qml` | Shared section chrome and switch behavior. |
+| `Panel/Segmented.qml` | Feature-specific segmented control. |
 | `Panel/Wallpapers.qml` | Modal thumbnail grid; renders `wallpaper.sh list`, stages a choice, and calls `wallpaper.sh apply` on **Apply**. |
-| `Panel/Button.qml` | Push button for panel footers; `primary: true` is the confirming action. |
+| `Design/Components/HvButton.qml` | Push button for panel footers; `primary: true` is the confirming action. |
 | `Panel/LinkRow.qml` | Full-width panel row that hands off to another surface (Wallpapers, Keyboard shortcuts). |
 | `Panel/Cheatsheet.qml` | Modal keybind cheatsheet; renders `Services/Keybinds` in two balanced columns with a search field. |
 | `Panel/BindRow.qml` | One cheatsheet row: the action, and the key caps for it. |
@@ -166,7 +168,7 @@ Actions are shown as the command that actually runs (`$terminal` resolved to
 same reason: a label is a second source of truth that goes stale the first time
 the command changes.
 
-For quick checks while editing, call `qs ipc call cheatsheet toggle` in a running
+For quick checks while editing, call `hyprveil shell toggle cheatsheet` in a running
 session; it opens the modal without restarting the shell or discarding
 notification history.
 
@@ -175,14 +177,14 @@ notification history.
 Quickshell exposes typed IPC. `qs ipc show` lists every target:
 
 ```bash
-qs ipc call quicksettings toggle     # open/close the panel
-qs ipc call notifications dnd        # toggle do-not-disturb
-qs ipc call notifications count      # tracked notification count
-qs ipc call notifications clear      # dismiss everything
-qs ipc call wallpapers toggle        # open/close the wallpaper grid
-qs ipc call dockpins toggle          # open/close the dock pin picker
-qs ipc call cheatsheet toggle        # open/close the keybind cheatsheet
-qs ipc call osd show volume 42 false # show the coalesced media-key overlay
+hyprveil shell toggle quick-settings # open/close the panel
+hyprveil shell dnd toggle             # toggle do-not-disturb
+hyprveil shell notifications count   # tracked notification count
+hyprveil shell notifications clear   # dismiss everything
+hyprveil shell toggle wallpapers     # open/close the wallpaper grid
+hyprveil shell toggle dock-pins      # open/close the dock pin picker
+hyprveil shell toggle cheatsheet     # open/close the keybind cheatsheet
+hyprveil shell osd volume 42 false   # show the coalesced media-key overlay
 qs ipc call lock isLocked            # lock state
 ```
 

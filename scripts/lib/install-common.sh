@@ -5,6 +5,8 @@
 HV_REPO="${HV_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 HV_STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
 HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+HV_DATA_HOME="${HYPRVEIL_DATA_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}}"
+HV_BIN_HOME="${HYPRVEIL_BIN_HOME:-$HOME/.local/bin}"
 HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
 HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
 HV_SHELL_PROFILE_STATE="$HV_STATE_HOME/shell-profile"
@@ -424,6 +426,46 @@ hv_backup_item() {
     cp -a "$source" "$backup/$label"
 }
 
+hv_install_cli() {
+    local runtime="$HV_DATA_HOME/hyprveil" staged backup target
+    mkdir -p "$HV_DATA_HOME" "$HV_BIN_HOME"
+    staged=$(mktemp -d "$HV_DATA_HOME/.hyprveil-runtime.XXXXXX")
+    if ! cp -a "$HV_REPO/hyprveil" "$HV_REPO/config" "$HV_REPO/scripts" \
+            "$HV_REPO/support" "$HV_REPO/completions" "$staged/"; then
+        rm -rf "$staged"
+        hv_bad "could not stage the Hyprveil CLI runtime"
+        return 1
+    fi
+    chmod +x "$staged/hyprveil" "$staged/scripts/"*.sh \
+        "$staged/scripts/lib/"*.sh "$staged/config/hypr/scripts/"*.sh 2>/dev/null || true
+
+    if [ -e "$runtime" ] || [ -L "$runtime" ] || [ -e "$HV_BIN_HOME/hyprveil" ] || [ -L "$HV_BIN_HOME/hyprveil" ]; then
+        backup=$(hv_new_backup_dir)
+        hv_backup_item "$runtime" "$backup/cli-runtime" "hyprveil"
+        hv_backup_item "$HV_BIN_HOME/hyprveil" "$backup/bin" "hyprveil"
+    fi
+    rm -rf "$runtime"
+    mv "$staged" "$runtime"
+
+    target="$HV_BIN_HOME/hyprveil"
+    rm -f "$target"
+    ln -s "$runtime/hyprveil" "$target"
+
+    target="$HV_DATA_HOME/bash-completion/completions"
+    mkdir -p "$target"
+    cp -a "$runtime/completions/hyprveil.bash" "$target/hyprveil"
+    hv_ok "CLI installed at $HV_BIN_HOME/hyprveil"
+}
+
+hv_remove_cli() {
+    local runtime="$HV_DATA_HOME/hyprveil" target="$HV_BIN_HOME/hyprveil"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$runtime/hyprveil" ]; then
+        rm -f "$target"
+    fi
+    rm -rf "$runtime"
+    rm -f "$HV_DATA_HOME/bash-completion/completions/hyprveil"
+}
+
 # Replace only Hyprveil-managed trees. Existing targets are backed up first,
 # replacement removes stale managed files, and persistent state remains outside
 # the config tree. User wallpaper files are explicitly carried forward, while the
@@ -531,6 +573,8 @@ hv_deploy_configs() {
     done
     chmod +x "$HV_CONFIG_HOME/hypr/scripts/"*.sh "$HV_CONFIG_HOME/hypr/scripts/lib/"*.sh \
         "$HV_CONFIG_HOME/waybar/scripts/"*.sh 2>/dev/null || true
+
+    hv_install_cli || return 1
 
     if [ -d "$backup/config" ]; then
         printf 'Existing configuration backed up to %s\n' "$backup"

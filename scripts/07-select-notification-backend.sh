@@ -95,6 +95,13 @@ printf '%s\n' "$profile" > "$profile_tmp"
 chmod 600 "$profile_tmp"
 mv -f "$profile_tmp" "$HV_SHELL_PROFILE_STATE"
 
+# Keep the typed provider setting aligned with the daemon/profile selection.
+# This can run before deployment, so fall back to the repository store.
+settings_store="$HV_CONFIG_HOME/hypr/scripts/settings-store.sh"
+[ -x "$settings_store" ] || settings_store="$REPO/config/hypr/scripts/settings-store.sh"
+HYPRVEIL_STATE_HOME="$HV_STATE_HOME" HYPRVEIL_CONFIG_HOME="$HV_CONFIG_HOME" \
+    "$settings_store" set "{\"providers\":{\"notifications\":\"$BACKEND\"}}"
+
 printf 'Notification backend selected: %s\n' "$BACKEND"
 printf 'Shell profile selected: %s\n' "$profile"
 if [ "$BACKEND" = mako ]; then

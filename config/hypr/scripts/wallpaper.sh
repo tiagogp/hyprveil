@@ -367,7 +367,7 @@ list_command() {
 # wedged shell degrades to a working picker rather than to nothing.
 qs_picker() {
     command -v qs >/dev/null 2>&1 || return 1
-    timeout 5 qs ipc call wallpapers open >/dev/null 2>&1
+    timeout 5 hyprveil shell open wallpapers >/dev/null 2>&1
 }
 
 pick_command() {

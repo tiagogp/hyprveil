@@ -14,6 +14,7 @@ import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 import "../Services"
 import ".."
+import "../Design/Components"
 
 Item {
     id: root
@@ -56,7 +57,7 @@ Item {
         }
     }
 
-    MouseArea {
+    HvPointerArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true

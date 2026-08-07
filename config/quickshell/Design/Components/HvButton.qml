@@ -16,11 +16,13 @@ Rectangle {
     property bool pressed: tap.pressed
     signal clicked()
 
-    implicitWidth: Math.max(Tokens.iconHit, label.implicitWidth + Tokens.spacing3 * 2)
-    implicitHeight: Tokens.iconHit
+    implicitWidth: Math.max(Ui.controlHeight, label.implicitWidth + Tokens.spacing3 * 2)
+    implicitHeight: Ui.controlHeight
     radius: Tokens.radiusSm
     activeFocusOnTab: enabled && !busy
     opacity: enabled ? 1 : 0.42
+    border.width: Ui.highContrast ? Ui.outlineWidth : 0
+    border.color: Ui.highContrast ? Tokens.text : "transparent"
     scale: pressed && enabled && !busy ? 0.97 : 1
     color: primary
         ? (pressed ? Accent.accent : Accent.accentSoft)

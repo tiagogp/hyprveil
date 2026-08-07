@@ -3,8 +3,8 @@
 set -euo pipefail
 
 show_osd() {
-    command -v qs >/dev/null 2>&1 || return 0
-    qs ipc call osd show "$@" >/dev/null 2>&1 || true
+    command -v hyprveil >/dev/null 2>&1 || return 0
+    hyprveil shell osd "$@" >/dev/null 2>&1 || true
 }
 
 audio_state() {

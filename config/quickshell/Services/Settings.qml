@@ -2,14 +2,14 @@
 // settings-store.sh. Panel/Preferences.qml (and anything else that reads a
 // user preference not owned by its own script, e.g. dock autohide, bar
 // workspace mode, the calm-mode toggle, launcher providers, per-monitor
-// overrides) binds to `Settings.data` here; nothing reads settings.json
+// overrides) binds to `Settings.data` here; nothing reads shell.json
 // itself and nothing writes it directly — see set() below.
 //
-// Same shape as Motion.qml: a FileView watches the state file so an edit
+// Same shape as Motion.qml: a FileView watches the XDG config file so an edit
 // from anywhere (this panel, `settings-store.sh set` from a terminal, a
 // future CLI) applies live with no second reload path to forget. The
 // difference is the write side — Motion's file is single-word and trivial to
-// validate inline, but settings.json has real structure, so every write
+// validate inline, but shell.json has real structure, so every write
 // still goes through the script for its merge/migrate/atomic-write, rather
 // than duplicating that logic here and risking the two drifting apart.
 pragma Singleton
@@ -17,6 +17,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
@@ -28,44 +29,22 @@ Singleton {
     property double lastUpdated: 0
 
     readonly property string scriptPath:
-        Quickshell.env("HOME") + "/.config/hypr/scripts/settings-store.sh"
+        Paths.hyprScripts + "/settings-store.sh"
 
-    readonly property string path:
-        (Quickshell.env("HYPRVEIL_STATE_HOME")
-            || (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
-                + "/hyprveil")
-        + "/settings.json"
+    readonly property string path: Paths.shellConfig
 
-    // Mirrors settings-store.sh's defaults() so a binding sees sane values
+    // Loaded from the same JSON schema as settings-store.sh so bindings see sane values
     // for the one frame before the first load completes, and so a component
     // reading a field the store has not learned yet (a brand-new install,
     // before `ensure` below has ever run) still gets something rather than
     // undefined.
-    property var data: ({
-        version: 2,
-        appearance: { accentProvider: "hyprveil", density: "comfortable" },
-        modules: {
-            enabled: { bar: true, dock: true, notifications: true, osd: true },
-            calmMode: false
-        },
-        bar: { workspacesMode: "dynamic", position: "top" },
-        dock: { autohide: false },
-        surfaces: { popupMonitor: "focused", rememberLastPage: false },
-        animation: { profile: "system", reducedMotion: false },
-        accessibility: { highContrast: false, largeTargets: false },
-        providers: {
-            launcher: { files: false, calculator: true, emoji: false },
-            notifications: "quickshell",
-            wallpaper: "hyprpaper"
-        },
-        monitors: {},
-        scenes: { profiles: {}, previous: null }
-    })
+    property var schemaDefaults: ({})
+    property var data: schemaDefaults
     property bool loaded: false
 
     // Convenience readers so a binding can write `Settings.dock.autohide`
     // without every call site repeating the `?? {}` guard for a key an older
-    // settings.json has not been migrated to yet.
+    // shell.json has not been migrated to yet.
     readonly property var bar: root.data.bar ?? {}
     readonly property var dock: root.data.dock ?? {}
     readonly property var appearance: root.data.appearance ?? {}
@@ -93,6 +72,11 @@ Singleton {
         return override.dockAutohide ?? (root.dock.autohide ?? false);
     }
 
+    function workspacesModeFor(name: string): string {
+        const override = root.monitorOverride(name);
+        return override.barWorkspacesMode ?? (root.bar.workspacesMode ?? "dynamic");
+    }
+
     // Shallow-merges `patch` into the stored settings and re-reads the
     // result once the script's atomic write lands (via the FileView watch
     // below) — the same "write, then let the watcher pick it up" flow
@@ -116,7 +100,7 @@ Singleton {
 
     function refresh(): void { file.reload(); }
 
-    // Created once at startup to make sure settings.json exists (and is
+    // Created once at startup to make sure shell.json exists (and is
     // migrated) even before anything calls set() — the same role
     // motion-profile.sh's --ensure plays for the motion state file.
     //
@@ -148,6 +132,20 @@ Singleton {
         id: resetter
         command: [root.scriptPath, "reset"]
         onRunningChanged: if (!running) file.reload()
+    }
+
+    FileView {
+        id: schemaFile
+        path: Paths.settingsSchema
+        blockLoading: true
+        onLoaded: {
+            try {
+                root.schemaDefaults = JSON.parse(text()).default ?? {};
+                if (!root.loaded) root.data = root.schemaDefaults;
+            } catch (e) {
+                root.error = "Settings schema could not be parsed";
+            }
+        }
     }
 
     FileView {

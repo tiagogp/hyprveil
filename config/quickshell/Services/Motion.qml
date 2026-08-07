@@ -15,6 +15,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
@@ -27,16 +28,16 @@ Singleton {
 
     // HYPRVEIL_STATE_HOME mirrors motion-profile.sh so a mocked test session and
     // the real shell read the exact same file.
-    readonly property string path:
-        (Quickshell.env("HYPRVEIL_STATE_HOME")
-            || (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
-                + "/hyprveil")
-        + "/motion-profile"
+    readonly property string path: Paths.stateHome + "/motion-profile"
 
     // The default is standard, not reduced: a missing or malformed file is the
     // first-run state, and first-run should look like the designed desktop.
     // Only the exact word "reduced" opts out.
-    property bool reduced: false
+    property bool systemReduced: false
+    readonly property bool reduced:
+        (Settings.animation.reducedMotion ?? false)
+        || (Settings.animation.profile ?? "system") === "reduced"
+        || ((Settings.animation.profile ?? "system") === "system" && systemReduced)
 
     // The one call site every Behavior uses. Reduced motion is not slower
     // motion — a long slow fade is worse for vestibular triggers than none —
@@ -55,7 +56,7 @@ Singleton {
         path: root.path
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: { root.reduced = text().trim() === "reduced"; root.lastUpdated = Date.now(); }
-        onLoadFailed: root.reduced = false
+        onLoaded: { root.systemReduced = text().trim() === "reduced"; root.lastUpdated = Date.now(); }
+        onLoadFailed: root.systemReduced = false
     }
 }

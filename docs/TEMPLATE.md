@@ -63,7 +63,7 @@ tests/
 ├── bench.sh
 └── run.sh                      # lightweight non-session quality gate
 install.sh                      # recommended entrypoint
-hyprveil                        # maintenance command (doctor/update/rollback/uninstall)
+hyprveil                        # source CLI; installer publishes it to ~/.local/bin
 ```
 
 ## Safe edit loop

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
 import "../.."
+import "../../Services"
 
 Rectangle {
     id: root
@@ -14,9 +15,11 @@ Rectangle {
     property bool hovered: hover.hovered
     default property alias trailing: trailingSlot.data
 
-    implicitHeight: subtitle.length > 0 ? 56 : 44
+    implicitHeight: subtitle.length > 0 ? Ui.rowHeightWithSubtitle : Ui.rowHeight
     radius: Tokens.radiusSm
     color: selected || hovered || activeFocus ? Accent.accentSoft : "transparent"
+    border.width: Ui.highContrast && (selected || activeFocus) ? Ui.outlineWidth : 0
+    border.color: Ui.highContrast ? Tokens.text : "transparent"
     activeFocusOnTab: false
     Accessible.role: Accessible.ListItem
     Accessible.name: accessibleName

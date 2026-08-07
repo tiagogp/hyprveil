@@ -79,7 +79,7 @@ HvSection {
                     ? Accent.accent : Tokens.muted
             }
 
-            MouseArea {
+            HvPointerArea {
                 id: dndMouse
                 anchors.fill: parent
                 hoverEnabled: true
@@ -109,7 +109,7 @@ HvSection {
                 color: clearMouse.containsMouse ? Accent.accent : Tokens.muted
             }
 
-            MouseArea {
+            HvPointerArea {
                 id: clearMouse
                 anchors.fill: parent
                 hoverEnabled: true
@@ -227,7 +227,7 @@ HvSection {
                         color: earlierDismiss.containsMouse ? Accent.accent : Tokens.dim
                     }
 
-                    MouseArea {
+                    HvPointerArea {
                         id: earlierDismiss
                         anchors.fill: parent
                         hoverEnabled: true

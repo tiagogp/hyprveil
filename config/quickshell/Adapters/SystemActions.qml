@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import "../Utils"
 
 Singleton {
     property bool available: true
@@ -13,12 +14,18 @@ Singleton {
     function refresh(): void { lastUpdated = Date.now(); }
     function run(command: var, nextState: string): void {
         if (busy) return;
+        busy = true;
         state = nextState;
         error = "";
         lastUpdated = Date.now();
         Quickshell.execDetached(command);
+        Qt.callLater(() => {
+            busy = false;
+            state = "idle";
+            lastUpdated = Date.now();
+        });
     }
-    function lock(): void { run([Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"], "locking"); }
+    function lock(): void { run([Paths.hyprScripts + "/lock.sh"], "locking"); }
     function suspend(): void { run(["systemctl", "suspend"], "suspending"); }
     function reboot(): void { run(["systemctl", "reboot"], "restarting"); }
     function powerOff(): void { run(["systemctl", "poweroff"], "powering-off"); }

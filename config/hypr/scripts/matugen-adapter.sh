@@ -10,7 +10,7 @@
 # already renders into (Hyprland, GTK, rofi, kitty, mako, qt5ct/qt6ct,
 # wlogout) stays correct without a second render path to maintain.
 #
-# Selected by `accent.provider` in settings.json ("hyprveil" default,
+# Selected by `appearance.accentProvider` in shell.json ("hyprveil" default,
 # "matugen" to opt in — see Settings.qml/Panel/Preferences.qml). Missing
 # matugen is neutral, not an error: this prints a message and exits 0,
 # leaving the accent exactly as it was, the same contract doctor.sh already

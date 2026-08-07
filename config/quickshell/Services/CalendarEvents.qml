@@ -3,10 +3,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Utils"
 
 Singleton {
     id: root
-    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/hypr/scripts/calendar-events.sh"
+    readonly property string scriptPath: Paths.hyprScripts + "/calendar-events.sh"
     property bool available: true
     property var state: []
     readonly property bool busy: loader.running
