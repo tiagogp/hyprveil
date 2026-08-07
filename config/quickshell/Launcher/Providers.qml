@@ -2,7 +2,7 @@
 // "Providers avançados do launcher" AND, since they are the same mechanism
 // seen from two angles, its "Extensões restritas": a small declarative
 // registry (hypr/scripts/data/launcher-providers.json) says which provider
-// KINDS exist and their metadata; Settings.modules.launcherProviders says
+// KINDS exist and their metadata; Settings.providers.launcher says
 // which are actually enabled. A provider is never arbitrary code — only one
 // of the fixed `kind`s below is understood, and an entry with an unknown
 // kind, or otherwise malformed, is skipped individually rather than failing
@@ -15,6 +15,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Adapters"
 import "../Services"
 
 Item {
@@ -32,7 +33,7 @@ Item {
     property string _query: ""
 
     function enabled(id) {
-        return Settings.modules.launcherProviders?.[id] ?? false;
+        return Settings.providers.launcher?.[id] ?? false;
     }
 
     function providerByKind(kind) {
@@ -132,7 +133,7 @@ Item {
             return {
                 kind: "action", id: "provider-calculator", label: q + " = " + display,
                 glyph: String.fromCodePoint(provider.glyphCodepoint ?? 0x2795),
-                run: () => Quickshell.execDetached(["wl-copy", display])
+                run: () => SystemActions.copyText(display)
             };
         } catch (e) {
             return null;
@@ -161,7 +162,7 @@ Item {
         return root._emoji.filter(e => e.name.includes(q)).slice(0, 5).map(e => ({
             kind: "action", id: "provider-emoji-" + e.name, label: e.ch + "  " + e.name,
             glyph: String.fromCodePoint(provider.glyphCodepoint ?? 0x1F642),
-            run: () => Quickshell.execDetached(["wl-copy", e.ch])
+            run: () => SystemActions.copyText(e.ch)
         }));
     }
 
@@ -203,7 +204,7 @@ Item {
                     kind: "action", id: "provider-file-" + path, label: path.split("/").pop(),
                     sub: path,
                     glyph: String.fromCodePoint(provider?.glyphCodepoint ?? 0x1F4C1),
-                    run: () => Quickshell.execDetached(["xdg-open", path])
+                    run: () => SystemActions.openUri(path)
                 }));
             }
         }

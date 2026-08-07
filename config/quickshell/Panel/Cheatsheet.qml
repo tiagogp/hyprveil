@@ -13,12 +13,14 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
     property string query: ""
 
     readonly property var visibleSections: _filter(Keybinds.sections, query.trim().toLowerCase())
@@ -70,6 +72,7 @@ Scope {
     // two it commits nothing — the only exits are Escape, the scrim, and the
     // close button.
     PanelWindow {
+        screen: root.targetScreen ?? Quickshell.screens[0]
         id: win
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
@@ -88,15 +91,13 @@ Scope {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.open = false
-            }
+            TapHandler { onTapped: root.open = false }
         }
 
-        Surface {
+        HvDialog {
             anchors.centerIn: parent
             elevation: 3
+            presented: root.open
             radius: Tokens.radiusLg
 
             // Matches the other two modals' entrance; see Panel/Wallpapers.qml
@@ -117,131 +118,38 @@ Scope {
             // capped against the output so a short screen scrolls rather than
             // hanging the dialog off both ends.
             implicitWidth: Math.min(940, parent.width - Tokens.spacing8 * 2)
-            implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
-                                     parent.height - Tokens.spacing8 * 2)
+            implicitHeight: Math.min(760, parent.height - Tokens.spacing8 * 2)
 
             // Stops a click inside the dialog reaching the scrim and dismissing
             // the thing the user is aiming at.
-            MouseArea { anchors.fill: parent }
-
             ColumnLayout {
                 id: column
                 anchors.fill: parent
                 anchors.margins: Tokens.spacing4
                 spacing: Tokens.spacing3
 
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing2
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        text: "Keyboard shortcuts"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-                    }
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: Keybinds.failed ? "" : Keybinds.count + " binds"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.text2xs
-                        color: Tokens.dim
-                    }
-
-                    Rectangle {
-                        implicitWidth: Tokens.spacing6
-                        implicitHeight: Tokens.spacing6
-                        radius: Tokens.radiusPill
-                        activeFocusOnTab: true
-                        color: closeMouse.containsMouse
-                            ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
-                        border.width: activeFocus ? 1 : 0
-                        border.color: Accent.accent
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Close keyboard shortcuts"
-
-                        Keys.onReturnPressed: root.open = false
-                        Keys.onSpacePressed: root.open = false
-
-                        Glyph {
-                            anchors.centerIn: parent
-                            text: "\u{f0156}"
-                            size: Tokens.iconSm
-                            color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
-                        }
-
-                        MouseArea {
-                            id: closeMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.open = false
-                        }
-                    }
+                    title: "Keyboard shortcuts"
+                    subtitle: Keybinds.failed ? "Unavailable" : Keybinds.count + " binds"
+                    canClose: true
+                    onClose: root.open = false
                 }
 
-                Rectangle {
+                HvSearchField {
+                    id: search
                     Layout.fillWidth: true
-                    implicitHeight: Tokens.spacing8
-                    radius: Tokens.radiusSm
-                    color: Qt.rgba(1, 1, 1, 0.06)
-                    border.width: search.activeFocus ? 1 : 0
-                    border.color: Accent.accent
+                    placeholderText: "Search keys or actions"
+                    accessibleName: "Search keyboard shortcuts"
+                    onTextChanged: root.query = text
+                    onEscaped: root.open = false
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Tokens.spacing3
-                        anchors.rightMargin: Tokens.spacing3
-                        spacing: Tokens.spacing2
-
-                        Glyph {
-                            text: "\u{f0349}"
-                            size: Tokens.iconSm
-                            color: Tokens.dim
-                        }
-
-                        TextInput {
-                            id: search
-                            renderType: Text.NativeRendering
-                            Layout.fillWidth: true
-                            focus: true
-                            Accessible.role: Accessible.EditableText
-                            Accessible.name: "Search keyboard shortcuts"
-                            color: Tokens.text
-                            font.family: Tokens.fontUi
-                            font.pixelSize: Tokens.textSm
-                            selectionColor: Accent.accentSoft
-                            selectedTextColor: Tokens.text
-                            clip: true
-                            onTextChanged: root.query = text
-                            // The modal holds the keyboard exclusively, so the
-                            // field has it from the moment it opens — which
-                            // means Escape has to be handled here or it is
-                            // handled nowhere.
-                            Keys.onEscapePressed: root.open = false
-
-                            // Cleared through the property rather than by
-                            // binding text to it: binding both ways makes the
-                            // field fight the user's own typing.
-                            Connections {
-                                target: root
-                                function onOpenChanged() {
-                                    if (root.open) search.text = "";
-                                }
-                            }
-
-                            Text {
-                                renderType: Text.NativeRendering
-                                anchors.fill: parent
-                                visible: search.text === ""
-                                text: "Search keys or actions"
-                                font: search.font
-                                color: Tokens.dim
-                                verticalAlignment: Text.AlignVCenter
+                    Connections {
+                        target: root
+                        function onOpenChanged() {
+                            if (root.open) {
+                                search.text = "";
+                                search.forceInputFocus();
                             }
                         }
                     }

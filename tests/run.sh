@@ -10,7 +10,10 @@ fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 ok() { printf 'OK: %s\n' "$*"; }
 
 cd "$REPO"
-mapfile -t shell_files < <({ find scripts tests config -type f -name '*.sh' -print; printf '%s\n' install.sh hyprveil; } | sort)
+shell_files=()
+while IFS= read -r file; do
+    shell_files+=("$file")
+done < <({ find scripts tests config -type f -name '*.sh' -print; printf '%s\n' install.sh hyprveil; } | sort)
 
 for file in "${shell_files[@]}"; do
     bash -n "$file" || fail "Bash syntax: $file"
@@ -150,7 +153,11 @@ ok "Markdown files have valid local links and formatting"
 
 for test in tests/lock-smoke.sh \
             tests/palette-drift-smoke.sh \
-            tests/qml-load-smoke.sh; do
+            tests/qml-load-smoke.sh \
+            tests/shell-architecture-smoke.sh \
+            tests/shell-cli-smoke.sh \
+            tests/layout-matrix-smoke.sh \
+            tests/performance-compare-smoke.sh; do
     printf '\n== %s ==\n' "$test"
     "$test"
 done

@@ -11,17 +11,20 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
 
     onOpenChanged: if (open) Capabilities.refresh()
 
     PanelWindow {
         id: win
+        screen: root.targetScreen ?? Quickshell.screens[0]
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
@@ -33,12 +36,13 @@ Scope {
         Rectangle {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
-            MouseArea { anchors.fill: parent; onClicked: root.open = false }
+            TapHandler { onTapped: root.open = false }
         }
 
-        Surface {
+        HvDialog {
             anchors.centerIn: parent
             elevation: 3
+            presented: root.open
             radius: Tokens.radiusLg
 
             transform: Translate {
@@ -53,12 +57,10 @@ Scope {
             }
 
             implicitWidth: Math.min(460, parent.width - Tokens.spacing8 * 2)
-            implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
-                                     parent.height - Tokens.spacing8 * 2)
+            implicitHeight: Math.min(560, parent.height - Tokens.spacing8 * 2)
 
             focus: true
             Keys.onEscapePressed: root.open = false
-            MouseArea { anchors.fill: parent }
 
             ColumnLayout {
                 id: column
@@ -66,54 +68,13 @@ Scope {
                 anchors.margins: Tokens.spacing4
                 spacing: Tokens.spacing3
 
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing2
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: "Integrations"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-                    }
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        text: Capabilities.loading ? "Checking…"
-                            : `${Capabilities.availableCount} available · ${Capabilities.missingCount} missing`
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.text2xs
-                        color: Tokens.dim
-                    }
-
-                    Rectangle {
-                        implicitWidth: Tokens.spacing6
-                        implicitHeight: Tokens.spacing6
-                        radius: Tokens.radiusPill
-                        activeFocusOnTab: true
-                        color: closeMouse.containsMouse ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Close integrations"
-                        Keys.onReturnPressed: root.open = false
-                        Keys.onSpacePressed: root.open = false
-
-                        Glyph {
-                            anchors.centerIn: parent
-                            text: "\u{f0156}"
-                            size: Tokens.iconSm
-                            color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
-                        }
-                        MouseArea {
-                            id: closeMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.open = false
-                        }
-                    }
+                    title: "Integrations"
+                    subtitle: Capabilities.loading ? "Checking…"
+                        : `${Capabilities.availableCount} available · ${Capabilities.missingCount} missing`
+                    canClose: true
+                    onClose: root.open = false
                 }
 
                 Flickable {
@@ -187,7 +148,7 @@ Scope {
                     }
                 }
 
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     text: "Refresh"
                     onClicked: Capabilities.refresh()

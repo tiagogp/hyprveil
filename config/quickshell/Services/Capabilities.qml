@@ -22,6 +22,11 @@ Singleton {
     // [{ id, label, available, degraded, hint }]
     property var rows: []
     property bool loading: false
+    property bool available: true
+    readonly property var state: root.rows
+    readonly property bool busy: root.loading
+    property string error: ""
+    property double lastUpdated: 0
 
     readonly property int availableCount: rows.filter(r => r.available).length
     readonly property int degradedCount: rows.filter(r => r.degraded).length
@@ -41,9 +46,12 @@ Singleton {
                 root.loading = false;
                 try {
                     root.rows = JSON.parse(text);
+                    root.error = "";
                 } catch (e) {
                     root.rows = [];
+                    root.error = "Capability report could not be parsed";
                 }
+                root.lastUpdated = Date.now();
             }
         }
     }

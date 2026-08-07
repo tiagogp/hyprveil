@@ -6,21 +6,25 @@ import Quickshell.Networking
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import ".."
+import "../App"
 
 RowLayout {
     id: root
 
     property var quickSettings: null
+    property var screen: null
     property string displayMode: "full" // full | standard | compact
     readonly property bool compact: displayMode === "compact"
 
     spacing: 0
 
-    function toggleSection(section: string): void {
-        root.quickSettings?.toggleSection(section);
+    function toggleSection(section: string, origin: var): void {
+        if (root.quickSettings) root.quickSettings.view = section;
+        SurfaceCoordinator.toggle("quick-settings", root.screen, origin);
     }
 
     BarAction {
+        id: bluetoothAction
         readonly property var adapter: Bluetooth.defaultAdapter
         readonly property var connected:
             Bluetooth.devices.values.filter(d => d.connected)
@@ -39,10 +43,11 @@ RowLayout {
                 : d.name).join("\n");
         }
         accessibleName: tooltip
-        onClicked: root.toggleSection("bluetooth")
+        onClicked: root.toggleSection("bluetooth", bluetoothAction)
     }
 
     BarAction {
+        id: wifiAction
         readonly property var wifiDevice:
             Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
 
@@ -51,10 +56,11 @@ RowLayout {
         tooltip: wifiDevice === null ? "Network" :
             Networking.wifiEnabled ? "Wi-Fi" : "Wi-Fi off"
         active: root.quickSettings?.open && root.quickSettings?.view === "wifi"
-        onClicked: root.toggleSection("wifi")
+        onClicked: root.toggleSection("wifi", wifiAction)
     }
 
     BarAction {
+        id: audioAction
         readonly property var sink: Pipewire.defaultAudioSink
         readonly property real volume: sink?.audio?.volume ?? 0
 
@@ -65,7 +71,7 @@ RowLayout {
             ? `${sink.description}: ${Math.round(volume * 100)}%`
             : "No audio sink"
         active: root.quickSettings?.open && root.quickSettings?.view === "audio"
-        onClicked: root.toggleSection("audio")
+        onClicked: root.toggleSection("audio", audioAction)
         onMiddleClicked: if (sink?.audio) sink.audio.muted = !sink.audio.muted
     }
 
@@ -80,7 +86,7 @@ RowLayout {
             ? `${source.description}: ${muted ? "Muted" : "Unmuted"}`
             : "No audio source"
         onClicked: if (source?.audio) source.audio.muted = !source.audio.muted
-        onMiddleClicked: root.toggleSection("audio")
+        onMiddleClicked: root.toggleSection("audio", audioAction)
     }
 
     Item {
@@ -107,7 +113,7 @@ RowLayout {
             showLabel: !root.compact
             labelMaximumWidth: 44
             tooltip: `${Math.round(parent.percentage * 100)}% battery`
-            onClicked: root.quickSettings?.toggleSection("all")
+            onClicked: root.toggleSection("all", batteryAction)
         }
     }
 }

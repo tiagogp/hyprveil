@@ -21,6 +21,11 @@ Commands:
                     choice (see ./scripts/10-first-run-setup.sh --help).
   doctor            Read-only health report for Fedora support, dependencies,
                     config, shell wiring, and Hyprveil state.
+  shell             Control the running shell without exposing Quickshell IPC.
+                    toggle|open <surface>, close, back, get active|settings,
+                    set <setting.path> <JSON value>, doctor.
+  wallpaper         list, set <file> [--monitor NAME] [--fit cover|contain],
+                    or restore through the wallpaper service.
   update            Preview repository changes, back up and atomically deploy
                     the managed config trees, then validate before reloading.
                     Options: --preview (show changes and exit), --yes.
@@ -118,6 +123,7 @@ check_dependencies() {
     local importance package command feature notification_backend required_missing=0 optional_missing=0 checked_count=0
     section "Dependencies"
     notification_backend=$(hv_notification_backend || true)
+    [ "$(hv_shell_profile)" != default ] || notification_backend=quickshell
     while IFS='|' read -r importance package command feature; do
         [ -n "$importance" ] || continue
         [[ "$importance" = \#* ]] && continue
@@ -153,8 +159,14 @@ check_dependencies() {
 }
 
 check_config() {
-    local config="$HV_CONFIG_HOME/hypr/hyprland.conf"
+    local config="$HV_CONFIG_HOME/hypr/hyprland.conf" shell_profile
     section "Hyprland And Shell"
+    shell_profile=$(hv_shell_profile)
+    if [ "$shell_profile" = recovery ]; then
+        status_warn "shell profile: recovery (degraded Waybar/Rofi/wlogout stack)"
+    else
+        status_ok "shell profile: default (complete Quickshell)"
+    fi
     if [ -f "$config" ]; then
         status_ok "Hyprland config found at $(redact "$config")"
     else
@@ -180,7 +192,11 @@ check_config() {
         status_fail "Quickshell config is missing at $(redact "$HV_CONFIG_HOME/quickshell/shell.qml")"
     fi
 
-    if have quickshell; then
+    if [ "$shell_profile" = recovery ]; then
+        if have waybar; then status_ok "Waybar recovery bar is installed"
+        else status_fail "recovery profile selected but Waybar is missing"
+        fi
+    elif have quickshell; then
         if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             if pgrep -u "${USER:-$(id -un)}" -x quickshell >/dev/null 2>&1; then
                 status_ok "Quickshell process is running in this Hyprland session"
@@ -215,13 +231,20 @@ check_state_file() {
 }
 
 check_state() {
-    local backend motion profile accent_file wallpaper_file pins_file hardware_file
+    local backend motion profile accent_file wallpaper_file pins_file hardware_file shell_profile
     section "Hyprveil State"
 
     backend=$(hv_notification_backend || true)
     case "$backend" in
         quickshell|swaync|mako) status_ok "notification backend: $backend" ;;
         *) status_fail "notification backend is missing or invalid"; printf '       Recovery: ./scripts/07-select-notification-backend.sh --backend quickshell\n' ;;
+    esac
+
+    shell_profile=$(hv_shell_profile)
+    case "$shell_profile" in
+        default) status_ok "shell profile state: default" ;;
+        recovery) status_warn "shell profile state: recovery (features are intentionally degraded)" ;;
+        *) status_fail "shell profile state is invalid" ;;
     esac
 
     hardware_file="$HV_STATE_HOME/hardware-profile.conf"
@@ -508,9 +531,121 @@ uninstall() {
     printf 'Uninstall complete. The Hyprveil repository checkout was not removed.\n'
 }
 
+settings_store() {
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/settings-store.sh" ]; then
+        printf '%s\n' "$HV_CONFIG_HOME/hypr/scripts/settings-store.sh"
+    else
+        printf '%s\n' "$REPO/config/hypr/scripts/settings-store.sh"
+    fi
+}
+
+wallpaper_store() {
+    if [ -x "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh" ]; then
+        printf '%s\n' "$HV_CONFIG_HOME/hypr/scripts/wallpaper.sh"
+    else
+        printf '%s\n' "$REPO/config/hypr/scripts/wallpaper.sh"
+    fi
+}
+
+shell_ipc() {
+    local qs_bin
+    if have qs; then qs_bin=qs
+    elif have quickshell; then qs_bin=quickshell
+    else
+        printf 'The shell IPC client is unavailable; install Quickshell or use the recovery profile.\n' >&2
+        return 1
+    fi
+    "$qs_bin" ipc call surface "$@"
+}
+
+shell_command() {
+    local action=${1:-} subject=${2:-} key value json_value patch store
+    case "$action" in
+        toggle|open)
+            [ "$#" -eq 2 ] || { printf 'Usage: hyprveil shell %s <surface>\n' "$action" >&2; return 2; }
+            case "$subject" in
+                launcher|quick-settings|calendar|session|preferences|wallpapers|integrations|overview|cheatsheet) ;;
+                *) printf 'Unknown shell surface: %s\n' "$subject" >&2; return 2 ;;
+            esac
+            shell_ipc "$action" "$subject"
+            ;;
+        close|back)
+            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil shell %s\n' "$action" >&2; return 2; }
+            shell_ipc "$action"
+            ;;
+        get)
+            [ "$#" -eq 2 ] || { printf 'Usage: hyprveil shell get active|settings\n' >&2; return 2; }
+            case "$subject" in
+                active) shell_ipc active ;;
+                settings) store=$(settings_store); "$store" get ;;
+                *) printf 'Unknown shell state: %s\n' "$subject" >&2; return 2 ;;
+            esac
+            ;;
+        set)
+            [ "$#" -eq 3 ] || { printf 'Usage: hyprveil shell set <setting.path> <JSON value>\n' >&2; return 2; }
+            key=$2; value=$3
+            [[ "$key" =~ ^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)*$ ]] \
+                || { printf 'Invalid setting path: %s\n' "$key" >&2; return 2; }
+            have jq || { printf 'jq is required to validate setting values.\n' >&2; return 1; }
+            if jq . >/dev/null 2>&1 <<<"$value"; then
+                json_value=$(jq -c . <<<"$value")
+            else
+                json_value=$(jq -nc --arg value "$value" '$value')
+            fi
+            patch=$(jq -nc --arg path "$key" --argjson value "$json_value" \
+                'setpath($path | split("."); $value)')
+            store=$(settings_store)
+            "$store" set "$patch" || return
+            "$store" get
+            ;;
+        doctor)
+            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil shell doctor\n' >&2; return 2; }
+            doctor
+            ;;
+        *)
+            printf 'Usage: hyprveil shell toggle|open|close|back|get|set|doctor ...\n' >&2
+            return 2
+            ;;
+    esac
+}
+
+wallpaper_command() {
+    local action=${1:-} path monitor='' fit=cover store
+    store=$(wallpaper_store)
+    case "$action" in
+        list|restore)
+            [ "$#" -eq 1 ] || { printf 'Usage: hyprveil wallpaper %s\n' "$action" >&2; return 2; }
+            "$store" "$action"
+            ;;
+        set)
+            shift
+            path=${1:-}
+            [ -n "$path" ] || { printf 'Usage: hyprveil wallpaper set <file> [--monitor NAME] [--fit cover|contain]\n' >&2; return 2; }
+            shift
+            while [ "$#" -gt 0 ]; do
+                case "$1" in
+                    --monitor) shift; monitor=${1:-} ;;
+                    --fit) shift; fit=${1:-} ;;
+                    *) printf 'Unknown wallpaper option: %s\n' "$1" >&2; return 2 ;;
+                esac
+                shift
+            done
+            case "$fit" in cover|contain) ;; *) printf 'Invalid wallpaper fit: %s\n' "$fit" >&2; return 2 ;; esac
+            [ -f "$path" ] || { printf 'Wallpaper file does not exist: %s\n' "$path" >&2; return 1; }
+            "$store" apply "$path" "$monitor" "$fit"
+            ;;
+        *)
+            printf 'Usage: hyprveil wallpaper list|set|restore ...\n' >&2
+            return 2
+            ;;
+    esac
+}
+
 case "${1:-}" in
     setup) shift; exec "$REPO/scripts/10-first-run-setup.sh" "$@" ;;
     doctor) shift; [ "$#" -eq 0 ] || { usage >&2; exit 2; }; doctor ;;
+    shell) shift; shell_command "$@" ;;
+    wallpaper) shift; wallpaper_command "$@" ;;
     update) shift; update "$@" ;;
     rollback) shift; rollback "$@" ;;
     uninstall) shift; uninstall "$@" ;;

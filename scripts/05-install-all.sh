@@ -41,6 +41,7 @@ if [[ "$ans2" == "y" || "$ans2" == "Y" ]]; then
     hv_deploy_configs
     "$REPO/scripts/06-select-profile.sh" --ensure
     "$REPO/scripts/07-select-notification-backend.sh" --ensure
+    "$REPO/scripts/11-select-shell-profile.sh" --ensure
     "$HV_CONFIG_HOME/hypr/scripts/motion-profile.sh" --ensure
     if [ -x "$HV_CONFIG_HOME/hypr/scripts/accent.sh" ]; then
         "$HV_CONFIG_HOME/hypr/scripts/accent.sh" render || true

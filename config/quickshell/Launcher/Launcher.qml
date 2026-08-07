@@ -15,12 +15,15 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import Quickshell.Widgets
 import ".."
+import "../Adapters"
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
     property string query: ""
     property int selected: 0
 
@@ -31,15 +34,15 @@ Scope {
 
     readonly property var systemActions: [
         { kind: "action", id: "lock", label: "Lock", glyph: "\u{f033e}",
-          run: () => Quickshell.execDetached([Quickshell.env("HOME") + "/.config/hypr/scripts/lock.sh"]) },
+          run: () => SystemActions.lock() },
         { kind: "action", id: "suspend", label: "Suspend", glyph: "\u{f04b2}",
-          run: () => Quickshell.execDetached(["systemctl", "suspend"]) },
+          run: () => SystemActions.suspend() },
         { kind: "action", id: "reboot", label: "Restart", glyph: "\u{f0453}",
-          run: () => Quickshell.execDetached(["systemctl", "reboot"]) },
+          run: () => SystemActions.reboot() },
         { kind: "action", id: "shutdown", label: "Shut down", glyph: "\u{f0425}",
-          run: () => Quickshell.execDetached(["systemctl", "poweroff"]) },
+          run: () => SystemActions.powerOff() },
         { kind: "action", id: "logout", label: "Log out", glyph: "\u{f0343}",
-          run: () => Hyprland.dispatch("exit") }
+          run: () => SystemActions.logout() }
     ]
 
     // Apps: every entry Quickshell knows about, minus anything that declares
@@ -116,6 +119,7 @@ Scope {
 
     PanelWindow {
         id: win
+        screen: root.targetScreen ?? Quickshell.screens[0]
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
@@ -127,13 +131,14 @@ Scope {
         Rectangle {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
-            MouseArea { anchors.fill: parent; onClicked: root.open = false }
+            TapHandler { onTapped: root.open = false }
         }
 
-        Surface {
+        HvDialog {
             anchors.horizontalCenter: parent.horizontalCenter
             y: parent.height * 0.16
             elevation: 3
+            presented: root.open
             radius: Tokens.radiusLg
 
             transform: Translate {
@@ -148,9 +153,7 @@ Scope {
             }
 
             implicitWidth: Math.min(560, parent.width - Tokens.spacing8 * 2)
-            implicitHeight: column.implicitHeight + Tokens.spacing4 * 2
-
-            MouseArea { anchors.fill: parent }
+            implicitHeight: Math.min(520, parent.height - Tokens.spacing8 * 2)
 
             ColumnLayout {
                 id: column
@@ -158,69 +161,42 @@ Scope {
                 anchors.margins: Tokens.spacing4
                 spacing: Tokens.spacing3
 
-                Rectangle {
+                HvHeader {
                     Layout.fillWidth: true
-                    implicitHeight: Tokens.spacing8
-                    radius: Tokens.radiusSm
-                    color: Qt.rgba(1, 1, 1, 0.06)
-                    border.width: search.activeFocus ? 1 : 0
-                    border.color: Accent.accent
+                    title: "Launcher"
+                    subtitle: "Apps, windows, providers, and session actions"
+                    canClose: true
+                    onClose: root.open = false
+                }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: Tokens.spacing3
-                        anchors.rightMargin: Tokens.spacing3
-                        spacing: Tokens.spacing2
+                HvSearchField {
+                    id: search
+                    Layout.fillWidth: true
+                    placeholderText: "Search apps, windows, actions…"
+                    accessibleName: "Search apps, windows, and actions"
+                    onTextChanged: { root.query = text; root.selected = 0; }
+                    onEscaped: root.open = false
+                    onAccepted: root.activate(root.selected)
+                    onMoveDown: root.selected = Math.min(root.results.length - 1, root.selected + 1)
+                    onMoveUp: root.selected = Math.max(0, root.selected - 1)
 
-                        Glyph { text: "\u{f0349}"; size: Tokens.iconSm; color: Tokens.dim }
-
-                        TextInput {
-                            id: search
-                            renderType: Text.NativeRendering
-                            Layout.fillWidth: true
-                            focus: true
-                            Accessible.role: Accessible.EditableText
-                            Accessible.name: "Search apps, windows, and actions"
-                            color: Tokens.text
-                            font.family: Tokens.fontUi
-                            font.pixelSize: Tokens.textSm
-                            selectionColor: Accent.accentSoft
-                            selectedTextColor: Tokens.text
-                            clip: true
-                            onTextChanged: { root.query = text; root.selected = 0; }
-
-                            Keys.onEscapePressed: root.open = false
-                            Keys.onReturnPressed: root.activate(root.selected)
-                            Keys.onDownPressed: root.selected =
-                                Math.min(root.results.length - 1, root.selected + 1)
-                            Keys.onUpPressed: root.selected = Math.max(0, root.selected - 1)
-
-                            Connections {
-                                target: root
-                                function onOpenChanged() { if (root.open) search.text = ""; }
-                            }
-
-                            Text {
-                                renderType: Text.NativeRendering
-                                anchors.fill: parent
-                                visible: search.text === ""
-                                text: "Search apps, windows, actions…"
-                                font: search.font
-                                color: Tokens.dim
-                                verticalAlignment: Text.AlignVCenter
+                    Connections {
+                        target: root
+                        function onOpenChanged() {
+                            if (root.open) {
+                                search.text = "";
+                                search.forceInputFocus();
                             }
                         }
                     }
                 }
 
-                Text {
-                    renderType: Text.NativeRendering
+                HvEmptyState {
                     Layout.fillWidth: true
                     visible: root.results.length === 0
-                    text: "No matches"
-                    font.family: Tokens.fontUi
-                    font.pixelSize: Tokens.textXs
-                    color: Tokens.dim
+                    glyph: "\u{f0349}"
+                    title: "No matches"
+                    detail: "Try a shorter app, window, action, file, or emoji name."
                 }
 
                 ColumnLayout {
@@ -235,66 +211,17 @@ Scope {
                         // later pass — narrowing by typing is the primary path.
                         model: root.results.slice(0, 9)
 
-                        Rectangle {
+                        HvActionRow {
                             required property var modelData
                             required property int index
                             Layout.fillWidth: true
-                            implicitHeight: Tokens.spacing8
-                            radius: Tokens.radiusSm
-                            color: root.selected === index
-                                ? Accent.accentSoft : "transparent"
-
-                            Accessible.role: Accessible.ListItem
-                            Accessible.name: modelData.label
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: Tokens.spacing2
-                                anchors.rightMargin: Tokens.spacing2
-                                spacing: Tokens.spacing2h
-
-                                IconImage {
-                                    visible: modelData.kind !== "action" && modelData.icon
-                                    source: modelData.icon ?? ""
-                                    implicitSize: Tokens.iconMd
-                                }
-                                Glyph {
-                                    visible: modelData.kind === "action"
-                                    text: modelData.glyph ?? ""
-                                    size: Tokens.iconMd
-                                    color: Tokens.muted
-                                }
-
-                                Text {
-                                    renderType: Text.NativeRendering
-                                    Layout.fillWidth: true
-                                    text: modelData.label
-                                    font.family: Tokens.fontUi
-                                    font.pixelSize: Tokens.textSm
-                                    font.weight: root.selected === index
-                                        ? Tokens.weightSemibold : Tokens.weightMedium
-                                    color: Tokens.text
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    renderType: Text.NativeRendering
-                                    visible: modelData.kind === "window"
-                                    text: modelData.sub ?? ""
-                                    font.family: Tokens.fontUi
-                                    font.pixelSize: Tokens.text2xs
-                                    color: Tokens.dim
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onEntered: root.selected = index
-                                onClicked: root.activate(index)
-                            }
+                            iconSource: modelData.kind !== "action" ? (modelData.icon ?? "") : ""
+                            glyph: modelData.kind === "action" ? (modelData.glyph ?? "") : ""
+                            title: modelData.label
+                            subtitle: modelData.kind === "window" ? (modelData.sub ?? "") : ""
+                            selected: root.selected === index
+                            onActiveFocusChanged: if (activeFocus) root.selected = index
+                            onClicked: root.activate(index)
                         }
                     }
                 }

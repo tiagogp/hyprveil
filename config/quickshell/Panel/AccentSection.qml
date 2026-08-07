@@ -5,41 +5,20 @@
 // there is exactly one place a preset is defined.
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
 import ".."
+import "../Design/Components"
+import "../Services"
 
-Section {
+HvSection {
     id: root
 
     glyph: "\u{f0598}"
     title: "Accent"
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/hypr/scripts/accent.sh"
-    property var presets: []
+    readonly property var presets: AccentService.state
 
     function apply(name) {
-        if (applier.running) return;
-        applier.presetName = name;
-        applier.running = true;
-    }
-
-    FileView {
-        id: file
-        path: Quickshell.env("HOME") + "/.config/hypr/scripts/data/accent-presets.json"
-        onLoaded: {
-            try {
-                root.presets = JSON.parse(text());
-            } catch (e) {
-                root.presets = [];
-            }
-        }
-    }
-
-    Process {
-        id: applier
-        property string presetName: ""
-        command: [root.scriptPath, "preset", presetName]
+        AccentService.applyPreset(name);
     }
 
     RowLayout {

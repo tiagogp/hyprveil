@@ -36,58 +36,34 @@ Scope {
     // notification would double up as its own history entry.
     readonly property double sessionStartTs: Date.now() / 1000
 
-    readonly property string storeScript:
-        Quickshell.env("HOME") + "/.config/hypr/scripts/notification-store.sh"
-
     // Notifications from a session that ended — appName/summary/image/urgency
     // only, never the body; see notification-store.sh for why. Rendered by
     // NotificationSection as read-only rows beneath the live/tracked ones.
     // Each entry is already shaped like the subset of a Quickshell Notification
     // that NotificationCard reads (summary/body/appIcon/urgency/actions), so
     // the same card renders both without a second code path.
-    property var persistedHistory: []
-
-    function _loadPersisted() {
-        historyLoader.running = true;
-    }
-
-    Process {
-        id: historyLoader
-        command: [root.storeScript, "list"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const raw = JSON.parse(text);
-                    root.persistedHistory = raw.map(r => ({
-                        sid: r.sid,
-                        app: r.app ?? "",
-                        summary: r.summary ?? "",
-                        body: "",
-                        appIcon: r.image ?? "",
-                        urgency: r.urgency === "critical" ? NotificationUrgency.Critical
-                               : r.urgency === "low" ? NotificationUrgency.Low
-                               : NotificationUrgency.Normal,
-                        actions: [],
-                        ts: r.ts ?? 0
-                    })).reverse();
-                } catch (e) {
-                    root.persistedHistory = [];
-                }
-            }
-        }
-    }
+    readonly property var persistedHistory: NotificationStore.state.map(r => ({
+        sid: r.sid,
+        app: r.app ?? "",
+        summary: r.summary ?? "",
+        body: "",
+        appIcon: r.image ?? "",
+        urgency: r.urgency === "critical" ? NotificationUrgency.Critical
+               : r.urgency === "low" ? NotificationUrgency.Low
+               : NotificationUrgency.Normal,
+        actions: [],
+        ts: r.ts ?? 0
+    }))
 
     function removePersisted(sid) {
-        root.persistedHistory = root.persistedHistory.filter(n => n.sid !== sid);
-        Quickshell.execDetached([root.storeScript, "remove", sid]);
+        NotificationStore.remove(sid);
     }
 
     function clearPersisted() {
-        root.persistedHistory = [];
-        Quickshell.execDetached([root.storeScript, "clear"]);
+        NotificationStore.clear();
     }
 
-    Component.onCompleted: root._loadPersisted()
+    Component.onCompleted: NotificationStore.refresh()
 
     // Quickshell's Notification carries no timestamp of its own, so the server
     // records arrival times here, keyed by notification id. Reading a `time`
@@ -122,8 +98,8 @@ Scope {
             // only metadata, per notification-store.sh's privacy scope.
             const urgencyName = notif.urgency === NotificationUrgency.Critical ? "critical"
                 : notif.urgency === NotificationUrgency.Low ? "low" : "normal";
-            Quickshell.execDetached([root.storeScript, "append",
-                notif.appName ?? "", notif.summary ?? "", notif.appIcon ?? "", urgencyName]);
+            NotificationStore.append(notif.appName ?? "", notif.summary ?? "",
+                notif.appIcon ?? "", urgencyName);
 
             if (root.dontDisturb) return;
             // Calm Mode's narrower suppression: non-urgent popups are held

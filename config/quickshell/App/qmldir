@@ -1,0 +1,8 @@
+singleton SurfaceCoordinator 1.0 SurfaceCoordinator.qml
+
+Shell 1.0 Shell.qml
+SurfaceHost 1.0 SurfaceHost.qml
+AnchoredHost 1.0 AnchoredHost.qml
+ModalHost 1.0 ModalHost.qml
+FullscreenHost 1.0 FullscreenHost.qml
+PassiveHost 1.0 PassiveHost.qml

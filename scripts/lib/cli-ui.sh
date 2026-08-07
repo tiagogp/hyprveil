@@ -94,12 +94,16 @@ cleanup() {
         printf '\033[?25h'
         CLI_UI_CURSOR_HIDDEN=0
     fi
-    for path in "${CLI_UI_TEMP_FILES[@]}"; do
-        [ -n "$path" ] && [ -e "$path" ] && rm -f -- "$path"
-    done
-    for path in "${CLI_UI_TEMP_DIRS[@]}"; do
-        [ -n "$path" ] && [ -d "$path" ] && rm -rf -- "$path"
-    done
+    if [ "${#CLI_UI_TEMP_FILES[@]}" -gt 0 ]; then
+        for path in "${CLI_UI_TEMP_FILES[@]}"; do
+            [ -n "$path" ] && [ -e "$path" ] && rm -f -- "$path"
+        done
+    fi
+    if [ "${#CLI_UI_TEMP_DIRS[@]}" -gt 0 ]; then
+        for path in "${CLI_UI_TEMP_DIRS[@]}"; do
+            [ -n "$path" ] && [ -d "$path" ] && rm -rf -- "$path"
+        done
+    fi
     return "$status"
 }
 

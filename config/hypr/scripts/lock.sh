@@ -22,6 +22,33 @@ HYPRLOCK_BIN="${HYPRVEIL_HYPRLOCK_BIN:-hyprlock}"
 
 log() { printf 'Lock: %s\n' "$*" >&2; }
 
+run_with_timeout() {
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 5 "$@"
+        return
+    fi
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout 5 "$@"
+        return
+    fi
+    if command -v perl >/dev/null 2>&1; then
+        # Kill a dedicated process group, not only the wrapper: a wedged shell
+        # may have a child retaining the command-substitution output pipe.
+        LC_ALL=C LANG=C perl -MPOSIX=setpgid -e '
+            $timeout = shift;
+            $pid = fork();
+            die "fork failed" unless defined $pid;
+            if ($pid == 0) { setpgid(0, 0); exec @ARGV; exit 127; }
+            $SIG{ALRM} = sub { kill "TERM", -$pid; waitpid($pid, 0); exit 124; };
+            alarm $timeout;
+            waitpid($pid, 0);
+            exit($? >> 8);
+        ' 5 "$@"
+        return
+    fi
+    return 1
+}
+
 fallback() {
     if command -v "$HYPRLOCK_BIN" >/dev/null 2>&1; then
         log "$1; falling back to hyprlock"
@@ -40,7 +67,7 @@ command -v "$QS_BIN" >/dev/null 2>&1 || fallback "Quickshell is not installed"
 
 # `qs ipc call` fails if no instance is running, if the target is missing, or if
 # the shell is wedged. All three mean the same thing here.
-state=$(timeout 5 "$QS_BIN" ipc call lock lock 2>/dev/null) || fallback "the shell did not answer"
+state=$(run_with_timeout "$QS_BIN" ipc call lock lock 2>/dev/null) || fallback "the shell did not answer"
 [ "$state" = locked ] || fallback "the shell did not confirm the lock"
 
 exit 0

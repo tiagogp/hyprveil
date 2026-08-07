@@ -6,6 +6,13 @@ set -uo pipefail
 
 STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hyprveil}"
 STATE_FILE="$STATE_HOME/notification-backend"
+PROFILE_FILE="$STATE_HOME/shell-profile"
+
+shell_profile() {
+    local profile=default
+    if [ -r "$PROFILE_FILE" ]; then IFS= read -r profile < "$PROFILE_FILE" || true; fi
+    case "$profile" in default|recovery) printf '%s\n' "$profile" ;; *) printf 'default\n' ;; esac
+}
 
 backend() {
     local selected=
@@ -60,11 +67,33 @@ stop_daemons() {
     done
     pkill -x swaync 2>/dev/null || true
     pkill -x mako 2>/dev/null || true
+    pkill -x waybar 2>/dev/null || true
+}
+
+start_recovery_bar() {
+    command -v waybar >/dev/null 2>&1 || {
+        printf 'Recovery profile: Waybar is unavailable.\n' >&2
+        return 1
+    }
+    if ! pgrep -x waybar >/dev/null 2>&1; then
+        waybar >/dev/null 2>&1 &
+    fi
 }
 
 start_daemon() {
     local selected
     selected=$(backend)
+    if [ "$(shell_profile)" = default ]; then
+        selected=quickshell
+        pkill -x waybar 2>/dev/null || true
+    else
+        for name in "${QS_NAMES[@]}"; do pkill -x "$name" 2>/dev/null || true; done
+        start_recovery_bar || true
+        [ "$selected" != quickshell ] || {
+            selected=swaync
+            command -v swaync >/dev/null 2>&1 || selected=mako
+        }
+    fi
     if [ "$selected" = quickshell ]; then
         if [ "${HYPRVEIL_NESTED_SESSION:-0}" != 1 ]; then
             pkill -x swaync 2>/dev/null || true
@@ -124,6 +153,7 @@ case "${1:-start}" in
         fi
         ;;
     toggle)
+        if [ "$(shell_profile)" = default ]; then qs_ipc quicksettings toggle; exit $?; fi
         case "$(backend)" in
             quickshell) qs_ipc quicksettings toggle ;;
             swaync) swaync-client -t -sw ;;
@@ -134,6 +164,7 @@ case "${1:-start}" in
         esac
         ;;
     dnd)
+        if [ "$(shell_profile)" = default ]; then qs_ipc notifications dnd; exit $?; fi
         case "$(backend)" in
             quickshell) qs_ipc notifications dnd ;;
             swaync) swaync-client -d -sw ;;
@@ -141,8 +172,9 @@ case "${1:-start}" in
         esac
         ;;
     backend) backend ;;
+    profile) shell_profile ;;
     *)
-        printf 'Usage: %s start|stop|restart|toggle|dnd|backend\n' "$0" >&2
+        printf 'Usage: %s start|stop|restart|toggle|dnd|backend|profile\n' "$0" >&2
         exit 2
         ;;
 esac

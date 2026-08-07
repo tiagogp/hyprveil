@@ -19,6 +19,12 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    property bool available: true
+    readonly property string state: root.reduced ? "reduced" : "standard"
+    property bool busy: false
+    property string error: ""
+    property double lastUpdated: 0
+
     // HYPRVEIL_STATE_HOME mirrors motion-profile.sh so a mocked test session and
     // the real shell read the exact same file.
     readonly property string path:
@@ -42,11 +48,14 @@ Singleton {
         return (root.reduced || CalmMode.pauseAnimations) ? 0 : ms;
     }
 
+    function refresh(): void { file.reload(); }
+
     FileView {
+        id: file
         path: root.path
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.reduced = text().trim() === "reduced"
+        onLoaded: { root.reduced = text().trim() === "reduced"; root.lastUpdated = Date.now(); }
         onLoadFailed: root.reduced = false
     }
 }

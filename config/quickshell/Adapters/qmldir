@@ -1,0 +1,3 @@
+singleton HyprlandAdapter 1.0 Hyprland.qml
+singleton SystemActions 1.0 SystemActions.qml
+singleton WallpaperAdapter 1.0 Wallpaper.qml

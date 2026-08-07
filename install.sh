@@ -184,6 +184,7 @@ if selected_contains "Notification backend" "${COMPONENTS[@]}"; then
     hv_step "$CURRENT" "Notification backend"
     if [ -f "$HV_NOTIFICATION_STATE" ]; then
         "$REPO/scripts/07-select-notification-backend.sh" --ensure
+        "$REPO/scripts/11-select-shell-profile.sh" --ensure
     else
         "$REPO/scripts/07-select-notification-backend.sh"
     fi

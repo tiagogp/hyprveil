@@ -17,6 +17,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../Design/Components"
 import "../Services"
 import ".."
 
@@ -24,6 +25,7 @@ Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
     property string query: ""
 
     // Every open window, filtered by the search box and ordered by workspace
@@ -61,6 +63,7 @@ Scope {
     }
 
     PanelWindow {
+        screen: root.targetScreen ?? Quickshell.screens[0]
         id: win
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
@@ -78,10 +81,7 @@ Scope {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.55)
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.open = false
-            }
+            TapHandler { onTapped: root.open = false }
         }
 
         ColumnLayout {
@@ -114,63 +114,22 @@ Scope {
 
             // Search pill. Same shape as the cheatsheet's so the two modals
             // share one search affordance rather than inventing a second.
-            Rectangle {
+            HvSearchField {
+                id: search
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: Math.min(460, win.width - Tokens.spacing8 * 2)
-                implicitHeight: Tokens.spacing8
-                radius: Tokens.radiusSm
-                color: Qt.rgba(1, 1, 1, 0.06)
-                border.width: search.activeFocus ? 1 : 0
-                border.color: Accent.accent
+                placeholderText: "Search windows"
+                accessibleName: "Search windows"
+                onTextChanged: root.query = text
+                onEscaped: root.open = false
+                onAccepted: if (root.windows.length > 0) root.activate(root.windows[0])
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: Tokens.spacing3
-                    anchors.rightMargin: Tokens.spacing3
-                    spacing: Tokens.spacing2
-
-                    Glyph {
-                        text: "\u{f0349}"
-                        size: Tokens.iconSm
-                        color: Tokens.dim
-                    }
-
-                    TextInput {
-                        id: search
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        focus: true
-                        Accessible.role: Accessible.EditableText
-                        Accessible.name: "Search windows"
-                        color: Tokens.text
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textSm
-                        selectionColor: Accent.accentSoft
-                        selectedTextColor: Tokens.text
-                        clip: true
-                        onTextChanged: root.query = text
-                        Keys.onEscapePressed: root.open = false
-                        // Enter commits to the first match, so a search that
-                        // narrows to one window is a type-and-go rather than a
-                        // type-then-aim.
-                        Keys.onReturnPressed:
-                            if (root.windows.length > 0) root.activate(root.windows[0])
-
-                        Connections {
-                            target: root
-                            function onOpenChanged() {
-                                if (root.open) search.text = "";
-                            }
-                        }
-
-                        Text {
-                            renderType: Text.NativeRendering
-                            anchors.fill: parent
-                            visible: search.text === ""
-                            text: "Search windows"
-                            font: search.font
-                            color: Tokens.dim
-                            verticalAlignment: Text.AlignVCenter
+                Connections {
+                    target: root
+                    function onOpenChanged() {
+                        if (root.open) {
+                            search.text = "";
+                            search.forceInputFocus();
                         }
                     }
                 }
@@ -206,18 +165,15 @@ Scope {
             }
 
             // Empty state — no windows at all, or none matching the query.
-            Text {
+            HvEmptyState {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.fillHeight: true
-                verticalAlignment: Text.AlignVCenter
-                renderType: Text.NativeRendering
                 visible: root.windows.length === 0
-                text: root.query.trim() === ""
+                glyph: "\u{f02d0}"
+                title: root.query.trim() === ""
                     ? "No open windows"
                     : "No window matches “" + root.query + "”"
-                font.family: Tokens.fontUi
-                font.pixelSize: Tokens.textSm
-                color: Tokens.dim
+                detail: root.query.trim() === "" ? "Open an application to see it here." : "Try a shorter title or app name."
             }
         }
     }

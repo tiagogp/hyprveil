@@ -14,61 +14,29 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
 
-    property string dir: ""
-    property var images: []
-    property var outputs: []
+    readonly property string dir: WallpaperService.state.dir ?? ""
+    readonly property var images: WallpaperService.state.images ?? []
+    readonly property var outputs: WallpaperService.state.outputs ?? []
     // "" means every monitor, matching what wallpaper.sh apply expects.
     property string target: ""
     property string fit: "cover"
-    property string status: ""
+    readonly property string status: WallpaperService.error
     // The staged choice. Picking a tile only stages it; nothing reaches
     // Hyprpaper until Apply is pressed, so a misclick costs a second click
     // rather than a wallpaper change and an accent re-derivation.
     property string selected: ""
 
-    Process {
-        id: lister
-        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh", "list"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const c = JSON.parse(text);
-                    root.dir = c.dir ?? "";
-                    // Reassigning root.images always replaces the GridView's
-                    // model with a new array, even when the contents are
-                    // identical — the view can't tell it's the same list, so
-                    // it tears down and rebuilds every delegate, and every
-                    // thumbnail Image with it. That's the blank-then-pop-in
-                    // flash on reopen despite the Image cache below: the
-                    // pixmap is cached, but the Image *element* holding it
-                    // was just destroyed and recreated. Keeping the old
-                    // array when nothing changed keeps the delegates (and
-                    // their decoded thumbnails) alive across reopenings.
-                    const newImages = c.images ?? [];
-                    const sameImages = newImages.length === root.images.length
-                        && newImages.every((p, i) => p === root.images[i]);
-                    if (!sameImages)
-                        root.images = newImages;
-                    root.outputs = c.outputs ?? [];
-                    // A monitor can disappear between openings; fall back to
-                    // "all" rather than silently applying to a dead output.
-                    if (root.target !== "" && !root.outputs.includes(root.target))
-                        root.target = "";
-                    root.status = "";
-                } catch (e) {
-                    root.images = [];
-                    root.status = "Could not read the wallpaper list";
-                }
-            }
-        }
-    }
+    onOutputsChanged: if (root.target !== "" && !root.outputs.includes(root.target))
+        root.target = ""
 
     // Detached, not a Process: applying a wallpaper re-derives the accent, which
     // rewrites Accent.qml, which is a full config reload. That reload destroys
@@ -83,10 +51,7 @@ Scope {
     function apply() {
         if (root.selected === "")
             return;
-        Quickshell.execDetached([
-            Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh",
-            "apply", root.selected, root.target, root.fit
-        ]);
+        WallpaperService.apply(root.selected, root.target, root.fit);
         root.open = false;
     }
 
@@ -95,7 +60,7 @@ Scope {
             // Each opening starts with nothing staged, so Apply is never armed
             // with a choice the user made in some earlier session.
             root.selected = "";
-            lister.running = true;
+            WallpaperService.refresh();
         }
     }
 
@@ -104,6 +69,7 @@ Scope {
     // confirm step, so the surrounding desktop should read as unavailable
     // rather than as something you could keep working in.
     PanelWindow {
+        screen: root.targetScreen ?? Quickshell.screens[0]
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
         // Covering the screen must not push the bar and dock out of their own
@@ -140,16 +106,14 @@ Scope {
 
             // Click-outside-to-dismiss. Sits under the dialog, so the dialog's
             // own MouseArea below swallows clicks that land on it.
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.open = false
-            }
+            TapHandler { onTapped: root.open = false }
         }
 
-        Surface {
+        HvDialog {
             id: card
             anchors.centerIn: parent
             elevation: 3
+            presented: root.open
             radius: Tokens.radiusSm
             border.color: Accent.accent
 
@@ -186,62 +150,22 @@ Scope {
             }
 
             implicitWidth: Math.max(0, Math.min(620, parent.width - Tokens.spacing4 * 2))
-            implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
-                                     parent.height - Tokens.spacing8 * 2)
+            implicitHeight: Math.min(680, parent.height - Tokens.spacing8 * 2)
 
             // Stops a click inside the dialog from reaching the scrim and
             // dismissing the thing the user is aiming at.
-            MouseArea { anchors.fill: parent }
-
             ColumnLayout {
                 id: column
                 anchors.fill: parent
                 anchors.margins: Tokens.spacing4
                 spacing: Tokens.spacing3
 
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: "Wallpapers"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-                    }
-
-                    Rectangle {
-                        implicitWidth: Tokens.spacing6
-                        implicitHeight: Tokens.spacing6
-                        radius: Tokens.radiusPill
-                        activeFocusOnTab: true
-                        color: closeMouse.containsMouse
-                            ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
-                        border.width: activeFocus ? 1 : 0
-                        border.color: Accent.accent
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Close wallpaper picker"
-
-                        Keys.onReturnPressed: root.open = false
-                        Keys.onSpacePressed: root.open = false
-
-                        Glyph {
-                            anchors.centerIn: parent
-                            text: "\u{f0156}"
-                            size: Tokens.iconSm
-                            color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
-                        }
-
-                        MouseArea {
-                            id: closeMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.open = false
-                        }
-                    }
+                    title: "Wallpapers"
+                    subtitle: "Preview, target, fit, then apply"
+                    canClose: true
+                    onClose: root.open = false
                 }
 
                 RowLayout {
@@ -269,14 +193,12 @@ Scope {
 
                 // Only the empty state; errors and progress belong to the
                 // footer status line, which is on screen either way.
-                Text {
-                    renderType: Text.NativeRendering
+                HvEmptyState {
                     Layout.fillWidth: true
                     visible: root.images.length === 0
-                    text: "No images in " + root.dir
-                    font.family: Tokens.fontUi
-                    font.pixelSize: Tokens.textXs
-                    color: Tokens.dim
+                    glyph: "\u{f0976}"
+                    title: "No wallpapers"
+                    detail: "No images were found in " + root.dir
                 }
 
                 GridView {
@@ -384,12 +306,12 @@ Scope {
                         elide: Text.ElideMiddle
                     }
 
-                    Button {
+                    HvButton {
                         text: "Cancel"
                         onClicked: root.open = false
                     }
 
-                    Button {
+                    HvButton {
                         text: "Apply"
                         primary: true
                         enabled: root.selected !== ""

@@ -23,6 +23,11 @@ Singleton {
     // [ { title, groups: [ { label, binds: [ { keys: [...], desc, search } ] } ] } ]
     property var sections: []
     property bool failed: false
+    readonly property bool available: !root.failed
+    readonly property var state: root.sections
+    property bool busy: false
+    readonly property string error: root.failed ? "Keybindings could not be read" : ""
+    property double lastUpdated: 0
 
     // Binds in the file, not rows on screen: _collapse turns ten per-digit
     // workspace binds into one row, and counting rows would report a scheme a
@@ -45,6 +50,7 @@ Singleton {
         onLoaded: {
             root.failed = false;
             root.sections = root._parse(text());
+            root.lastUpdated = Date.now();
         }
         onLoadFailed: {
             root.failed = true;

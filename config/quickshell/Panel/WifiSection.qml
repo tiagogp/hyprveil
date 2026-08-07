@@ -9,8 +9,10 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Networking
 import ".."
+import "../Design/Components"
+import "../Services"
 
-Section {
+HvSection {
     id: root
     glyph: "\u{f05a9}"
     title: "Wi-Fi"
@@ -27,7 +29,7 @@ Section {
             .sort((a, b) => b.signalStrength - a.signalStrength);
     }
 
-    Toggle {
+    HvToggle {
         Layout.alignment: Qt.AlignRight
         visible: root.device !== null
         accessibleName: "Wi-Fi"
@@ -70,11 +72,7 @@ Section {
                     if (modelData.known || modelData.security === WifiSecurityType.Open)
                         modelData.connect(null);
                     else
-                        Quickshell.execDetached([
-                            "sh", "-c",
-                            "if command -v nmcli >/dev/null 2>&1; then nmcli device wifi connect \"$1\"; else notify-send 'Wi-Fi connection unavailable' 'Install NetworkManager/nmcli to connect to secured networks from Hyprveil.'; fi",
-                            "hyprveil-wifi-connect", modelData.name
-                        ]);
+                        Network.connectWifi(modelData.name);
                 }
 
                 Keys.onReturnPressed: activate()

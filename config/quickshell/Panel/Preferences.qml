@@ -18,12 +18,14 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
     // The Wallpapers scope, passed down from shell.qml — the same reference
     // QuickSettings.qml already holds, not a second instance.
     property var wallpapers: null
@@ -32,45 +34,19 @@ Scope {
     // than as a global so closing the panel discards an unfinished name
     // instead of it lingering into the next time Preferences opens.
     property string newSceneName: ""
-    property var sceneNames: []
+    readonly property var sceneNames: Scenes.state
 
     onOpenChanged: {
         if (open) {
             Capabilities.refresh();
-            root.refreshScenes();
+            Scenes.refresh();
         }
     }
 
-    Process {
-        id: scenesLister
-        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/scenes.sh", "list"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try { root.sceneNames = JSON.parse(text); }
-                catch (e) { root.sceneNames = []; }
-            }
-        }
-    }
-    function refreshScenes() { scenesLister.running = true; }
-
-    function runScenes(args) {
-        Quickshell.execDetached([Quickshell.env("HOME") + "/.config/hypr/scripts/scenes.sh"].concat(args));
-        refreshTimer.restart();
-    }
-    Timer {
-        id: refreshTimer
-        interval: 200
-        onTriggered: root.refreshScenes()
-    }
+    function runScenes(args) { Scenes.run(args); }
 
     function reapplyAccent() {
-        Quickshell.execDetached(["sh", "-c",
-            'path=$(' + Quickshell.env("HOME") + '/.config/hypr/scripts/wallpaper.sh list | ' +
-            'jq -r ".fallback.path // empty"); [ -n "$path" ] || exit 0; ' +
-            'if [ "' + (Settings.accent.provider ?? "hyprveil") + '" = matugen ]; then ' +
-            Quickshell.env("HOME") + '/.config/hypr/scripts/matugen-adapter.sh from-wallpaper "$path"; else ' +
-            Quickshell.env("HOME") + '/.config/hypr/scripts/accent.sh from-wallpaper "$path"; fi'
-        ]);
+        AccentService.reapplyFromWallpaper(Settings.appearance.accentProvider ?? "hyprveil");
     }
 
     readonly property bool matugenAvailable:
@@ -78,6 +54,7 @@ Scope {
 
     PanelWindow {
         id: win
+        screen: root.targetScreen ?? Quickshell.screens[0]
         visible: root.open
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
@@ -89,12 +66,13 @@ Scope {
         Rectangle {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
-            MouseArea { anchors.fill: parent; onClicked: root.open = false }
+            TapHandler { onTapped: root.open = false }
         }
 
-        Surface {
+        HvDialog {
             anchors.centerIn: parent
             elevation: 3
+            presented: root.open
             radius: Tokens.radiusLg
 
             transform: Translate {
@@ -109,12 +87,10 @@ Scope {
             }
 
             implicitWidth: Math.min(480, parent.width - Tokens.spacing8 * 2)
-            implicitHeight: Math.min(column.implicitHeight + Tokens.spacing4 * 2,
-                                     parent.height - Tokens.spacing8 * 2)
+            implicitHeight: Math.min(640, parent.height - Tokens.spacing8 * 2)
 
             focus: true
             Keys.onEscapePressed: root.open = false
-            MouseArea { anchors.fill: parent }
 
             ColumnLayout {
                 id: column
@@ -122,45 +98,12 @@ Scope {
                 anchors.margins: Tokens.spacing4
                 spacing: Tokens.spacing3
 
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing2
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: "Preferences"
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-                    }
-
-                    Rectangle {
-                        implicitWidth: Tokens.spacing6
-                        implicitHeight: Tokens.spacing6
-                        radius: Tokens.radiusPill
-                        activeFocusOnTab: true
-                        color: closeMouse.containsMouse ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Close preferences"
-                        Keys.onReturnPressed: root.open = false
-                        Keys.onSpacePressed: root.open = false
-
-                        Glyph {
-                            anchors.centerIn: parent
-                            text: "\u{f0156}"
-                            size: Tokens.iconSm
-                            color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
-                        }
-                        MouseArea {
-                            id: closeMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.open = false
-                        }
-                    }
+                    title: "Preferences"
+                    subtitle: "Appearance, behavior, providers, and monitors"
+                    canClose: true
+                    onClose: root.open = false
                 }
 
                 Flickable {
@@ -177,7 +120,7 @@ Scope {
                         spacing: Tokens.spacing3
 
                         // --- Bar --------------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f005c}"
                             title: "Bar"
@@ -203,7 +146,7 @@ Scope {
                         }
 
                         // --- Dock -------------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0a79}"
                             title: "Dock"
@@ -218,7 +161,7 @@ Scope {
                                     font.pixelSize: Tokens.textXs
                                     color: Tokens.muted
                                 }
-                                Toggle {
+                                HvToggle {
                                     checked: Settings.dock.autohide ?? false
                                     accessibleName: "Dock autohide"
                                     onToggled: value => Settings.set({ dock: { autohide: value } })
@@ -251,7 +194,7 @@ Scope {
                                         font.pixelSize: Tokens.textXs
                                         color: Tokens.muted
                                     }
-                                    Toggle {
+                                    HvToggle {
                                         checked: Settings.dockAutohideFor(modelData.name ?? "")
                                         accessibleName: "Dock autohide on " + (modelData.name ?? "this monitor")
                                         onToggled: value =>
@@ -262,7 +205,7 @@ Scope {
                         }
 
                         // --- Accent ------------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0765}"
                             title: "Accent"
@@ -280,16 +223,16 @@ Scope {
                                 Segmented {
                                     options: ["Hyprveil", "Matugen"]
                                     values: ["hyprveil", "matugen"]
-                                    current: Settings.accent.provider ?? "hyprveil"
+                                    current: Settings.appearance.accentProvider ?? "hyprveil"
                                     accessibleName: "Accent provider"
-                                    onPicked: value => Settings.set({ accent: { provider: value } })
+                                    onPicked: value => Settings.set({ appearance: { accentProvider: value } })
                                 }
                             }
 
                             Text {
                                 renderType: Text.NativeRendering
                                 Layout.fillWidth: true
-                                visible: (Settings.accent.provider ?? "hyprveil") === "matugen" && !root.matugenAvailable
+                                visible: (Settings.appearance.accentProvider ?? "hyprveil") === "matugen" && !root.matugenAvailable
                                 text: "Matugen is not installed — the Hyprveil algorithm stays active until it is. See Integrations."
                                 font.family: Tokens.fontUi
                                 font.pixelSize: Tokens.text2xs
@@ -297,7 +240,7 @@ Scope {
                                 wrapMode: Text.WordWrap
                             }
 
-                            LinkRow {
+                            HvActionRow {
                                 Layout.fillWidth: true
                                 text: "Re-apply from current wallpaper"
                                 onClicked: root.reapplyAccent()
@@ -305,7 +248,7 @@ Scope {
                         }
 
                         // --- Calm Mode ---------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0e63}"
                             title: "Calm Mode"
@@ -332,7 +275,7 @@ Scope {
                                         color: Accent.accent
                                     }
                                 }
-                                Toggle {
+                                HvToggle {
                                     checked: CalmMode.manualOn
                                     accessibleName: "Calm Mode"
                                     onToggled: CalmMode.toggleManual()
@@ -341,7 +284,7 @@ Scope {
                         }
 
                         // --- Launcher providers ------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0349}"
                             title: "Launcher providers"
@@ -364,13 +307,13 @@ Scope {
                                         font.pixelSize: Tokens.textXs
                                         color: Tokens.muted
                                     }
-                                    Toggle {
-                                        checked: Settings.modules.launcherProviders?.[modelData.key] ?? false
+                                    HvToggle {
+                                        checked: Settings.providers.launcher?.[modelData.key] ?? false
                                         accessibleName: modelData.label + " launcher provider"
                                         onToggled: value => {
-                                            const next = Object.assign({}, Settings.modules.launcherProviders);
+                                            const next = Object.assign({}, Settings.providers.launcher);
                                             next[modelData.key] = value;
-                                            Settings.set({ modules: Object.assign({}, Settings.modules, { launcherProviders: next }) });
+                                            Settings.set({ providers: Object.assign({}, Settings.providers, { launcher: next }) });
                                         }
                                     }
                                 }
@@ -378,7 +321,7 @@ Scope {
                         }
 
                         // --- Popups -------------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0403}"
                             title: "Popup monitor"
@@ -387,14 +330,14 @@ Scope {
                                 Layout.fillWidth: true
                                 options: ["Focused"].concat(Quickshell.screens.map(s => s.name ?? "?"))
                                 values: ["focused"].concat(Quickshell.screens.map(s => s.name ?? "?"))
-                                current: Settings.preferences.popupMonitor ?? "focused"
+                                current: Settings.surfaces.popupMonitor ?? "focused"
                                 accessibleName: "Preferred monitor for launcher, quick settings, calendar, and integrations"
-                                onPicked: value => Settings.set({ preferences: { popupMonitor: value } })
+                                onPicked: value => Settings.set({ surfaces: { popupMonitor: value } })
                             }
                         }
 
                         // --- Scenes -------------------------------------------
-                        Section {
+                        HvSection {
                             Layout.fillWidth: true
                             glyph: "\u{f0a1e}"
                             title: "Scenes"
@@ -425,12 +368,12 @@ Scope {
                                         font.pixelSize: Tokens.textXs
                                         color: Tokens.text
                                     }
-                                    LinkRow {
+                                    HvActionRow {
                                         implicitWidth: 64
                                         text: "Apply"
                                         onClicked: root.runScenes(["apply", parent.modelData])
                                     }
-                                    LinkRow {
+                                    HvActionRow {
                                         implicitWidth: 32
                                         text: "\u{f0156}"
                                         accessibleName: "Delete scene " + modelData
@@ -439,7 +382,7 @@ Scope {
                                 }
                             }
 
-                            LinkRow {
+                            HvActionRow {
                                 Layout.fillWidth: true
                                 text: "Revert last scene"
                                 onClicked: root.runScenes(["revert"])
@@ -449,37 +392,20 @@ Scope {
                                 Layout.fillWidth: true
                                 spacing: Tokens.spacing2
 
-                                Rectangle {
+                                HvTextField {
+                                    id: nameInput
                                     Layout.fillWidth: true
-                                    implicitHeight: Tokens.spacing8
-                                    radius: Tokens.radiusSm
-                                    color: Qt.rgba(1, 1, 1, 0.06)
-                                    border.width: nameInput.activeFocus ? 1 : 0
-                                    border.color: Accent.accent
-
-                                    TextInput {
-                                        id: nameInput
-                                        renderType: Text.NativeRendering
-                                        anchors.fill: parent
-                                        anchors.leftMargin: Tokens.spacing2
-                                        anchors.rightMargin: Tokens.spacing2
-                                        verticalAlignment: Text.AlignVCenter
-                                        color: Tokens.text
-                                        font.family: Tokens.fontUi
-                                        font.pixelSize: Tokens.textSm
-                                        clip: true
-                                        Accessible.role: Accessible.EditableText
-                                        Accessible.name: "New scene name"
-                                        onTextChanged: root.newSceneName = text
-                                        Keys.onReturnPressed: {
-                                            if (root.newSceneName.trim() === "") return;
-                                            root.runScenes(["save", root.newSceneName.trim()]);
-                                            nameInput.text = "";
-                                        }
+                                    placeholderText: "New scene name"
+                                    accessibleName: "New scene name"
+                                    onTextChanged: root.newSceneName = text
+                                    onAccepted: {
+                                        if (root.newSceneName.trim() === "") return;
+                                        root.runScenes(["save", root.newSceneName.trim()]);
+                                        nameInput.text = "";
                                     }
                                 }
 
-                                LinkRow {
+                                HvActionRow {
                                     implicitWidth: 96
                                     text: "Save as…"
                                     onClicked: {

@@ -11,5 +11,17 @@ singleton Brightness 1.0 Brightness.qml
 singleton Capabilities 1.0 Capabilities.qml
 singleton Settings 1.0 Settings.qml
 singleton CalmMode 1.0 CalmMode.qml
+singleton Audio 1.0 Audio.qml
+singleton Network 1.0 Network.qml
+singleton Bluetooth 1.0 Bluetooth.qml
+singleton WallpaperService 1.0 WallpaperService.qml
+singleton ShellActions 1.0 ShellActions.qml
+singleton State 1.0 State.qml
+singleton Scenes 1.0 Scenes.qml
+singleton AccentService 1.0 AccentService.qml
+singleton NightLight 1.0 NightLight.qml
+singleton PowerProfiles 1.0 PowerProfiles.qml
+singleton CalendarEvents 1.0 CalendarEvents.qml
+singleton NotificationStore 1.0 NotificationStore.qml
 
 BluetoothWatch 1.0 BluetoothWatch.qml

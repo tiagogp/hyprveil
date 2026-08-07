@@ -7,6 +7,15 @@ HV_STATE_HOME="${HYPRVEIL_STATE_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr
 HV_CONFIG_HOME="${HYPRVEIL_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 HV_SOURCE_LOG="$HV_STATE_HOME/package-sources.tsv"
 HV_NOTIFICATION_STATE="$HV_STATE_HOME/notification-backend"
+HV_SHELL_PROFILE_STATE="$HV_STATE_HOME/shell-profile"
+
+hv_shell_profile() {
+    local profile=default
+    if [ -r "$HV_SHELL_PROFILE_STATE" ]; then
+        IFS= read -r profile < "$HV_SHELL_PROFILE_STATE" || true
+    fi
+    case "$profile" in default|recovery) printf '%s\n' "$profile" ;; *) printf 'default\n' ;; esac
+}
 
 if [ -r "$HV_REPO/scripts/lib/cli-ui.sh" ]; then
     # shellcheck disable=SC1091

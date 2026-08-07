@@ -10,6 +10,8 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
 import ".."
+import "../App"
+import "../Design/Components"
 import "../Services"
 
 PanelWindow {
@@ -54,7 +56,7 @@ PanelWindow {
         calendar?.unregisterBar(bar);
     }
 
-    Surface {
+    HvChrome {
         id: barSurface
         anchors.left: parent.left
         anchors.right: parent.right
@@ -62,8 +64,6 @@ PanelWindow {
         implicitHeight: 44
         height: implicitHeight
         elevation: 1
-        alphaOverride: Accent.chromeAlpha
-        tint: Tokens.chromeTint
         radius: Tokens.radiusMd
 
         Item {
@@ -168,8 +168,7 @@ PanelWindow {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: if (bar.calendar)
-                        bar.calendar.open = !bar.calendar.open
+                    onClicked: SurfaceCoordinator.toggle("calendar", bar.screen, centerButton)
                 }
 
                 Accessible.role: Accessible.Button
@@ -232,6 +231,7 @@ PanelWindow {
 
                 StatusCluster {
                     quickSettings: bar.quickSettings
+                    screen: bar.screen
                     displayMode: bar.displayMode
                 }
 
@@ -241,12 +241,12 @@ PanelWindow {
                 }
 
                 BarAction {
+                    id: wallpaperAction
                     visible: !bar.compact
                     glyph: "\u{f0976}"
                     tooltip: "Wallpaper"
                     active: bar.wallpapers?.open ?? false
-                    onClicked: if (bar.wallpapers)
-                        bar.wallpapers.open = !bar.wallpapers.open
+                    onClicked: SurfaceCoordinator.toggle("wallpapers", bar.screen, wallpaperAction)
                 }
 
                 BarAction {
@@ -264,7 +264,10 @@ PanelWindow {
                         : count > 0 ? Accent.accentOnChrome : Tokens.muted
                     active: bar.quickSettings?.open
                         && bar.quickSettings?.view === "notifications"
-                    onClicked: bar.quickSettings?.toggleSection("notifications")
+                    onClicked: {
+                        if (bar.quickSettings) bar.quickSettings.view = "notifications";
+                        SurfaceCoordinator.toggle("quick-settings", bar.screen, notificationAction);
+                    }
                     onRightClicked: if (bar.notifications)
                         bar.notifications.dontDisturb = !bar.notifications.dontDisturb
 
@@ -300,13 +303,11 @@ PanelWindow {
                 }
 
                 BarAction {
+                    id: powerAction
                     glyph: "\u{f0425}"
                     tooltip: "Power"
                     accentOnHover: true
-                    onClicked: Quickshell.execDetached([
-                        "sh", "-c",
-                        Quickshell.env("HOME") + "/.config/wlogout/power-menu.sh"
-                    ])
+                    onClicked: SurfaceCoordinator.toggle("session", bar.screen, powerAction)
                 }
             }
         }

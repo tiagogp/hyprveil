@@ -17,6 +17,8 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Widgets
 import ".."
+import "../Adapters"
+import "../Design/Components"
 import "../Services"
 
 PanelWindow {
@@ -137,10 +139,7 @@ PanelWindow {
             // dock-manager.sh takes the position 1-based, and matches the id
             // against both desktop_id and app_id — so a pin whose desktop entry
             // was never resolved still moves.
-            Quickshell.execDetached([
-                Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
-                "move", item.desktopId ? item.desktopId : item.appId,
-                String(dock.dragTo + 1)]);
+            Pins.move(item.desktopId ? item.desktopId : item.appId, dock.dragTo + 1);
         dock.cancelDrag();
     }
 
@@ -175,13 +174,11 @@ PanelWindow {
             }
         }
 
-        Surface {
+        HvChrome {
             anchors.centerIn: parent
             implicitWidth: row.implicitWidth + Tokens.spacing3 * 2
             implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
             elevation: 2
-            alphaOverride: Accent.chromeAlpha
-            tint: Tokens.chromeTint
             radius: Tokens.radiusLg
 
             RowLayout {
@@ -256,7 +253,7 @@ PanelWindow {
                                 // no entry there is nothing to execute(), and a
                                 // pinned app that does nothing on click is a dead
                                 // tile. gtk-launch takes the desktop id directly.
-                                Quickshell.execDetached(["gtk-launch", modelData.desktopId]);
+                                SystemActions.launchDesktop(modelData.desktopId);
                             }
                         }
 
@@ -266,10 +263,7 @@ PanelWindow {
                             onPicked: toplevel => Compositor.dispatchTo("focuswindow", toplevel)
                         }
                         onClosed: Compositor.dispatchTo("closewindow", modelData.toplevel)
-                        onUnpinned: if (modelData.pinned)
-                            Quickshell.execDetached([
-                                Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh",
-                                "remove", modelData.appId])
+                        onUnpinned: if (modelData.pinned) Pins.remove(modelData.appId)
 
                         // A running window that is not pinned has no stored
                         // position, so there is nothing a drop could write.
@@ -303,8 +297,7 @@ PanelWindow {
                 DockTile {
                     glyph: "\u{f0a79}"
                     tooltip: "Trash"
-                    onActivated: Quickshell.execDetached(
-                        ["nautilus", "--new-window", "trash:///"])
+                    onActivated: SystemActions.openTrash()
                 }
             }
 

@@ -9,8 +9,10 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Bluetooth
 import ".."
+import "../Adapters"
+import "../Design/Components"
 
-Section {
+HvSection {
     id: root
     glyph: "\u{f00af}"
     title: "Bluetooth"
@@ -25,7 +27,7 @@ Section {
             .sort((a, b) => (b.connected ? 1 : 0) - (a.connected ? 1 : 0));
     }
 
-    Toggle {
+    HvToggle {
         Layout.alignment: Qt.AlignRight
         visible: root.adapter !== null
         accessibleName: "Bluetooth"
@@ -122,14 +124,11 @@ Section {
         }
     }
 
-    Button {
+    HvButton {
         Layout.alignment: Qt.AlignRight
         visible: root.adapter !== null && (root.adapter?.enabled ?? false)
         text: "Pair device"
         accessibleName: "Pair Bluetooth device"
-        onClicked: Quickshell.execDetached([
-            "sh", "-c",
-            "if command -v blueman-manager >/dev/null 2>&1; then blueman-manager; else notify-send 'Bluetooth pairing unavailable' 'Install blueman to pair new devices from Hyprveil.'; fi"
-        ])
+        onClicked: SystemActions.openBluetoothControl()
     }
 }

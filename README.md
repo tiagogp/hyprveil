@@ -9,24 +9,20 @@ replacing it.
 
 The default desktop is Quickshell QML: it draws the floating top bar, bottom dock,
 Quick Settings, notification popups/history, wallpaper picker, keybind cheatsheet,
-and lock screen. Waybar remains in the repository as a legacy/fallback bar, while
-SwayNC and Mako are notification-only fallbacks for systems that do not run the
-Quickshell notification backend.
+and lock screen. The explicit `recovery` profile starts Waybar with Rofi,
+wlogout, and SwayNC or Mako; those tools are not presented as parallel parts of
+the default product.
 
 ## Screenshots
 
 | | |
 |---|---|
-| ![Desktop: bar and dock](docs/images/desktop.png) Desktop — bar, dock, wallpaper-derived crimson accent | ![Launcher](docs/images/launcher.png) Launcher — rofi, centered, accent selection |
+| ![Desktop: bar and dock](docs/images/desktop.png) Desktop — unified bar, dock, and wallpaper-derived accent | ![Desktop with blue accent](docs/images/desktop-accent.png) The same shell with a wallpaper-derived blue accent |
 | ![Wallpaper picker](docs/images/wallpaper-picker.png) Wallpaper picker — per-monitor fit, live accent preview | ![Keybind cheatsheet](docs/images/cheatsheet.png) Keybind cheatsheet — searchable, grouped by category |
 
-Accents are wallpaper-derived, not fixed — the same shell re-themed from a blue
-wallpaper:
-
-![Desktop re-themed from a blue wallpaper](docs/images/desktop-accent.png)
-
-*(Lock screen, notification, and power menu screenshots are still pending — see
-[CONTRIBUTING.md](CONTRIBUTING.md#screenshots) if you'd like to contribute a set.)*
+The old Rofi launcher capture is no longer shown as the product launcher. Run
+`tests/capture-shell.sh` from a live Hyprland session to refresh the complete
+release set and `shell-demo.webm` after a visual change.
 
 ## Requirements
 
@@ -73,8 +69,12 @@ Important warnings:
 - Quickshell shell with a glass top bar, workspace controls, focused-window title,
   MPRIS media controls, status cluster, dock, Quick Settings, notifications,
   wallpaper picker, cheatsheet, and lock screen.
-- Backend-aware notification launcher with Quickshell as the default and SwayNC or
-  Mako as selected fallbacks.
+- Exclusive surface coordination for the native launcher, session dialog, Quick
+  Settings, preferences, wallpaper picker, overview, calendar, and cheatsheet.
+- Explicit default/recovery profiles; the doctor labels recovery as degraded.
+- Versioned settings schema v2 with validation, v1 migration, atomic writes,
+  corrupt-file recovery, providers, accessibility, and per-monitor overrides.
+- Public `hyprveil shell` and `hyprveil wallpaper` commands.
 - Wallpaper state and per-monitor fit restored through Hyprpaper IPC.
 - Standard/reduced motion profiles and a global animation toggle.
 - Wallpaper-derived accent rendering for Hyprland, Quickshell, Kitty, Rofi,
@@ -96,6 +96,10 @@ The docs are intentionally small:
   accents, keybindings, and optional dependencies.
 - [docs/HARDWARE.md](docs/HARDWARE.md): desktop/laptop and GPU profiles.
 - [docs/QUICK-SETTINGS.md](docs/QUICK-SETTINGS.md): panel controls and cheatsheet.
+- [docs/SHELL-ARCHITECTURE.md](docs/SHELL-ARCHITECTURE.md): runtime layers,
+  surface ownership, service contracts, and behavioral invariants.
+- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md): reusable controls, density,
+  type, elevation, focus, accessibility, and motion.
 - [docs/QUICKSHELL-COMPETITIVE-ANALYSIS.md](docs/QUICKSHELL-COMPETITIVE-ANALYSIS.md):
   competitive benchmark and roadmap against leading Hyprland + Quickshell shells.
 - [docs/RECOVERY.md](docs/RECOVERY.md): rollback and component recovery.

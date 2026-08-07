@@ -6,9 +6,10 @@
 import QtQuick
 import QtQuick.Layouts
 import ".."
+import "../Design/Components"
 import "../Services"
 
-Section {
+HvSection {
     id: root
     glyph: "\u{f00e0}"
     title: "Brightness"

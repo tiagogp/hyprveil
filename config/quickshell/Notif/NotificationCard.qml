@@ -9,6 +9,7 @@ import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
 import ".."
+import "../Adapters"
 
 Surface {
     id: card
@@ -123,7 +124,7 @@ Surface {
                 maximumLineCount: 4
                 elide: Text.ElideRight
                 lineHeight: 1.3
-                onLinkActivated: link => Quickshell.execDetached(["xdg-open", link])
+                onLinkActivated: link => SystemActions.openUri(link)
             }
 
             RowLayout {

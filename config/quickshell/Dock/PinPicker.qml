@@ -17,6 +17,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
 import ".."
+import "../Design/Components"
 import "../Panel"
 import "../Services"
 
@@ -28,8 +29,8 @@ Scope {
     // The installed-application catalogue, and the ceiling dock-manager.sh will
     // enforce on commit. Both come from `entries` so the number is not written
     // down twice.
-    property var entries: []
-    property int limit: 10
+    readonly property var entries: Pins.catalog
+    readonly property int limit: Pins.limit
     property string query: ""
     property string status: ""
 
@@ -77,39 +78,7 @@ Scope {
         staged = next;
     }
 
-    Process {
-        id: lister
-        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh", "entries"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const c = JSON.parse(text);
-                    root.limit = c.limit ?? 10;
-                    const sorted = (c.entries ?? []).slice().sort(
-                        (a, b) => a.name.localeCompare(b.name));
-                    // Reassigning root.entries always hands the ListView a new
-                    // array, even when the catalogue is unchanged from last
-                    // opening — the view can't tell it's the same list, so it
-                    // tears down and rebuilds every row, IconImage included.
-                    // That's a flash of every app icon blanking and redecoding
-                    // on an opening that changed nothing. JSON.stringify is a
-                    // cheap enough compare for a few hundred plain-object rows
-                    // and keeps the old array (and its resolved icons) alive
-                    // when nothing actually installed or removed an app.
-                    if (JSON.stringify(sorted) !== JSON.stringify(root.entries))
-                        root.entries = sorted;
-                    root.status = "";
-                } catch (e) {
-                    root.entries = [];
-                    root.status = "Could not read the application list";
-                }
-                // Staging waits on the catalogue: a pin is only stageable once
-                // there is an entry to resolve it against, and `unresolved`
-                // cannot be counted before then.
-                root.restage();
-            }
-        }
-    }
+    onEntriesChanged: { root.status = Pins.error; root.restage(); }
 
     function restage() {
         const known = new Set(root.entries.map(e => e.desktop_id.toLowerCase()));
@@ -144,9 +113,7 @@ Scope {
     // through notify-send, which lands in the same history as everything else,
     // and the shell picks up the new order from the watched state file.
     function apply() {
-        Quickshell.execDetached([
-            Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh", "set"
-        ].concat(root.staged));
+        Pins.set(root.staged);
         root.open = false;
     }
 
@@ -161,7 +128,7 @@ Scope {
             // Re-listed on every opening: apps are installed and removed while
             // the shell runs, and a stale catalogue would let Apply commit an id
             // that no longer exists.
-            lister.running = true;
+            Pins.refreshCatalog();
         }
     }
 
@@ -525,12 +492,12 @@ Scope {
                         elide: Text.ElideRight
                     }
 
-                    Button {
+                    HvButton {
                         text: "Cancel"
                         onClicked: root.open = false
                     }
 
-                    Button {
+                    HvButton {
                         text: "Apply"
                         primary: true
                         onClicked: root.apply()

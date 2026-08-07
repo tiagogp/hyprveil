@@ -18,6 +18,12 @@ import Quickshell.Services.UPower
 Singleton {
     id: root
 
+    property bool available: true
+    readonly property var state: ({ active: root.active, reason: root.reason })
+    property bool busy: false
+    property string error: ""
+    property double lastUpdated: 0
+
     // Below this percentage AND discharging, calm mode engages on its own.
     // Desktops report no battery at all (UPower.displayDevice.isLaptopBattery
     // is false), so this branch never fires there — no surprise behaviour on
@@ -60,5 +66,7 @@ Singleton {
 
     function toggleManual(): void {
         Settings.set({ modules: Object.assign({}, Settings.modules, { calmMode: !root.manualOn }) });
+        root.lastUpdated = Date.now();
     }
+    function refresh(): void { root.lastUpdated = Date.now(); }
 }

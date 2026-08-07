@@ -29,6 +29,10 @@ Singleton {
     property bool probed: false
     property bool available: false
     property int percent: 0
+    readonly property var state: ({ percent: root.percent, ddcMonitors: root.ddcMonitors })
+    readonly property bool busy: backlightProbe.running || backlightSet.running || ddcDetect.running || ddcSetter.running
+    property string error: ""
+    property double lastUpdated: 0
 
     // DDC is opportunistic and slow (a real I2C round trip per monitor), so it
     // is probed once, lazily, only when the section that needs it becomes
@@ -65,6 +69,7 @@ Singleton {
                 if (isNaN(pct)) { root.available = false; return; }
                 root.available = true;
                 root.percent = Math.max(0, Math.min(100, Math.round(pct)));
+                root.lastUpdated = Date.now();
             }
         }
     }

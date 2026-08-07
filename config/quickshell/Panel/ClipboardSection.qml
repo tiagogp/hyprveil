@@ -8,8 +8,10 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import ".."
+import "../Adapters"
+import "../Design/Components"
 
-Section {
+HvSection {
     id: root
 
     glyph: "\u{f014f}"
@@ -56,23 +58,16 @@ Section {
     }
 
     function copy(entry) {
-        Quickshell.execDetached([
-            "sh", "-c", "printf '%s\\n' \"$1\" | cliphist decode | wl-copy",
-            "hyprveil-clipboard-copy", entry
-        ]);
+        SystemActions.clipboardCopy(entry);
     }
 
     function remove(entry) {
-        Quickshell.execDetached([
-            "sh", "-c", "printf '%s\\n' \"$1\" | cliphist delete",
-            "hyprveil-clipboard-delete", entry
-        ]);
+        SystemActions.clipboardDelete(entry);
         reloadTimer.restart();
     }
 
     function clearAll() {
-        Quickshell.execDetached(["cliphist", "wipe"]);
-        Quickshell.execDetached(["sh", "-c", "rm -rf \"$1\"", "_", root.thumbCacheDir]);
+        SystemActions.clipboardClear(root.thumbCacheDir);
         root.entries = [];
         root.status = "Clipboard history is empty";
     }

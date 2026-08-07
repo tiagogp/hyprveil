@@ -17,12 +17,15 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../App"
+import "../Design/Components"
 import "../Services"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
 
     // The month on screen, held apart from Time.today so paging does not move
     // the shell's clock. Reset to the current month every time the panel opens —
@@ -35,29 +38,12 @@ Scope {
     // the calendar actually opens, never at shell startup: the roadmap's
     // "lazy load" requirement for this item, and there is nothing to show
     // before the panel that would show it exists.
-    property var upcomingEvents: []
+    readonly property var upcomingEvents: CalendarEvents.state
 
     onOpenChanged: {
         if (open) {
             resetToToday();
-            eventsLoader.running = true;
-        }
-    }
-
-    Process {
-        id: eventsLoader
-        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/calendar-events.sh", "upcoming", "3"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    root.upcomingEvents = JSON.parse(text);
-                } catch (e) {
-                    // No ICS source configured, or nothing parsed — the
-                    // month grid below is the complete fallback either way,
-                    // exactly as if this Process had never run.
-                    root.upcomingEvents = [];
-                }
-            }
+            CalendarEvents.refresh();
         }
     }
 
@@ -131,13 +117,14 @@ Scope {
     }
 
     PanelWindow {
+        screen: root.targetScreen ?? Quickshell.screens[0]
         id: win
         visible: root.open
         anchors { top: true; right: true }
         margins { top: Tokens.spacing2h; right: Tokens.spacing2h }
 
         implicitWidth: 300
-        implicitHeight: column.implicitHeight + Tokens.spacing3 * 2
+        implicitHeight: Math.min(520, (screen?.height ?? 560) - Tokens.spacing5)
         color: "transparent"
         WlrLayershell.namespace: "hyprveil-calendar"
         WlrLayershell.layer: WlrLayer.Top
@@ -155,8 +142,12 @@ Scope {
         }
         onVisibleChanged: focusGrab.active = visible
 
-        Surface {
+        HvPopover {
             anchors.fill: parent
+            presented: root.open
+            origin: Qt.point(SurfaceCoordinator.originRect.x, SurfaceCoordinator.originRect.y)
+            transformOrigin: SurfaceCoordinator.originRect.x > (screen?.width ?? 0) / 2
+                ? Item.TopRight : Item.TopLeft
             // Rev 02 draws the calendar dropdown with the same shadow as
             // every other floating widget (frame 2e) rather than sitting flat.
             elevation: 2
@@ -174,26 +165,11 @@ Scope {
                 // Header: month label plus the two pagers. The label is itself
                 // the "jump to today" control — the discoverable place to undo a
                 // page is the thing that says which month you paged to.
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing2
+                    title: root.monthLabel
 
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: root.monthLabel
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.resetToToday()
-                        }
-                    }
-
+                    HvButton { text: "Today"; onClicked: root.resetToToday() }
                     CalendarPager {
                         glyph: "\u{f0141}" // chevron-left
                         onClicked: root.step(-1)

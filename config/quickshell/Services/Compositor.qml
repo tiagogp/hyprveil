@@ -24,6 +24,19 @@ import Quickshell.Hyprland
 Singleton {
     id: root
 
+    property bool available: true
+    readonly property var state: ({ workspace: root.focusedWorkspaceId, appId: root.activeAppId, title: root.activeTitle })
+    property bool busy: false
+    property string error: ""
+    property double lastUpdated: 0
+
+    function refresh(): void {
+        Hyprland.refreshMonitors();
+        Hyprland.refreshWorkspaces();
+        Hyprland.refreshToplevels();
+        root.lastUpdated = Date.now();
+    }
+
     // The current toplevel, guarded against Hyprland's stale activeToplevel
     // value after switching to or emptying a workspace.
     readonly property var activeWindow: {

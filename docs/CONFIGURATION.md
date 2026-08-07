@@ -76,12 +76,39 @@ title, or app stylesheet, and document the reason next to the rule.
 | `dock-pins.json` | `dock-manager.sh` | invalid file is preserved; empty dock restored |
 | `wallpapers.json` | `wallpaper.sh` | invalid file is preserved; bundled fallback restored |
 | `motion-profile` | `motion-profile.sh` | invalid file is preserved; `standard` restored |
+| `settings.json` | `settings-store.sh` / `Services/Settings.qml` | schema v1 is migrated to v2; invalid files are preserved before defaults are restored |
 | `kitty-sessions/*.conf` | `kitty/hyprveil-session.sh` | explicit user snapshots; not read by the shell |
 | `backups/` | installer and manual backup | retained until the user removes it |
 
 All JSON state is schema-checked. Dock and wallpaper writes use a temporary file,
 an atomic rename, and a lock where concurrent writers are possible. State files
 containing user choices use private permissions.
+
+## Settings schema v2
+
+`settings.json` is the single typed configuration for shell preferences. Its
+documented defaults are:
+
+| Key | Default |
+|---|---|
+| `appearance.accentProvider` / `appearance.density` | `hyprveil` / `comfortable` |
+| `modules.enabled` | bar, dock, notifications, and OSD enabled |
+| `modules.calmMode` | `false` |
+| `bar.workspacesMode` / `bar.position` | `dynamic` / `top` |
+| `dock.autohide` | `false` |
+| `surfaces.popupMonitor` / `rememberLastPage` | `focused` / `false` |
+| `animation.profile` / `reducedMotion` | `system` / `false` |
+| `accessibility.highContrast` / `largeTargets` | `false` / `false` |
+| `providers.launcher` | files off, calculator on, emoji off |
+| `providers.notifications` / `wallpaper` | `quickshell` / `hyprpaper` |
+| `monitors` | empty overrides object; global defaults are inherited |
+
+Every write goes through `settings-store.sh`: it validates the resulting v2
+document before an atomic rename. Version 1 keys are migrated without losing
+bar, dock, accent, provider, monitor, or scene choices. A malformed file is
+copied beside the original with an `.invalid-<timestamp>` suffix before defaults
+are restored. `Services/State.qml` discovers settings, wallpaper, pins, and
+session state for QML; feature components do not read `settings.json`.
 
 ## Optional dependencies
 

@@ -21,6 +21,12 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    property bool available: true
+    readonly property var state: root.data
+    readonly property bool busy: ensure.running || writer.running || resetter.running
+    property string error: ""
+    property double lastUpdated: 0
+
     readonly property string scriptPath:
         Quickshell.env("HOME") + "/.config/hypr/scripts/settings-store.sh"
 
@@ -36,15 +42,22 @@ Singleton {
     // before `ensure` below has ever run) still gets something rather than
     // undefined.
     property var data: ({
-        version: 1,
-        bar: { workspacesMode: "dynamic" },
-        dock: { autohide: false },
-        accent: { provider: "hyprveil" },
+        version: 2,
+        appearance: { accentProvider: "hyprveil", density: "comfortable" },
         modules: {
-            calmMode: false,
-            launcherProviders: { files: false, calculator: true, emoji: false }
+            enabled: { bar: true, dock: true, notifications: true, osd: true },
+            calmMode: false
         },
-        preferences: { popupMonitor: "focused" },
+        bar: { workspacesMode: "dynamic", position: "top" },
+        dock: { autohide: false },
+        surfaces: { popupMonitor: "focused", rememberLastPage: false },
+        animation: { profile: "system", reducedMotion: false },
+        accessibility: { highContrast: false, largeTargets: false },
+        providers: {
+            launcher: { files: false, calculator: true, emoji: false },
+            notifications: "quickshell",
+            wallpaper: "hyprpaper"
+        },
         monitors: {},
         scenes: { profiles: {}, previous: null }
     })
@@ -55,9 +68,12 @@ Singleton {
     // settings.json has not been migrated to yet.
     readonly property var bar: root.data.bar ?? {}
     readonly property var dock: root.data.dock ?? {}
-    readonly property var accent: root.data.accent ?? {}
+    readonly property var appearance: root.data.appearance ?? {}
     readonly property var modules: root.data.modules ?? {}
-    readonly property var preferences: root.data.preferences ?? {}
+    readonly property var surfaces: root.data.surfaces ?? {}
+    readonly property var animation: root.data.animation ?? {}
+    readonly property var accessibility: root.data.accessibility ?? {}
+    readonly property var providers: root.data.providers ?? {}
     readonly property var monitors: root.data.monitors ?? {}
     readonly property var scenes: root.data.scenes ?? {}
 
@@ -97,6 +113,8 @@ Singleton {
     function reset(): void {
         resetter.running = true;
     }
+
+    function refresh(): void { file.reload(); }
 
     // Created once at startup to make sure settings.json exists (and is
     // migrated) even before anything calls set() — the same role
@@ -141,8 +159,11 @@ Singleton {
             try {
                 root.data = JSON.parse(text());
                 root.loaded = true;
+                root.error = "";
+                root.lastUpdated = Date.now();
             } catch (e) {
                 // Keep the last-known-good in-memory value; settings-store.sh
+                root.error = "Settings could not be parsed";
                 // itself is the thing responsible for backing up and
                 // resetting a malformed file on disk.
             }

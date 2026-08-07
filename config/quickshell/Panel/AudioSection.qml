@@ -8,9 +8,11 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Pipewire
 import ".."
+import "../Adapters"
+import "../Design/Components"
 import "../Services"
 
-Section {
+HvSection {
     id: root
 
     glyph: "\u{f057e}"
@@ -139,7 +141,7 @@ Section {
                             }
                         }
 
-                        AudioSlider {
+                        HvSlider {
                             Layout.fillWidth: true
                             node: modelData
                         }
@@ -264,7 +266,7 @@ Section {
                             }
                         }
 
-                        AudioSlider {
+                        HvSlider {
                             Layout.fillWidth: true
                             node: modelData
                         }
@@ -383,7 +385,7 @@ Section {
                             }
                         }
 
-                        AudioSlider {
+                        HvSlider {
                             Layout.fillWidth: true
                             node: modelData
                         }
@@ -407,12 +409,10 @@ Section {
             }
         }
 
-        Button {
+        HvButton {
             Layout.alignment: Qt.AlignRight
             text: "Sound settings"
-            onClicked: Quickshell.execDetached(
-                ["env", "XDG_CURRENT_DESKTOP=GNOME",
-                 "gnome-control-center", "sound"])
+            onClicked: SystemActions.openSoundSettings()
         }
     }
 }

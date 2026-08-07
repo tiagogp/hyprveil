@@ -7,9 +7,10 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import ".."
+import "../Design/Components"
 import "../Notif"
 
-Section {
+HvSection {
     id: root
     glyph: "\u{f009a}"
     title: "Notifications"

@@ -689,7 +689,7 @@ mencionado no cabeçalho deste documento.
     depender de `fd`), debounced e limitado a 8 resultados, com `timeout 2`
     no processo; calculadora via um parser aritmético próprio (sem `eval`,
     sem `qalc`); emoji via lista estática curta. Cada
-    provider liga/desliga em `Settings.modules.launcherProviders` a partir
+    provider liga/desliga em `Settings.providers.launcher` a partir
     de `Panel/Preferences.qml`; calculadora ligada por padrão (nenhum
     processo obrigatório), arquivos e emoji desligados por padrão como o
     roadmap pede. "Orçamento medido" aqui é o `timeout 2` do provider de

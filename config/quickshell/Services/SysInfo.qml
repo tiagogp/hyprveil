@@ -19,6 +19,12 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    property bool available: true
+    readonly property var state: ({ cpu: root.cpu, memory: root.memory, temperature: root.temperature })
+    property bool busy: false
+    property string error: ""
+    property double lastUpdated: 0
+
     // Bumped by consumers while they are on screen; polling runs only when at
     // least one is. A CPU meter nobody is looking at does not need to wake the
     // shell every few seconds.
@@ -115,7 +121,9 @@ Singleton {
         root._readCpu();
         root._readMem();
         root._readTemp();
+        root.lastUpdated = Date.now();
     }
+    function refresh(): void { root.poll(); }
 
     Timer {
         interval: root.interval

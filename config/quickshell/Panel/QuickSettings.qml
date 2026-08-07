@@ -14,11 +14,14 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import ".."
+import "../App"
+import "../Design/Components"
 
 Scope {
     id: root
 
     property bool open: false
+    property var targetScreen: null
     // Which sections the panel shows. The bar routes status controls straight
     // to their matching section while the IPC target continues to open the full
     // stack. One window owns every view so close/focus/layer-shell behavior
@@ -78,12 +81,13 @@ Scope {
 
     PanelWindow {
         id: win
+        screen: root.targetScreen ?? Quickshell.screens[0]
         visible: root.open
         anchors { top: true; right: true }
         margins { top: Tokens.spacing2h; right: Tokens.spacing2h }
 
         implicitWidth: Math.max(0, Math.min(360, (screen?.width ?? 360) - Tokens.spacing2h * 2))
-        implicitHeight: Math.min(column.implicitHeight + Tokens.spacing3 * 2, 900)
+        implicitHeight: Math.min(760, (screen?.height ?? 800) - Tokens.spacing5)
         color: "transparent"
         WlrLayershell.namespace: "hyprveil-quicksettings"
         WlrLayershell.layer: WlrLayer.Top
@@ -102,8 +106,12 @@ Scope {
         }
         onVisibleChanged: focusGrab.active = visible
 
-        Surface {
+        HvPopover {
             anchors.fill: parent
+            presented: root.open
+            origin: Qt.point(SurfaceCoordinator.originRect.x, SurfaceCoordinator.originRect.y)
+            transformOrigin: SurfaceCoordinator.originRect.x > (screen?.width ?? 0) / 2
+                ? Item.TopRight : Item.TopLeft
             // Rev 02 draws quick settings with the same shadow as every other
             // floating widget (frame 2g) rather than sitting flat.
             elevation: 2
@@ -118,50 +126,14 @@ Scope {
                 anchors.margins: Tokens.spacing3
                 spacing: Tokens.spacing2
 
-                RowLayout {
+                HvHeader {
                     Layout.fillWidth: true
                     Layout.bottomMargin: Tokens.spacing1
-
-                    Text {
-                        renderType: Text.NativeRendering
-                        Layout.fillWidth: true
-                        text: root.viewTitle
-                        font.family: Tokens.fontUi
-                        font.pixelSize: Tokens.textLg
-                        font.weight: Tokens.weightBold
-                        color: Tokens.text
-                    }
-
-                    Rectangle {
-                        implicitWidth: Tokens.spacing6
-                        implicitHeight: Tokens.spacing6
-                        radius: Tokens.radiusPill
-                        activeFocusOnTab: true
-                        color: closeMouse.containsMouse
-                            ? Accent.accentSoft : Qt.rgba(1, 1, 1, 0.08)
-                        border.width: activeFocus ? 1 : 0
-                        border.color: Accent.accent
-                        Accessible.role: Accessible.Button
-                        Accessible.name: "Close Quick Settings"
-
-                        Keys.onReturnPressed: root.open = false
-                        Keys.onSpacePressed: root.open = false
-
-                        Glyph {
-                            anchors.centerIn: parent
-                            text: "\u{f0156}"
-                            size: Tokens.iconSm
-                            color: closeMouse.containsMouse ? Accent.accent : Tokens.muted
-                        }
-
-                        MouseArea {
-                            id: closeMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.open = false
-                        }
-                    }
+                    title: root.viewTitle
+                    canGoBack: root.contextual
+                    canClose: true
+                    onBack: root.view = "all"
+                    onClose: SurfaceCoordinator.close()
                 }
 
                 WifiSection {
@@ -213,47 +185,43 @@ Scope {
                 }
 
                 // Opens the shell's own picker.
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     visible: root.view === "all"
                     text: "Wallpapers…"
                     onClicked: {
-                        root.open = false;
-                        wallpapers.open = true;
+                        SurfaceCoordinator.open("wallpapers", root.targetScreen, null);
                     }
                 }
 
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     visible: root.view === "all"
                     text: "Keyboard shortcuts…"
                     onClicked: {
-                        root.open = false;
-                        cheatsheet.open = true;
+                        SurfaceCoordinator.open("cheatsheet", root.targetScreen, null);
                     }
                 }
 
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     visible: root.view === "all"
                     text: "Integrations…"
                     onClicked: {
-                        root.open = false;
-                        integrations.open = true;
+                        SurfaceCoordinator.open("integrations", root.targetScreen, null);
                     }
                 }
 
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     visible: root.view === "all"
                     text: "Preferences…"
                     onClicked: {
-                        root.open = false;
-                        preferences.open = true;
+                        SurfaceCoordinator.open("preferences", root.targetScreen, null);
                     }
                 }
 
-                LinkRow {
+                HvActionRow {
                     Layout.fillWidth: true
                     visible: root.contextual
                     text: "All settings…"

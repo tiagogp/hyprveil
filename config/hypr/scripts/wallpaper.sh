@@ -350,8 +350,8 @@ list_command() {
     done < <(connected_monitors || true)
 
     ensure_state || die "could not initialize wallpaper state"
-    images_json=$(json_array "${images[@]}")
-    outputs_json=$(json_array "${outputs[@]}")
+    if [ "${#images[@]}" -gt 0 ]; then images_json=$(json_array "${images[@]}"); else images_json='[]'; fi
+    if [ "${#outputs[@]}" -gt 0 ]; then outputs_json=$(json_array "${outputs[@]}"); else outputs_json='[]'; fi
     jq -n \
         --arg dir "$WALLPAPER_DIR" \
         --argjson images "$images_json" \

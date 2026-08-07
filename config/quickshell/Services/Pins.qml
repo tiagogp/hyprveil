@@ -23,8 +23,38 @@ Singleton {
     readonly property string path:
         (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state")
         + "/hyprveil/dock-pins.json"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/.config/hypr/scripts/dock-manager.sh"
 
     property var pins: []
+    property bool available: true
+    readonly property var state: root.pins
+    property bool busy: false
+    property string error: ""
+    property double lastUpdated: 0
+    property var catalog: []
+    property int limit: 10
+
+    function refresh(): void { file.reload(); }
+    function refreshCatalog(): void { catalogue.running = true; }
+    function set(desktopIds: var): void { Quickshell.execDetached([scriptPath, "set"].concat(desktopIds)); }
+    function remove(id: string): void { if (id) Quickshell.execDetached([scriptPath, "remove", id]); }
+    function move(id: string, position: int): void { if (id) Quickshell.execDetached([scriptPath, "move", id, String(position)]); }
+
+    Process {
+        id: catalogue
+        command: [root.scriptPath, "entries"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const parsed = JSON.parse(text);
+                    root.limit = parsed.limit ?? 10;
+                    root.catalog = (parsed.entries ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                    root.error = "";
+                } catch (e) { root.catalog = []; root.error = "Could not read the application list"; }
+                root.lastUpdated = Date.now();
+            }
+        }
+    }
 
     FileView {
         id: file
@@ -33,9 +63,9 @@ Singleton {
         // file; watching it means the dock follows either without a signal.
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.pins = root._parse(text())
+        onLoaded: { root.pins = root._parse(text()); root.error = ""; root.lastUpdated = Date.now(); }
         // A missing file is the first-run state, not an error.
-        onLoadFailed: root.pins = []
+        onLoadFailed: { root.pins = []; root.lastUpdated = Date.now(); }
     }
 
     // Rejects a malformed file rather than propagating it: a half-written array

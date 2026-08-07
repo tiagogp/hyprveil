@@ -85,7 +85,18 @@ printf '%s\n' "$BACKEND" > "$state_tmp"
 chmod 600 "$state_tmp"
 mv -f "$state_tmp" "$HV_NOTIFICATION_STATE"
 
+# The complete shell owns the notification bus, so selecting a legacy daemon
+# is also an explicit request for the recovery stack. Keep old setup flags
+# meaningful while storing the two concerns independently.
+profile=default
+[ "$BACKEND" = quickshell ] || profile=recovery
+profile_tmp=$(mktemp "$HV_STATE_HOME/.shell-profile.XXXXXX")
+printf '%s\n' "$profile" > "$profile_tmp"
+chmod 600 "$profile_tmp"
+mv -f "$profile_tmp" "$HV_SHELL_PROFILE_STATE"
+
 printf 'Notification backend selected: %s\n' "$BACKEND"
+printf 'Shell profile selected: %s\n' "$profile"
 if [ "$BACKEND" = mako ]; then
     printf 'Mako fallback selected: popup notifications and DND remain available; history requires Quickshell or SwayNC.\n'
 elif [ "$BACKEND" = swaync ]; then

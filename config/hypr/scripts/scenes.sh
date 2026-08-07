@@ -4,7 +4,7 @@
 # rather than one screen).
 #
 # A scene is a snapshot of exactly the fields Settings/settings-store.sh
-# already owns — dock autohide, accent provider, Calm Mode — applied
+# already owns — dock autohide, appearance, Calm Mode, and providers — applied
 # atomically through the same `settings-store.sh set` every other write in
 # this shell goes through. Wallpaper and the measured accent COLOR stay out
 # of a scene on purpose: those are wallpaper.sh/accent.sh's own state, with
@@ -28,7 +28,7 @@ message() { printf '%s\n' "$*" >&2; }
 # The fields a scene snapshots — kept in one place so save/apply/revert
 # cannot drift out of sync with each other about what a "scene" contains.
 scene_fields() {
-    jq -c '{dock: .dock, accent: .accent, modules: .modules}' <<<"$1"
+    jq -c '{dock: .dock, appearance: .appearance, modules: .modules, providers: .providers}' <<<"$1"
 }
 
 cmd_list() {
@@ -55,7 +55,7 @@ cmd_apply() {
     # snapshot is kept — applying a second scene overwrites the ability to
     # undo the first, which matches how a single Ctrl+Z slot behaves
     # elsewhere, rather than growing an unbounded history nothing surfaces.
-    # $profile is already {dock,accent,modules}; scenes.previous is merged in
+    # $profile is already {dock,appearance,modules,providers}; scenes.previous is merged in
     # alongside it, at the top level, not inside it.
     previous=$(scene_fields "$current")
     patch=$(jq -nc --argjson snap "$profile" --argjson prev "$previous" \
