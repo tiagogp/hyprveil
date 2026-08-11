@@ -35,22 +35,24 @@ PanelWindow {
     readonly property bool autohide: Settings.dockAutohideFor(dock.monitorName)
     readonly property bool revealed: !dock.autohide || dockHover.hovered
 
-    anchors.bottom: true
+    anchors { bottom: true; left: true; right: true }
     // Rev 02 floats the dock further off the bottom edge (frame 2a/2c) —
     // spacing3 is the closest step on the closed scale to the mockup's 14px.
     margins.bottom: Tokens.spacing3
     implicitHeight: 44 + Tokens.spacing5
-    implicitWidth: row.implicitWidth + Tokens.spacing6
     color: "transparent"
-    // Left at the default (auto) UNLESS autohide is on: a hidden dock that
-    // still reserves its strip defeats the point of hiding it, so autohide
-    // also stops excluding tiled windows from that space. Pinning it to 0
-    // unconditionally made the dock float over tiled windows even when
-    // shown; the bar has always reserved its strip, and a non-autohide dock
-    // still matches that.
+    // The dock is visually a centered pill, but the layer window spans the
+    // bottom edge so wlroots can reserve a real workarea strip. Be explicit
+    // about that strip: some Hyprland/Quickshell combinations do not infer an
+    // exclusive zone for a bottom-anchored layer from ExclusionMode alone. Keep
+    // the reserved strip to the dock window's height; the bottom margin is
+    // visual breathing room, not extra tiled-window padding.
     exclusionMode: dock.autohide ? ExclusionMode.Ignore : ExclusionMode.Normal
+    exclusiveZone: dock.autohide ? 0 : dock.implicitHeight
     WlrLayershell.namespace: "hyprveil-dock"
     WlrLayershell.layer: WlrLayer.Top
+
+    mask: Region { item: dockSurface }
 
     // Pinned apps first in their saved order, then anything else running on ANY
     // workspace. A pinned app that is also running appears once, as the pinned
@@ -176,6 +178,7 @@ PanelWindow {
         }
 
         Surface {
+            id: dockSurface
             anchors.centerIn: parent
             implicitWidth: row.implicitWidth + Tokens.spacing3 * 2
             implicitHeight: row.implicitHeight + Tokens.spacing2h * 2
